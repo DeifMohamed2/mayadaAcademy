@@ -4,7 +4,7 @@
     <%- include("./partials/head.ejs") %>
 
 <style>
-    .group {
+.group {
      
     display: flex;
     flex-direction: column; /* Stack elements vertically */
@@ -16,6 +16,23 @@
     width: 100%; /* Make labels and selects take up the full width */
 }
 
+
+  .spinner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 9px solid;
+    border-color: #dbdcef;
+    border-right-color: #1800ed;
+    animation: spinner-d3wgkg 1s infinite linear;
+  }
+
+  @keyframes spinner-d3wgkg {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
 </style>
 <body>
     <div class="container-fluid">
@@ -26,9 +43,7 @@
             <!--------------------END ASIDE  ------------------>
    <!-- Modal -->
 
- <% if (modalData) { %>
                 
-   
    <div class="modal fade show" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="false">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -36,83 +51,88 @@
                 <h2 class="modal-title" id="exampleModalLabel"> Update Data</h2>
                 <i class="fa-solid fa-xmark close-modal" data-bs-dismiss="modal" aria-label="Close"></i>
             </div>
-            <form action="/teacher/updateUserData/<%= modalData._id %>" method="post" id="formModalData">
+            <form  id="formModalDataUpdate">
 
+              <div class="spinner mx-auto" id="spinner"></div>
               <div class="modal-body">
 
-              
+
                       <label for="ModalUserName">اسم الطالب : </label> 
-                      <input type="text" id="ModalUserName" class="modal-input" name="Username" value="<%= modalData.Username %>"> <br>
+                      <input type="text" id="ModalUserName" class="modal-input" name="Username" value=""> <br>
                       
                   
                       <label for="ModalUserphone">رقم هاتف الطالب : </label> 
-                      <input type="tel" id="ModalUserphone" class="modal-input"name="phone" value="<%= modalData.phone %>"> <br>
+                      <input type="tel" id="ModalUserphone" class="modal-input"name="phone" value=""> <br>
                       
       
 
                       <label for="ModalParentUserphone">رقم هاتف ولي امر الطالب : </label> 
-                      <input type="tel" id="ModalParentUserphone" class="modal-input" name="parentPhone" value="<%= modalData.parentPhone %>"> <br>
+                      <input type="tel" id="ModalParentUserphone" class="modal-input" name="parentPhone" value=""> <br>
                       
                       <label for="ModalUserAmount">Amount : </label>
-                      <input type="tel" id="ModalUserAmount" class="modal-input" name="balance" value="<%= modalData.balance %>"> <br>
+                      <input type="tel" id="ModalUserAmount" class="modal-input" name="balance" value=""> <br>
               
                       <label for="amountRemaining">Amount Remaining : </label>
-                      <input type="tel" id="amountRemaining" class="modal-input" name="amountRemaining" value="<%= modalData.amountRemaining %>"> <br>
+                      <input type="tel" id="amountRemaining" class="modal-input" name="amountRemaining" value=""> <br>
+
+                      <label for="absences">Absences : </label>
+                      <input type="number" id="absences" class="modal-input" name="absences" value=""> <br>
 
                   <label for="GradeLevel">Grade Level:</label>
                     <select name="GradeLevel" id="GradeLevel" class="modal-input Grade w-75" required>
-                      <option value="10" <%= modalData.GradeLevel == '10' ? 'selected' : '' %>>Grade 10</option>
-                      <option value="11" <%= modalData.GradeLevel == '11' ? 'selected' : '' %>>Grade 11</option>
-                      <option value="12" <%= modalData.GradeLevel == '12' ? 'selected' : '' %>>Grade 12</option>
+                      <option value="10" >Grade 10</option>
+                      <option value="11" >Grade 11</option>
+                      <option value="12" >Grade 12</option>
                     </select>
 
                   <label for="attendingType">Attending Type:</label>
                   <select name="attendingType" id="attendingType" class="modal-input Grade w-75" required>
-                    <option value="HomeSchooling" <%= modalData.attendingType == 'HomeSchooling' ? 'selected' : '' %>>Home Schooling</option>
-                    <option value="Attending" <%= modalData.attendingType == 'Attending' ? 'selected' : '' %>>Attending</option>
+                    <option value="HomeSchooling" >Home Schooling</option>
+                    <option value="Attending" >Attending</option>
                   </select>
 
                   <label for="bookTaken"> Book Taken </label>
                   <select name="bookTaken" id="bookTaken" class="modal-input Grade w-75" required>
-                    <option value="true" <%= modalData.bookTaken == true ? 'selected' : '' %>>Yes</option>
-                    <option value="false" <%= modalData.bookTaken == false  ? 'selected' : '' %>>No</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
                   </select>
 
                     <label for="ModalSchoolName">School Name :</label> 
-                    <input type="text" id="schoolName" class="modal-input" name="schoolName" value="<%= modalData.schoolName %>"> <br>
-              
-                    <button type="button" class="btn btn-outline-primary" id="transferStudent">نقل الطالب الي</button>
+                    <input type="text" id="schoolName" class="modal-input" name="schoolName" value=""> <br>
+                    <input type="text" id="StudentID" class="d-none" value="">
+                    <!-- <button type="button" class="btn btn-outline-primary" id="transferStudent">نقل الطالب الي</button>
 
                     <div class="group d-none" id="selectionGroup">
                       
                           <label for="centerName">Center Name</label>
-                          <select name="centerName" id="centerName" class="Grade"  >
+                          <select name="centerName" id="centerNameToUpdate" class="Grade"  >
                               <option value="">Center Name</option>
                               <option value="GTA">GTA</option>
                               <option value="tagmo3">Tagmo3</option>
                           </select>
 
                           <label for="Grade">Grade</label>
-                          <select name="Grade" id="Grade" class="Grade" >
+                          <select name="Grade" id="GradeToUpdate" class="Grade" >
                               <option value="">Grade</option>
                           </select>
 
                           <label for="gradeType">Grade Type</label>
-                          <select name="gradeType" id="gradeType" class="Grade" >
+                          <select name="gradeType" id="gradeTypeToUpdate" class="Grade" >
                               <option value="">Grade Type</option>
                           </select>
 
                           <label for="groupTime">Group Time</label>
-                          <select name="groupTime" id="groupTime" class="Grade" >
+                          <select name="groupTime" id="groupTimeToUpdate" class="Grade" >
                               <option value="">Group Time</option>
                           </select>
 
-                    </div>
+
+                    </div> -->
 
               </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" window.location.herf="/teacher/studentsRequests">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" >Close</button>
                 <button type="submit"  class="btn btn-primary" data-bs-dismiss="modal">Update </button>
             </div>
 
@@ -121,9 +141,7 @@
     </div>
     </div>
 
-<% } %>
 
-<% if (modalDelete) { %>
     <div class="modal fade show" id="exampleModal2" tabindex="-1" aria-labelledby="exampleModalLabel2" aria-hidden="false">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -131,7 +149,7 @@
                     <h2 class="modal-title" id="exampleModalLabel2"> مسح طالب</h2>
                     <i class="fa-solid fa-xmark close-modal" data-bs-dismiss="modal" aria-label="Close"></i>
                 </div>
-                <form action="/teacher/studentsRequests/delete/<%= modalDelete %>" method="post">
+                <form id="deleteForm"  method="post">
     
                 <div class="modal-body">
                   <h2>  هل تريد مسح الطالب نهائياً ؟</h2>
@@ -139,26 +157,23 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" window.location.herf="/teacher/studentsRequests">Close</button>
-                    <button type="submit"  class="btn btn-primary" data-bs-dismiss="modal">Yes </button>
+                    <button type="submit"  class="btn btn-primary" >Yes </button>
                 </div>
             </form>
             </div>
         </div>
         </div>
 
-
-<% } %>
-
 <!--  END Modal -->
             <div class="col-lg-10 ">
                 <main>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <form action="/teacher/studentsRequests" method="get">
 
                                  <select name="centerName" class="Grade" id="centerName" value="" required>
-                                        <option    value=""> اختر السنتر </option>
-                                        <option value="maadi">Maadi</option>
+                                        <option value=""> اختر السنتر </option>
+                                        <option value="GTA">GTA</option>
                                         <option value="tagmo3">Tagmo3</option>
                                     </select>
                                     <select name="Grade" id="Grade" class="Grade" value="" required>
@@ -175,19 +190,25 @@
                                         <option value=""> Group Time </option>
                                     </select>
 
-                           
+                                    <select name="attendingType" class="Grade" id="attendingType" value="">
+                                        <option value=""> Attending Type </option>
+                                        <option value="HomeSchooling">Home Schooling</option>
+                                        <option value="Attending">Attending</option>
+                                    </select>
+
+                                    <select name="GradeLevel" class="Grade" id="GradeLevel" value="">
+                                      <option value=""> Grade Level</option>
+                                      <option value="10">Grade 10</option>
+                                      <option value="11">Grade 11</option>
+                                      <option value="12">Grade 12</option>
+                                    </select>
 
                                   <button class="btn btn-outline-warning me-5 mt-4" >Get Data</button>
                      
                             </form>
                         </div>
         
-                        <div class=" col-md-6 ">
-                            <div class="left" style="margin-top: 0.2rem;">
-                                <%- include("./partials/top.ejs") %> 
-
-                            </div>
-                        </div>
+                 
                     </div>
                     <table id="convetToexcel" style="display: none;">
                         
@@ -265,11 +286,18 @@
                                            
                                                   
 
-                                                     <td class="enter">
-                                                        <button  ><a href="/teacher/studentsRequests/<%=student._id  %>" class="primary" >View Data<i class="fa-solid fa-pen-to-square me-3"></i></a> </button> 
+                                                    <td class="enter">
+                                                      <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#exampleModal" data-id="<%= student._id %>" onclick="populateModal('<%= student._id %>')">
+                                                      View Data<i class="fa-solid fa-pen-to-square me-3"></i>
+                                                      </button>
                                                     </td>
+                                                    
+
                                                      <td class="enter">
-                                                        <button ><a href="/teacher/studentsRequests/delete/<%=student._id  %>" class="btn btn-outline-danger" style="color: rgb(255, 255, 255); border: 2px solid rgb(211, 0, 0); border-radius: 30px; padding: .7rem;" >Delete Account<i class="fa-solid fa-trash me-3" ></i></a> </button> 
+                                                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#exampleModal2" data-id="<%= student._id %>" onclick="getIdToDelete('<%= student._id %>')">
+                                                            Delete Account<i class="fa-solid fa-trash me-3"></i>
+                                                        </button>
+                                                        <!-- <button ><a href="/teacher/studentsRequests/delete/<%=student._id  %>" class="btn btn-outline-danger" style="color: rgb(255, 255, 255); border: 2px solid rgb(211, 0, 0); border-radius: 30px; padding: .7rem;" >Delete Account<i class="fa-solid fa-trash me-3" ></i></a> </button>  -->
                                                     </td>
                                                 </tr>
 
@@ -309,7 +337,7 @@
                                 </div>
                             </div>
 
-                      
+
                         </div>
                     </div>
                 </main>
@@ -325,194 +353,109 @@
     <script src="/assest/bootstrap.bundle.min.js"></script>
     <script src="/assest/bootstrap.min.js"></script>
 
+ <%- include("../partials/group.ejs") %>
 
 
-    <script>
 
 
-const centerNames = {
-    maadi : [
-    { value: 'EST', text: 'EST' },
-  
-    ],
-    tagmo3 :[
-    { value: 'EST', text: 'EST' },
-    { value: 'ACT', text: 'ACT' }
-
-    ]
-  }
-
-  // Define centers for each grade
-const gradeTypeOptions = {
-  EST :[
-    { value: 'adv', text: 'Advanced' },
-    { value: 'basic', text: 'Basic' }
-  ],
-  ACT: [
-    { value: 'adv', text: 'advanced' }
-  ]
-};
-
-// Group times for each center
-const groupTimes = {
-  maadi: {
-    EST: {
-      adv: [
-        { value: 'group1', text: 'Group(1)' }, 
-        { value: 'group2', text: 'Group(2)' },
-        { value: 'group3', text: 'Group(3)' },
-
-      ],
-      basic: [
-        { value: 'group1', text: "Group(1)" },
-
-      ]
-    },
- 
-  },
-  tagmo3: {
-    EST: {
-      adv: [
-        { value: 'group1', text: "Group(1)" },
-        { value: 'group2', text: "Group(2)" },
-        { value: 'group3', text: "Group(3)" },
-        
-              
-      ],
-      basic :[
-       { value: 'group1', text: "Group(1)" },
-
-      ],
-  
-    },
-
-    ACT: {
-
-      adv: [
-      { value: 'group1', text: "Group(1)" },
-      ],
+<script>
+    const spinner = document.getElementById('spinner');
+    function populateModal(id){
+      console.log(id)
+      
+      spinner.classList.remove('d-none');
+      fetch(`/teacher/studentsRequests/${id}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data)
+          document.getElementById('ModalUserName').value = data.Username;
+          document.getElementById('ModalUserphone').value = data.phone;
+          document.getElementById('ModalParentUserphone').value = data.parentPhone;
+          document.getElementById('ModalUserAmount').value = data.balance;
+          document.getElementById('amountRemaining').value = data.amountRemaining;
+          document.getElementById('absences').value = data.absences;
+          document.getElementById('GradeLevel').value = data.GradeLevel;
+          document.getElementById('attendingType').value = data.attendingType;
+          document.getElementById('bookTaken').value = data.bookTaken;
+          document.getElementById('schoolName').value = data.schoolName;
+          document.getElementById('StudentID').value = data._id;
+          spinner.classList.add('d-none');
+        })
+        .catch(error => {
+          console.error('Error fetching student data:', error)
+          spinner.classList.add('d-none');
+        });
     }
-  
-  }
-};
 
 
-document.getElementById('centerName').addEventListener('change', ()=>{
-   const centerName = document.getElementById('centerName').value;
-  const Grade = document.getElementById('Grade');
- 
-  // Clear existing grade type options
-  Grade.innerHTML = '<option value="" selected>Select Grade</option>';
-   console.log(centerName ,centerNames[centerName] )
-  // Add new grade type options based on the selected grade
-  if (centerNames[centerName]) {
-    centerNames[centerName].forEach(center => {
-      const option = document.createElement('option');
-      option.value = center.value;
-      option.textContent = center.text;
-      Grade.appendChild(option);
+
+    const formModalDataUpdate = document.getElementById('formModalDataUpdate');
+    formModalDataUpdate.addEventListener('submit', (e) => {
+      e.preventDefault();
+      spinner.classList.remove('d-none');
+      const id = document.getElementById('StudentID').value;
+      const data = {
+        Username: document.getElementById('ModalUserName').value,
+        phone: document.getElementById('ModalUserphone').value,
+        parentPhone: document.getElementById('ModalParentUserphone').value,
+        balance: document.getElementById('ModalUserAmount').value,
+        amountRemaining: document.getElementById('amountRemaining').value,
+        absences: document.getElementById('absences').value,
+        GradeLevel: document.getElementById('GradeLevel').value,
+        attendingType: document.getElementById('attendingType').value,
+        bookTaken: document.getElementById('bookTaken').value,
+        schoolName: document.getElementById('schoolName').value,
+
+      };
+      console.log(data)
+      fetch(`/teacher/updateUserData/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Success:', data);
+          location.reload();
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
     });
-  }
-
-  // Clear the group time options whenever the grade changes
-  document.getElementById('gradeType').innerHTML = '<option value="" selected>Type</option>';
-});
-// Handle grade change
-document.getElementById('Grade').addEventListener('change', function() {
-  const selectedGrade = this.value;
-  const gradeType = document.getElementById('gradeType');
-  
-  // Clear existing grade type options
-  gradeType.innerHTML = '<option value="" selected>Type</option>';
-
-  // Add new grade type options based on the selected grade
-  if (gradeTypeOptions[selectedGrade]) {
-    gradeTypeOptions[selectedGrade].forEach(center => {
-      const option = document.createElement('option');
-      option.value = center.value;
-      option.textContent = center.text;
-      gradeType.appendChild(option);
-    });
-  }
-
-  // Clear the group time options whenever the grade changes
-  document.getElementById('groupTime').innerHTML = '<option value="" selected>Group Time</option>';
-});
-
-// Handle center name change and update group times
-function updateGroupTimes() {
-  const selectedCenter = document.getElementById('centerName').value;
-  const selectedGrade = document.getElementById('Grade').value;
-  const selectedGradeType = document.getElementById('gradeType').value;
-  const groupTime = document.getElementById('groupTime');
-
-  // Clear existing group time options
-  groupTime.innerHTML = '<option value="" selected>Group Time</option>';
-
-  // Check if the selected center exists
-  if (!groupTimes[selectedCenter]) {
-    console.error(`Center "${selectedCenter}" is not found in groupTimes`);
-    return;
-  }
-
-  // Check if the selected grade exists for the center
-  if (!groupTimes[selectedCenter][selectedGrade]) {
-    console.error(`Grade "${selectedGrade}" is not found for center "${selectedCenter}"`);
-    return;
-  }
-
-  // Check if the selected grade type exists for the grade in the center
-  if (!groupTimes[selectedCenter][selectedGrade][selectedGradeType]) {
-    console.error(`Grade type "${selectedGradeType}" is not found for grade "${selectedGrade}" in center "${selectedCenter}"`);
-    return;
-  }
-
-  // Add new group times based on selected center, grade, and gradeType
-  groupTimes[selectedCenter][selectedGrade][selectedGradeType].forEach(group => {
-    const option = document.createElement('option');
-    option.value = group.value;
-    option.textContent = group.text;
-    groupTime.appendChild(option);
-  });
-}
-
-// Add event listeners to update group times when the center, grade, or grade type changes
-document.getElementById('Grade').addEventListener('change', updateGroupTimes);
-document.getElementById('gradeType').addEventListener('change', updateGroupTimes);
 
 </script>
 
 
 <script>
-    const transferStudent = document.getElementById('transferStudent');
-    transferStudent.addEventListener('click',()=>{
-        const selectionGroup = document.getElementById('selectionGroup');
-        selectionGroup.classList.toggle('d-none');
-    })
+    const deleteForm = document.getElementById('deleteForm');
+    function getIdToDelete(id){
+        deleteForm.setAttribute('action', `/teacher/studentsRequests/delete/${id}`);
+    }
+
+    deleteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      spinner.classList.remove('d-none');
+    const response = await fetch(deleteForm.getAttribute('action'), {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        const data = await response.json();
+        console.log(data)
+
+        if (response.ok) {
+            location.reload();
+        }else{
+            console.log('error')
+        }
+
+    });
+
+
 </script>
-
-   <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Find the modal element
-            const deleteModal = <%- JSON.stringify(modalDelete) %>;
-            const DataModal = <%- JSON.stringify(modalData) %>;
-
-            if (deleteModal) {
-                var modal2 = document.getElementById('exampleModal2');
-                // Show the modal
-                var modalBootstrap2 = new bootstrap.Modal(modal2);
-                modalBootstrap2.show();
-            }else{
-                var modal = document.getElementById('exampleModal');
-                // Show the modal
-                var modalBootstrap = new bootstrap.Modal(modal);
-                modalBootstrap.show();
-            
-            }
-          
-      
-        });
-    </script>
 
 </body>
 

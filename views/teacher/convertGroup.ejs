@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+    <%- include("./partials/head.ejs") %>
+
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+
+<body>
+
+    <style>
+
+ #reader {
+            width: 300px;
+            height: 300px;
+            margin: auto;
+            border-radius: 10px;
+                        border: 2px solid #ffffff;
+            display: none;
+
+        }
+        #qr-code {
+            margin-top: 20px;
+        }
+
+        .chapter_Box form input {
+            border-radius: 10px;
+            background-color: transparent;
+            border: 2px solid #ffffff;
+            color: #ffffff !important;
+            text-align: center;
+            font-size: larger;
+            font-weight: 900;
+            transition: all 0.3s;
+        }
+
+        .chapter_Box form input:focus {
+            border: 2px solid #affff3;
+            background-color: transparent;
+            color: #ffffff !important;
+        }
+
+
+        .chapter_Box form button {
+            margin-top: 1rem;
+            border-radius: 10px;
+        }
+        
+        .spinner {
+                    
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: conic-gradient(#0000 10%,#474bff);
+            -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 9px),#000 0);
+            animation: spinner-zp9dbg 1s infinite linear;
+        }
+
+#Message {
+    color: #ffd904;
+    text-align: center;
+    margin-top: 1rem;
+    font-weight: 900;
+    font-size: 1.5rem;
+}
+
+.studentCode:disabled{
+    background-color: transparent;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+
+    opacity: 0.5;
+
+}
+
+@keyframes spinner-zp9dbg {
+   to {
+      transform: rotate(1turn);
+   }
+}
+
+@media (max-width: 768px) {
+    #myTable{
+        font-size: 10px
+    }
+    
+}
+        
+    </style>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2" >
+                <%- include("./partials/nav.ejs") %>
+            </div>
+            <!--------------------END ASIDE  ------------------>
+   <!-- Modal -->
+
+
+
+<!--  END Modal -->
+            <div class="col-lg-10 ">
+                <main>
+                    <div class="row">
+                     
+                        <div class=" col-md-4 ">
+                            <div class="left" style="margin-top: 0.2rem;">
+                                <%- include("./partials/top.ejs") %> 
+
+                            </div>
+                        </div>
+
+                       
+                    </div>
+
+         
+                    
+                 <div class="row justify-content-center" id="boxOfCardAdded">
+                    <div class="col-md-8">
+                        <div class=" p-4 chapter_Box">
+                            <h2 class="text-center mb-4">نقل طالب الي جروب جديد</h2>
+                            <form  method="post"  id="transferForm" action="/teacher/transferStudent" >
+                                <div class="row align-items-center">
+                                    <!-- Code -->
+                                    <div class="col-md-5 mb-3 mx-auto">
+                                        <label for="studentCode" class="form-label">كود الطالب او رقم الكارت </label>
+                                        <input type="number" class="form-control form-control-sm studentCode" id="studentCode" name="studentCode" required>
+                                        <button type="button" id="getDataToTransferring" class="btn btn-secondary btn-md me-3 mt-4"> Get Data To Transferring </button>
+                                      </div>
+                                    
+                                
+                                </div>
+
+                                <div class="spinner d-none mx-auto" id="spinner"></div>
+                                <div id="Message" class="d-none"></div>
+                                <div class="studentData col-12 d-none" id="StudentData">
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="studentName" class="form-label">Student Name</label>
+                                            <h2 id="studentNameForUser"></h2>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="phoneNumber" class="form-label">Phone Number</label>
+                                            <h2 id="phoneNumberForUser"></h2>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="gradeType" class="form-label">Grade Type</label>
+                                                <h2 id="gradeTypeForUser"></h2>
+                                            </div>
+                                                   <div class="col-md-6">
+                                                     <label for="centerName" class="form-label">Center Name</label>
+                                                     <h2 id="centerNameForUser"></h2>
+                                                   </div>
+                                           
+                                    </div>       
+                                    <div class="row mb-3">
+                                          <div class="col-md-6">
+                                            <label for="groupTime" class="form-label">Group Time</label>
+                                            <h2 id="groupTimeForUser"></h2>
+                                          </div>
+
+                                            <div class="col-md-6">
+                                                    <label for="Grade" class="form-label">Grade</label>
+                                                    <h2 id="GradeForUser"></h2>
+                                            </div>
+                                    </div>
+                                  
+                                </div>
+
+                          
+                                <div class="col-md-12 d-none" id="transferTo">
+                                <h2 style="font-weight: 900;">Transfer To</h2>
+                                
+                                    <select name="centerName" class="Grade" id="centerName" value="" required>
+                                             <option value=""> اختر السنتر </option>
+                                             <option value="GTA">GTA</option>
+                                             <option value="tagmo3">Tagmo3</option>
+                                    </select>
+
+
+                                    <select name="Grade" class="Grade" id="Grade" required>
+                                             <option value="" selected>اختر الصف </option>
+                                             <option value="EST">EST</option>
+                                             <option value="EST1">EST1</option>
+                                             <option value="EST2">EST2</option>
+                                             <option value="ACT">ACT</option>
+
+                                    </select>
+
+                                    <select name="gradeType" class="Grade" id="gradeType" value="" required>
+                                             <option value=""> Type</option>
+                                    </select>
+
+                                    <select name="groupTime" class="Grade" id="groupTime" required>
+                                             <option value="" selected>مجموعه</option>
+                                    </select>
+
+                                    <!-- Submit Button -->
+                                    <div class="text-center">
+                                     <button type="submit" class="btn btn-primary btn-md px-4">Transfer</button>
+                                    </div>
+
+                                </div>
+
+                              
+                            
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                </main>
+            </div>
+
+            <!-------------------- END OF MAIN --------------------->
+         
+        </div>
+    </div>
+
+    <script src="/assest/bootstrap.bundle.min.js"></script>
+    <script src="/assest/bootstrap.min.js"></script>
+
+
+        <%- include("../partials/group.ejs") %>
+
+
+
+<script>
+    const getDataToTransferring = document.getElementById('getDataToTransferring');
+    const studentCode = document.getElementById('studentCode');
+    const spinner = document.getElementById('spinner');
+    const StudentData = document.getElementById('StudentData');
+    const transferTo = document.getElementById('transferTo');
+    const Message = document.getElementById('Message')
+    getDataToTransferring.addEventListener('click', async () => {
+        spinner.classList.remove('d-none');
+        Message.classList.add('d-none');
+        const response = await fetch(`/teacher/getDataToTransferring/${studentCode.value}`);
+        const data = await response.json();
+        console.log(data);
+        if(response.ok){
+            spinner.classList.add('d-none');
+            StudentData.classList.remove('d-none');
+            transferTo.classList.remove('d-none');
+            document.getElementById('gradeTypeForUser').textContent = data.gradeType;
+            document.getElementById('centerNameForUser').textContent = data.centerName;
+            document.getElementById('groupTimeForUser').textContent = data.groupTime;
+            document.getElementById('GradeForUser').textContent = data.Grade;
+            document.getElementById('studentNameForUser').textContent = data.Username;
+            document.getElementById('phoneNumberForUser').textContent = data.phone;
+            studentCode.setAttribute('disabled', true);
+        }else{
+            spinner.classList.add('d-none');
+            StudentData.classList.add('d-none');
+            transferTo.classList.add('d-none');
+            document.getElementById('Message').textContent = data.message;
+            document.getElementById('Message').classList.remove('d-none');
+        }
+     
+    });
+
+    const transferForm = document.getElementById('transferForm');
+
+    transferForm.addEventListener('submit', async (e) => {
+        spinner.classList.remove('d-none');
+         Message.classList.add('d-none');
+        e.preventDefault();
+        const formData = new FormData(transferForm);
+        const response = await fetch(`/teacher/transferStudent/${studentCode.value}`, {
+            method: 'PUT',
+            body: formData
+        });
+        const data = await response.json();
+        console.log(data);
+        if(response.ok){
+            spinner.classList.add('d-none');
+            document.getElementById('Message').textContent = data.message;
+            document.getElementById('Message').classList.remove('d-none');
+        }else{
+            spinner.classList.add('d-none');
+            document.getElementById('Message').textContent = data.message;
+            document.getElementById('Message').classList.remove('d-none');
+        }
+    });
+
+</script>
+
+</body>
+
+
+</html>

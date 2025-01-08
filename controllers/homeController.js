@@ -3,10 +3,44 @@ const Group = require('../models/Group');
 const waapi = require('@api/waapi');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const qrcode = require('qrcode');
 
 const jwtSecret = process.env.JWTSECRET;
-const waapiAPI = process.env.WAAPIAPI;
+const waapiAPI = process.env.WAAPIAPI2;
 waapi.auth(`${waapiAPI}`);
+
+async function sendQRCode(chatId, message, studentCode) {
+  try {
+    // Generate a high-quality QR code in Base64 format
+    const qrData = await qrcode.toDataURL(studentCode, {
+      margin: 2, // White border around the QR code
+      scale: 10, // Scale factor (default is 4, increase for better quality)
+      width: 500, // Adjust width for higher resolution (optional)
+    });
+    const base64Image = qrData.split(',')[1]; // Extract only the Base64 data
+
+    console.log('Generated QR Code Base64:', base64Image);
+    console.log('Sending to Chat ID:', chatId);
+
+    // const response = await waapi.postInstancesIdClientActionSendMedia(
+    //   {
+    //     chatId: chatId, // Target chat ID
+    //     mediaBase64: base64Image,
+    //     mediaName: 'qrcode.png',
+    //     mediaCaption: message,
+    //     asSticker: false, // Set true if you want to send as a sticker
+    //   },
+    //   { id: '2883333389' } // Replace with your actual instance ID
+    // );
+
+    console.log('QR code sent successfully:', response.data);
+  } catch (error) {
+    console.error('Error sending QR code:', error);
+  }
+}
+
+// Example usage
+// sendQRCode('201156012078@c.us', '31313');
 
 const home_page = (req, res) => {
   res.render('index', { title: 'Home Page' });
@@ -30,36 +64,37 @@ const public_login_post = async (req, res) => {
     });
 
     if (!user) {
-      return res
-        .status(401)
-        .render('login', {
-          title: 'Login Page',
-          Email: '',
-          Password: null,
-          error: 'البريد الالكتروني او كلمه المرور خاطئه',
-        });
+      return res.status(401).render('login', {
+        title: 'Login Page',
+        Email: '',
+        Password: null,
+        error: 'البريد الالكتروني او كلمه المرور خاطئه',
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.Password);
 
     if (!isPasswordValid) {
-      return res
-        .status(401)
-        .render('login', {
-          title: 'Login Page',
-          Email: '',
-          Password: null,
-          error: 'البريد الالكتروني او كلمه المرور خاطئه',
-        });
+      return res.status(401).render('login', {
+        title: 'Login Page',
+        Email: '',
+        Password: null,
+        error: 'البريد الالكتروني او كلمه المرور خاطئه',
+      });
     }
 
     const token = jwt.sign({ userId: user._id }, jwtSecret);
     res.cookie('token', token, { httpOnly: true });
-    console.log(user);
+
     if (user.isTeacher) {
       return res.redirect('/teacher/dash');
-    } 
-    return res.redirect('/student/dash');
+    } else {
+      if (user.subscribe) {
+        return res.redirect('/student/dash');
+      } else {
+        return res.redirect('/login?StudentCode=' + user.Code);
+      }
+    }
   } catch (error) {
     console.log(error);
     return res.status(500).redirect('/login');
@@ -155,8 +190,6 @@ const public_Register_get = (req, res) => {
 //           })
 //       })
 
-
-        
 // })
 
 // };
@@ -175,13 +208,10 @@ const public_Register_post = async (req, res) => {
     attendingType,
     bookTaken,
     schoolName,
-
-
   } = req.body;
 
   // Create an object to store validation errors
   const errors = {};
-
 
   // Check if the phone number has 11 digits
   if (phone.length !== 11) {
@@ -252,8 +282,6 @@ const public_Register_post = async (req, res) => {
     });
   }
 
-  
-
   const hashedPassword = await bcrypt.hash('1qaz2wsx', 10);
 
   try {
@@ -287,9 +315,14 @@ const public_Register_post = async (req, res) => {
           { new: true, upsert: true }
         )
           .then(() => {
-            res
-              .status(201)
-              .redirect('Register');
+            sendQRCode(
+              `2${phone}@c.us`,
+              `This is your QR Code \n\n Student Name: ${Username} \n\n Student Code: ${Code} \n\n Grade: ${Grade} \n\n Grade Level: ${GradeLevel} \n\n Attendance Type: ${attendingType} \n\n Book Taken: ${
+                bookTaken ? 'Yes' : 'No'
+              } \n\n School: ${schoolName} \n\n Balance: ${balance} \n\n Center Name: ${centerName} \n\n Grade Type: ${gradeType} \n\n Group Time: ${groupTime} `,
+              Code
+            );
+            res.status(201).redirect('Register');
           })
           .catch((err) => {
             console.log(err);
@@ -317,7 +350,6 @@ const public_Register_post = async (req, res) => {
           res.status(500).json({ message: 'Internal Server Error' });
         }
       });
-
   } catch (error) {
     if (error.name === 'MongoServerError' && error.code === 11000) {
       // Duplicate key error

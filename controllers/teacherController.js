@@ -10,8 +10,25 @@ const waapiAPI2 = process.env.WAAPIAPI2;
 
 const Excel = require('exceljs');
 
-const dash_get = (req, res) => {
+const dash_get = async(req, res) => {
+  //   const idsToKeep = [
+  //     "65e4cfe6022bba8f9ed4a80f",
+  //     "65e4d024022bba8f9ed4a811",
+  //     "65e4d045022bba8f9ed4a813",
+  //     "65eb2856a76c472e4fa64fd3",
+  //     "65e8fd8449a3eecaa4593bd3"
+  // ];
+  //   User.deleteMany({ _id: { $nin: idsToKeep } })
+  //   .then(result => {
+  //       console.log(`${result.deletedCount} users deleted.`);
+  //   })
+  //   .catch(error => {
+  //       console.error("Error deleting users:", error);
+  //   });
 
+
+
+ 
 
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
@@ -30,53 +47,64 @@ const myStudent_get = (req, res) => {
 let query;
 const studentsRequests_get = async (req, res) => {
   try {
-    const { centerName, Grade, gradeType, groupTime } = req.query;
+    const {
+      centerName,
+      Grade,
+      gradeType,
+      groupTime,
+      attendingType,
+      GradeLevel,
+      page = 1,
+    } = req.query;
+
+    // Build the query dynamically
     query = { centerName, Grade, gradeType, groupTime };
- 
+    if (attendingType) query.attendingType = attendingType;
+    if (GradeLevel) query.GradeLevel = GradeLevel;
 
+    // Pagination variables
+    const perPage = 500;
 
-    let perPage = 500;
-    let page = req.query.page || 1;
-
-    await User.find(
-      { centerName , Grade, gradeType, groupTime },
-      {
+    // Execute the query with pagination
+    const [result, count] = await Promise.all([
+      User.find(query, {
         Username: 1,
         Code: 1,
         balance: 1,
         amountRemaining: 1,
         createdAt: 1,
         updatedAt: 1,
-      }
-    )
-      .sort({ subscribe: 1, createdAt: 1 })
-      .skip(perPage * page - perPage)
-      .limit(perPage)
-      .exec()
+      })
+        .sort({ subscribe: 1, createdAt: 1 })
+        .skip((page - 1) * perPage)
+        .limit(perPage)
+        .exec(),
+      User.countDocuments(query),
+    ]);
 
-      .then(async (result) => {
-        const count = await User.countDocuments({});
-        const nextPage = parseInt(page) + 1;
-        const hasNextPage = nextPage <= Math.ceil(count / perPage);
-        const hasPreviousPage = page > 1; // Check if current page is greater than 1
+    // Calculate pagination details
+    const nextPage = parseInt(page) + 1;
+    const hasNextPage = nextPage <= Math.ceil(count / perPage);
+    const hasPreviousPage = page > 1;
 
-        res.render('teacher/studentsRequests', {
-          title: 'StudentsRequests',
-          path: req.path,
-          modalData: null,
-          modalDelete: null,
-          studentsRequests: result,
-
-          Grade: Grade,
-          isSearching: false,
-          nextPage: hasNextPage ? nextPage : null,
-          previousPage: hasPreviousPage ? page - 1 : null, // Calculate previous page
-        });
-      });
+    // Render the response
+    res.render('teacher/studentsRequests', {
+      title: 'StudentsRequests',
+      path: req.path,
+      modalData: null,
+      modalDelete: null,
+      studentsRequests: result,
+      Grade,
+      isSearching: false,
+      nextPage: hasNextPage ? nextPage : null,
+      previousPage: hasPreviousPage ? page - 1 : null,
+    });
   } catch (error) {
-    console.log(error);
+    console.error('Error in studentsRequests_get:', error);
+    res.status(500).send('Internal Server Error');
   }
 };
+
 
 const searchForUser = async (req, res) => {
   const { searchBy, searchInput } = req.body;
@@ -212,22 +240,14 @@ const getSingleUserAllData = async (req, res) => {
      
     ).then((result) => {
 
-      res.render('teacher/studentsRequests', {
-        title: 'StudentsRequests',
-        path: req.path,
-        modalData: result,
-        modalDelete: null,
-        studentsRequests: null,
-     
-      
-        isSearching: false,
-        nextPage: null,
-        previousPage: null, // Calculate previous page
-      });
+      res.status(200).send(result);
     }).catch((error) => {
       console.log(error);
     });
-  } catch (error) {}
+  } catch (error) {
+    console.log(error);
+    
+  }
 };
 
 const updateUserData = async (req, res) => {
@@ -237,10 +257,8 @@ const updateUserData = async (req, res) => {
       phone,
       parentPhone,
       balance,
-      centerName,
-      Grade,
-      gradeType,
-      groupTime,
+ 
+      absences,
       amountRemaining,
       GradeLevel,
       attendingType,
@@ -266,12 +284,13 @@ const updateUserData = async (req, res) => {
     if (attendingType) updateFields.attendingType = attendingType;
     if (bookTaken) updateFields.bookTaken = bookTaken;
     if (schoolName) updateFields.schoolName = schoolName;
+    if (absences) updateFields.absences = absences
 
     // Optional fields with additional checks
-    if (centerName) updateFields.centerName = centerName;
-    if (Grade) updateFields.Grade = Grade;
-    if (gradeType) updateFields.gradeType = gradeType;
-    if (groupTime) updateFields.groupTime = groupTime;
+    // if (centerName) updateFields.centerName = centerName;
+    // if (Grade) updateFields.Grade = Grade;
+    // if (gradeType) updateFields.gradeType = gradeType;
+    // if (groupTime) updateFields.groupTime = groupTime;
 
     // Update the student document
     const updatedUser = await User.findByIdAndUpdate(studentID, updateFields, {
@@ -282,38 +301,37 @@ const updateUserData = async (req, res) => {
     }
 
     // Handle group update only if centerName is provided
-    if (centerName) {
-      // Remove the student from any previous group
-      await Group.updateMany(
-        { students: updatedUser._id },
-        { $pull: { students: updatedUser._id } }
-      );
+    // if (centerName) {
+    //   console.log('Updating group data...');
+    //   // Remove the student from any previous group
+    //   await Group.updateMany(
+    //     { students: updatedUser._id },
+    //     { $pull: { students: updatedUser._id } }
+    //   );
 
-      // Find the new group
-      const newGroup = await Group.findOne({
-        CenterName: centerName,
-        Grade,
-        gradeType,
-        GroupTime: groupTime,
-      });
+    //   // Find the new group
+    //   const newGroup = await Group.findOne({
+    //     CenterName: centerName,
+    //     Grade,
+    //     gradeType,
+    //     GroupTime: groupTime,
+    //   });
 
-      if (!newGroup) {
-        return res.status(404).json({ error: 'Target group not found.' });
-      }
+    //   if (!newGroup) {
+    //     return res.status(404).json({ error: 'Target group not found.' });
+    //   }
 
-      // Add the student to the new group
-      if (!newGroup.students.includes(updatedUser._id)) {
-        newGroup.students.push(updatedUser._id);
-        await newGroup.save();
-      }
-    }
+    //   // Add the student to the new group
+    //   if (!newGroup.students.includes(updatedUser._id)) {
+    //     newGroup.students.push(updatedUser._id);
+    //     await newGroup.save();
+    //   }
+    // }
 
     // Redirect or send a success response
     res
       .status(200)
-      .redirect(
-        `/teacher/studentsRequests?centerName=${centerName}&Grade=${Grade}&gradeType=${gradeType}&groupTime=${groupTime}`
-      );
+      .json({ message: 'User data updated successfully.', updatedUser });
   } catch (error) {
     console.error('Error updating user data:', error);
     res.status(500).json({ error: 'Internal server error.' });
@@ -321,23 +339,23 @@ const updateUserData = async (req, res) => {
 };
 
 
-const confirmDeleteStudent = async (req, res) => {
-  try {
-    const studentID = req.params.studentID;
-    res.render('teacher/studentsRequests', {
-      title: 'StudentsRequests',
-      path: req.path,
-      modalData: null,
-      modalDelete: studentID,
-      studentsRequests: null,
-      studentPlace: query.place || 'All',
-      Grade: query.Grade,
-      isSearching: false,
-      nextPage: null,
-      previousPage: null, // Calculate previous page
-    });
-  } catch (error) {}
-};
+// const confirmDeleteStudent = async (req, res) => {
+//   try {
+//     const studentID = req.params.studentID;
+//     res.render('teacher/studentsRequests', {
+//       title: 'StudentsRequests',
+//       path: req.path,
+//       modalData: null,
+//       modalDelete: studentID,
+//       studentsRequests: null,
+//       studentPlace: query.place || 'All',
+//       Grade: query.Grade,
+//       isSearching: false,
+//       nextPage: null,
+//       previousPage: null, // Calculate previous page
+//     });
+//   } catch (error) {}
+// };
 
 const DeleteStudent = async (req, res) => {
   try {
@@ -352,13 +370,17 @@ const DeleteStudent = async (req, res) => {
     ) {
       return res.status(400).json({ error: 'You can not delete this user' });
     }
-    await User.findByIdAndDelete(studentID).then((result) => {
-      res
-        .status(200)
-        .redirect(
-          `/teacher/studentsRequests?Grade=${query.Grade}&studentPlace=All`
-        );
-    });
+
+    await Group.updateMany(
+      { students: studentID },
+      { $pull: { students: studentID } }
+    ).then(async(result) => {
+      await User.findByIdAndDelete(studentID).then((result) => {
+        res
+          .status(200)
+          .json({ message: 'User deleted successfully.', result });
+      });
+  });
   } catch (error) {
     console.log(error);
   }
@@ -554,20 +576,35 @@ const convertToExcelAllUserData = async (req, res) => {
 
 // =================================================== END MyStudent ================================================ //
 
+async function sendWappiMessage(message, phone,adminPhone) {
+  let instanceId = '';
+  if (adminPhone == '01065057897') {
+    instanceId = '2883189';
+    waapi.auth(waapiAPI2);
+  }else if (adminPhone == '01055640148') {
+    instanceId = '3431202';
+    waapi.auth(waapiAPI);
+  }
+
+   await waapi
+     .postInstancesIdClientActionSendMessage(
+       {
+         chatId: `2${phone}@c.us`,
+         message: message,
+       },
+       { id: instanceId }
+     )
+     .then(({ data }) => {})
+     .catch((err) => {
+       console.log(err);
+     });
+}
+
+
+
 const addCardGet = async (req, res) => {
-//   console.log('Fafaf');
-//  const group = await Group.findById('672137d7e7a46e43d89e7f02');
-//   console.log(group.students);
-//   const groupTotransferStudent = await Group.findById(
-//     '6721408ae7a46e43d8c7f087'
-//   );
-//    groupTotransferStudent.students = group.students;
-
-//   await groupTotransferStudent.save();
-//   console.log(groupTotransferStudent.students);
-
+  
   res.render('teacher/addCard', { title: 'addCard', path: req.path });
- 
 }
 
 const addCardToStudent = async (req, res) => {
@@ -767,24 +804,38 @@ const markAttendance = async (req, res) => {
       const messageWappi = `⚠️ *عزيزي ولي أمر الطالب ${student.Username}*،\n
 نود إعلامكم بأنه تم التحديث ابنكم قد *تأخر في الحضور اليوم*.\n
 وقد تم تسجيل حضوره *متأخرًا*.\n
-المبلغ المتبقي من سعر الحصة هو: *${student.amountRemaining} جنيه*.\n
+وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
 عدد مرات الغياب: *${student.absences}*.\n\n
 *يرجى الانتباه لمواعيد الحضور مستقبلًا*.\n\n
+التاريخ: ${today}
+الوقت: ${new Date().toLocaleTimeString()}
 *شكرًا لتعاونكم.*`;
 
       // Send the message via the waapi (already present)
-      await waapi
-        .postInstancesIdClientActionSendMessage(
-          {
-            chatId: `2${student.parentPhone}@c.us`,
-            message: messageWappi,
-          },
-          { id: '28889' }
-        )
-        .then(({ data }) => {})
-        .catch((err) => {
-          console.log(err);
-        });
+
+    await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
+
+      // let instanceId = '';
+      // if (req.userData.phone == '01065057897') {
+      //   instanceId = '28889';
+      //   waapi.auth(waapiAPI2);
+      // }else if (req.userData.phone == '01055640148') {
+      //   instanceId = '34202';
+      //   waapi.auth(waapiAPI);
+      // }
+
+      // await waapi
+      //   .postInstancesIdClientActionSendMessage(
+      //     {
+      //       chatId: `2${student.parentPhone}@c.us`,
+      //       message: messageWappi,
+      //     },
+      //     { id: instanceId }
+      //   )
+      //   .then(({ data }) => {})
+      //   .catch((err) => {
+      //     console.log(err);
+      //   });
 
       return res.status(200).json({
         message: 'The Student Marked As Late \n' + message,
@@ -842,6 +893,18 @@ const markAttendance = async (req, res) => {
         });
       }
 
+const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
+نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
+وقد تم تسجيل حضوره *بنجاح*.\n
+وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
+عدد مرات الغياب: *${student.absences}*.\n
+التاريخ: ${today}
+الوقت: ${new Date().toLocaleTimeString()}
+*شكرًا لتعاونكم.*`;
+
+
+      // Send the message via the waapi (already present)
+      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
 
       await student.save();
       return res.status(200).json({
@@ -1169,33 +1232,6 @@ const finalizeAttendance = async (req, res) => {
         };
       }
 
-const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
-نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
-وقد تم تسجيل حضوره *بنجاح*.\n
-المبلغ المتبقي من سعر الحصة هو: *${student.amountRemaining} جنيه*.\n
-عدد مرات الغياب: *${student.absences}*.\n\n
-*شكرًا لتعاونكم.*`;
-
-
-
-   // Send the message via the waapi (already present)
-   await waapi
-     .postInstancesIdClientActionSendMessage(
-       {
-         chatId: `2${student.parentPhone}@c.us`,
-         message: messageWappi,
-       },
-       { id: '28889' }
-     )
-
-     .then(({ data }) => {})
-     .catch((err) => {
-       console.log(err);
-     });
-
-
-
-
     });
 
     // Add total row for Present Students
@@ -1294,22 +1330,8 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 *شكرًا لتعاونكم.*`;
 
 
-
-   // Send the message via the waapi (already present)
-   await waapi
-     .postInstancesIdClientActionSendMessage(
-       {
-         chatId: `2${student.parentPhone}@c.us`,
-         message: messageWappi,
-       },
-       { id: '28889' }
-     )
-
-     .then(({ data }) => {})
-     .catch((err) => {
-       console.log(err);
-     });
-
+      // Send the message via the waapi (already present)
+      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
 
 
 
@@ -1403,23 +1425,10 @@ const messageWappi = `❌ *عزيزي ولي أمر الطالب ${student.Usern
 وقد تم تسجيل غيابه .\n
 عدد مرات الغياب: *${student.absences}*.${subMessage}\n\n
 *شكرًا لتعاونكم.*`;
+ 
 
-
-
-   // Send the message via the waapi (already present)
-   await waapi
-     .postInstancesIdClientActionSendMessage(
-       {
-         chatId: `2${student.parentPhone}@c.us`,
-         message: messageWappi,
-       },
-       { id: '28889' }
-     )
-
-     .then(({ data }) => {})
-     .catch((err) => {
-       console.log(err);
-     });
+      // Send the message via the waapi (already present)
+      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
 
  
 
@@ -1866,20 +1875,10 @@ const convertAttendeesToExcel = async (req, res) => {
 عدد مرات الغياب: *${student.absences}*.\n\n
 *شكرًا لتعاونكم.*`;
 
-      // Send the message via the waapi (already present)
-      await waapi
-        .postInstancesIdClientActionSendMessage(
-          {
-            chatId: `2${student.parentPhone}@c.us`,
-            message: messageWappi,
-          },
-          { id: '28889' }
-        )
 
-        .then(({ data }) => {})
-        .catch((err) => {
-          console.log(err);
-        });
+      // Send the message via the waapi (already present)
+      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
+
     });
 
     // Add total row for Present Other Group  Students
@@ -2191,14 +2190,14 @@ const sendGradeMessages = async (req, res) => {
       let message = `
 السلام عليكم 
 مع حضرتك assistant mr kably EST/ACT math teacher 
-برجاء العلم ان تم الحصول الطالب ${name} على درجة (${grade}) من (${maxGrade}) في (${quizName}) 
+برجاء العلم ان تم حصول الطالب ${name} على درجة (${grade}) من (${maxGrade}) في (${quizName}) 
       `;
 
       try {
 
-        if (instanceID === '24954') {
-          waapi.auth(waapiAPI)
-        } else {
+        if (instanceID === '34202') {
+          waapi.auth(waapiAPI);
+        } else if(instanceID === '28889'){
           waapi.auth(waapiAPI2);
         }
 
@@ -2269,7 +2268,7 @@ ${msg}
       `;
 
       try {
-        if (instanceID === '24954') {
+        if (instanceID === '34155') {
           waapi.auth(waapiAPI)
         } else {
          waapi.auth(waapiAPI2);
@@ -2323,6 +2322,203 @@ ${msg}
 
 
 
+// =================================================== Whats app 2 =================================================== //
+
+
+const whatsApp2_get = (req, res) => {
+  res.render('teacher/whatsApp2', { title: 'whatsApp2', path: req.path });
+}
+
+const getDataStudentInWhatsApp = async (req, res) => {
+  const {centerName,Grade,gradeType,groupTime} = req.query 
+  try {
+    const group = await Group.findOne({CenterName:centerName,Grade,gradeType,GroupTime:groupTime}).populate('students')
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+    const students = group.students;
+    res.status(200).json({ students });
+  }
+  catch (error) {
+    console.error('Error fetching attendees:', error);
+    res.status(500).json({ message: 'Server error. Please try again.' });
+  }
+
+}
+
+const submitData = async (req, res) => {
+  const { data, option, quizName, maxGrade, instanceID } = req.body;
+  let n = 0;
+  req.io.emit('sendingMessages', {
+    nMessages: n,
+  });
+
+  try {
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    for (const student of data) {
+      console.log(student);
+      let theMessage = '';
+        if (option === 'HWStatus') {
+          let msg = '';
+        if (student['hwStatus'] == 'no') {
+          msg = `لم يقم الطالب ${student['studentName']} بحل واجب حصة اليوم`;
+        } else {
+          msg = `لقد قام الطالب ${student['studentName']} بحل واجب حصة اليوم`;
+        }
+theMessage = `
+السلام عليكم 
+مع حضرتك assistant mr kably EST/ACT math teacher 
+${msg}
+`;
+
+      }else if (option === 'gradeMsg') {
+        theMessage = `
+السلام عليكم
+مع حضرتك assistant mr kably EST/ACT math teacher
+برجاء العلم ان تم حصول الطالب ${student['studentName']} على درجة (${student['grade']}) من (${maxGrade}) في (${quizName})
+`;
+      }
+
+      console.log(theMessage  , student['parentPhone']);
+
+      try {
+        if (instanceID === '34202') {
+          waapi.auth(waapiAPI);
+        } else if(instanceID === '28889'){ 
+          waapi.auth(waapiAPI2);
+        }
+        await waapi
+          .postInstancesIdClientActionSendMessage(
+            {
+              chatId: `2${student['parentPhone']}@c.us`,
+              message: theMessage,
+            },
+            { id: instanceID }
+          )
+          .then((result) => {
+            console.log(result);
+            req.io.emit('sendingMessages', {
+              nMessages: ++n,
+            });
+          })
+          .catch((err) => {
+            console.error(err);
+          });
+      } catch (err) {
+        console.error(`Error sending message to ${student['studentName']}:`, err);
+      }
+
+      // Introduce a random delay between 1 and 10 seconds
+      const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+      console.log(
+        `Delaying for ${
+          randomDelay / 1000
+        } seconds before sending the next message.`
+      );
+      await delay(randomDelay);
+    }
+
+    res.status(200).json({ message: 'Messages sent successfully' });
+  } catch (error) {
+    console.error('Error sending messages:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+
+
+
+}
+
+
+// =================================================== END Whats app 2 =================================================== //
+
+// =================================================== Convert Group =================================================== //
+
+
+const convertGroup_get = (req, res) => {
+  res.render('teacher/convertGroup', { title: 'convertGroup', path: req.path });
+}
+
+const getDataToTransferring = async (req, res) => {
+  const {Code} = req.params;
+
+  try {
+    const student = await User.findOne({
+      $or: [{ cardId: Code }, { Code: +Code }],
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const groups = await Group.find({ Grade: student.Grade, CenterName: student.centerName, gradeType: student.gradeType });
+
+    if (!groups) {
+      return res.status(404).json({ message: 'No groups found for this student' });
+    }
+
+    res.status(200).json(  student  );
+  }
+  catch (error) {
+    console.error('Error fetching groups:', error);
+    res.status(500).json({ message: 'Server error. Please try again.' });
+  }
+}
+
+const transferStudent = async (req, res) => {
+  const {  centerName, Grade, gradeType, groupTime } = req.body;
+  const {Code} = req.params;
+  console.log(req.body)
+  try {
+    const student = await User.findOne({
+      $or: [{ cardId: Code }, { Code: +Code }],
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const group = await Group.findOne({
+      Grade,
+      CenterName: centerName,
+      GroupTime: groupTime,
+      gradeType,
+    });
+
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+
+    // Remove the student from any previous group
+    await Group.updateMany(
+      { students: student._id },
+      { $pull: { students: student._id } }
+    );
+
+    // Check if the student is already in the group
+    if (group.students.includes(student._id)) {
+      return res.status(400).json({ message: 'Student is already in the group' });
+    }
+
+
+    // Update the student's group info
+    student.centerName = centerName;
+    student.Grade = Grade;
+    student.gradeType = gradeType;
+    student.groupTime = groupTime;
+    await student.save();
+
+    // Transfer the student to the new group
+    group.students.push(student._id);
+    await group.save();
+
+    res.status(200).json({ message: 'Student transferred successfully' });
+  } catch (error) {
+    console.error('Error transferring student:', error);
+    res.status(500).json({ message: 'Server error. Please try again.' });
+  }
+};
 
 // =================================================== Log Out =================================================== //
 
@@ -2340,7 +2536,7 @@ module.exports = {
   myStudent_get,
 
   studentsRequests_get,
-  confirmDeleteStudent,
+  // confirmDeleteStudent,
   DeleteStudent,
   searchForUser,
   converStudentRequestsToExcel,
@@ -2377,6 +2573,16 @@ module.exports = {
   whatsApp_get,
   sendGradeMessages,
   sendMessages,
+
+  // WhatsApp 2
+  whatsApp2_get,
+  getDataStudentInWhatsApp,
+  submitData,
+
+  // Convert Group
+  convertGroup_get,
+  getDataToTransferring,
+  transferStudent,
 
   logOut,
 };

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+    <%- include("./partials/head.ejs") %>
+
+<body>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .upload-container {
+            background-color: transparent;
+            border: 2px solid #e3b228;
+            border-radius: 10px;
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-size: 2rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .file-label {
+            display: block;
+            background-color: transparent;
+            border: 2px dashed #e3b228;
+            border-radius: 5px;
+            padding: 15px;
+            color: #e3b228;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .file-label:hover {
+            background-color: #e3b228;
+            color: rgb(0, 0, 0);
+        }
+
+        #file , #fileMSG {
+            display: none;
+        }
+
+        .upload-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            border: 2px solid #e3b228;
+            background-color: transparent;
+            color: #e3b228;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background-color: #e3b228;
+            color: rgb(0, 0, 0);
+            transform: scale(1.05);
+        }
+
+        .output {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .hidden {
+            display: none;
+        }
+    input[type="radio"] {
+        width: 20px !important;
+        height: 20px !important;
+        cursor: pointer;
+        appearance: none; /* Remove default styling */
+        background-color: #ffffff; 
+        border: 2px solid #000000;
+        border-radius: 50%; /* Make it circular */
+        position: relative;
+    }
+
+    input[type="radio"]:checked::before {
+        content: "";
+        width: 10px; /* Size of the inner point */
+        height: 10px;
+        background-color: #e3b228; /* Yellow color */
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    </style>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2">
+                <%- include("./partials/nav.ejs") %>
+            </div>
+
+            <div class="col-lg-10">
+                <main>
+                    <div class="row">
+                        <div class="col-md-6"></div>
+
+                        <div class="col-md-6">
+                            <div class="left" style="margin-top: 0.2rem;">
+                                <%- include("./partials/top.ejs") %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-1 mb-4">
+                            <select name="numberSelected" id="numberSelected" class="Grade w-100 text-center" required>
+                                <option value="">اختر الرقم  </option>
+                                <option value="28889">01065057897</option>
+                                <option value="34202">01055640148</option>
+                            </select>
+                        </div>
+
+                            <div class="col-md-2">
+                                <select name="centerName" class="Grade w-100" id="centerName" value="" required>
+                                  <option value=""> اختر السنتر </option>
+                                  <option value="GTA">GTA</option>
+                                  <option value="tagmo3">Tagmo3</option>
+                                </select>
+                            </div>
+
+                             <div class="col-md-2">
+                                 <select name="Grade" id="Grade" class="Grade w-100" value="" required>
+                                   <option value=""> اختر الصف </option>
+    
+                                 </select>
+                             </div>
+
+
+                            <div class="col-md-2">
+                             <select name="gradeType" class="Grade w-100" id="gradeType" value="" required>
+                               <option value=""> Type</option>
+                             </select>
+                            </div>
+                            
+                             <div class="col-md-2">
+                                   <select name="groupTime" class="Grade w-100" id="groupTime" value="" required>
+                                     <option value=""> Group Time </option>
+                                   </select>
+
+                             </div>
+                          
+                            <div class="col-md-2 mb-4">
+                                <select name="chapterGrade" id="optionSelect" class="Grade w-100 text-center" required>
+                                    <option value="">اختر نوع الارسال </option>
+                                    <option value="HWStatus">ارسال حاله الواجب</option>
+                                    <option value="gradeMsg">ارسال درجات الامتحان</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-4">
+                                <button class="upload-btn" id="getDataButton" style="padding: 10px !important;">Get Data</button>
+                            </div>
+                        <hr>
+
+            
+                            
+              
+                      <div class="col-md-12 mb-4 hidden" id="nMessagesBox" style="color: #e3b228;">
+                        <h2>يتم الان ارسال الرسائل برجاء عدم اعاده تحميل الصفحه</h2>
+                        <div id="numberOfSendMSG" style=" border: 1px solid #e3b228 ; padding: 10px; border-radius: 20px; width: 10%; text-align: center;"></div>
+                      </div>
+
+                        <!-- Section for "ارسال درجات" -->
+                        <div id="QuizStatusName" class="hidden">
+                            <div class="col-md-4 mb-4">
+                                <input type="text" id="quizName" value="" class="form-control" placeholder="اسم الامتحان">
+                            </div>
+
+                            <div class="col-md-4 mb-4">
+                                <input type="text" id="maxGrade" value="" class="form-control" placeholder="الدرجه من كام ">
+                            </div>
+
+                   
+                        </div>
+
+                    </div>
+
+                    <div class="row">
+                     <div class="student-table hidden" id="HWStatusTabel">
+                            <h2 style="color: white;">Homework Status</h2>
+                            <table  style="color: white;">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Student Name</th>
+                                        <th>Student Code</th>
+                                        <th>Parent Phone</th>
+                                        <th>Yes</th>
+                                        <th>No</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="HWStatusTbody">
+                         
+                                    <!-- Add more rows as needed -->
+                                </tbody>
+                            </table>
+                    </div>
+                    <div class="student-table hidden" id="quizGradesTable">
+              
+                            <h2 style="color: white;">Quiz Grades</h2>
+                            <table class="table" style="color: white;">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th >Student Name</th>
+                                        <th>Student Code</th>
+                                        <th>Parent Phone</th>
+                                        <th>Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quizGradesTbody">
+                          
+                                    <!-- Add more rows as needed -->
+                                </tbody>
+                            </table>
+                   
+                    </div>
+
+                    <div class="row"></div>
+                        <div class="col-md-2 mb-4">
+                            <button class="upload-btn" id="submitDataButton" style="padding: 10px !important;">Submit Data</button>
+                        </div>
+                    </div>
+
+                </div>
+
+
+
+                </main>
+            </div>
+
+
+       
+        </div>
+
+
+      
+
+    </div>
+    
+
+    <script src="../assest/bootstrap.bundle.min.js"></script>
+    <script src="../assest/bootstrap.min.js"></script>
+
+  <%- include("../partials/group.ejs") %>
+
+
+
+  <script>
+        const numberSelected = document.getElementById('numberSelected');
+        const centerName = document.getElementById('centerName');
+        const Grade = document.getElementById('Grade');
+        const gradeType = document.getElementById('gradeType');
+        const groupTime = document.getElementById('groupTime');
+        const optionSelect = document.getElementById('optionSelect');
+        const getDataButton = document.getElementById('getDataButton');
+
+        const getData =async () => {
+       
+          // Validate inputs
+          if (!numberSelected.value || !centerName.value || !Grade.value || !gradeType.value || !groupTime.value || !optionSelect.value) {
+            alert('Please fill in all the required fields.');
+            return;
+          }
+
+            // Disable all buttons
+            numberSelected.disabled = true;
+            centerName.disabled = true;
+            Grade.disabled = true;
+            gradeType.disabled = true;
+            groupTime.disabled = true;
+            optionSelect.disabled = true;
+            getDataButton.disabled = true;
+
+            // Get data
+          await fetch(`/teacher/whatsApp2/getDataStudentInWhatsApp?numberSelected=${numberSelected.value}&centerName=${centerName.value}&Grade=${Grade.value}&gradeType=${gradeType.value}&groupTime=${groupTime.value}&optionSelect=${optionSelect.value}`)
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data);
+                    
+
+                    // Fill the table
+                    if (optionSelect.value === 'HWStatus') {
+                        document.getElementById('HWStatusTabel').classList.remove('hidden');
+                        const tbody = document.getElementById('HWStatusTbody');
+                        tbody.innerHTML = '';
+                        data.students.forEach((student, index) => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${student.Username}</td>
+                                    <td>${student.Code}</td>
+                                    <td>${student.parentPhone}</td>
+                                    <td><input type="radio" name="hwStatus${index + 1}" value="yes"></td>
+                                    <td><input type="radio" name="hwStatus${index + 1}" value="no"></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    else if (optionSelect.value === 'gradeMsg') {
+                        document.getElementById('quizGradesTable').classList.remove('hidden');
+                        document.getElementById('QuizStatusName').classList.remove('hidden');
+                        const tbody = document.getElementById('quizGradesTbody');
+                        tbody.innerHTML = '';
+                        data.students.forEach((student, index) => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${student.Username}</td>
+                                    <td>${student.Code}</td>
+                                    <td>${student.parentPhone}</td>
+                                    <td><input type="text" name="quizGrade${index + 1}" class="form-control mx-auto" value="0" dir="ltr"></
+                                </tr>
+                            `;
+                        });
+
+                        
+                    }
+                });
+
+        }
+
+        getDataButton.addEventListener('click', getData);
+
+
+
+
+  </script>
+
+<script>
+  const submitDataButton = document.getElementById('submitDataButton');
+  
+  const submitData = async () => {
+    document.getElementById('nMessagesBox').classList.remove('hidden');
+    // Collect data from the table
+    const data = [];
+    let isValid = true;
+
+    if (optionSelect.value === 'HWStatus') {
+        const rows = document.querySelectorAll('#HWStatusTbody tr');
+        rows.forEach((row, index) => {
+            const studentName = row.cells[1].innerText;
+            const studentCode = row.cells[2].innerText;
+            const parentPhone = row.cells[3].innerText;
+            const hwStatusInput = row.querySelector(`input[name="hwStatus${index + 1}"]:checked`);
+            const hwStatus = hwStatusInput ? hwStatusInput.value : "no"; // Default to "no" if not checked
+            data.push({
+                studentName,
+                studentCode,
+                parentPhone,
+                hwStatus
+            });
+        });
+    } else if (optionSelect.value === 'gradeMsg') {
+        const quizName = document.getElementById('quizName').value;
+        const maxGrade = document.getElementById('maxGrade').value;
+
+        if (!quizName || !maxGrade) {
+            isValid = false;
+            alert('Please enter quiz name and max grade.');
+            return;
+        }
+
+        const rows = document.querySelectorAll('#quizGradesTbody tr');
+        rows.forEach((row, index) => {
+            const studentName = row.cells[1].innerText;
+            const studentCode = row.cells[2].innerText;
+            const parentPhone = row.cells[3].innerText;
+            const gradeInput = row.querySelector(`input[name="quizGrade${index + 1}"]`);
+            const grade = gradeInput ? gradeInput.value : "0"; // Default to "0" if empty
+            data.push({
+                studentName,
+                studentCode,
+                parentPhone,
+                grade
+            });
+        });
+    }
+
+    if (!isValid) return;
+
+    console.log(data);
+    // console.log(document.getElementById('quizName').value, document.getElementById('maxGrade').value);
+    console.log(optionSelect.value);
+
+    // Send data to the server
+  const response =   await fetch('/teacher/whatsApp2/submitData', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          data,
+          option: optionSelect.value,
+          quizName: document.getElementById('quizName').value||'',
+          maxGrade: document.getElementById('maxGrade').value||'',
+          instanceID: document.getElementById('numberSelected').value
+        })
+      })
+      if(response.ok){
+        console.log('Data submitted successfully!');
+        alert('Data submitted successfully!');
+        window.location.reload();
+      }else{
+        console.log('Failed to submit data!');
+        alert('Failed to submit data!');
+      }
+      
+  
+  };
+
+  submitDataButton.addEventListener('click', submitData);
+</script>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const numberOfSendMSG = document.getElementById('numberOfSendMSG');
+      const socket = io();
+
+      socket.on('sendingMessages', (data) => {
+        numberOfSendMSG.classList.remove('d-none');
+        numberOfSendMSG.innerHTML = `تم ارسال ${data.nMessages} رساله`;
+
+
+      });
+    </script>
+
+
+ 
+</body>
+
+</html>
