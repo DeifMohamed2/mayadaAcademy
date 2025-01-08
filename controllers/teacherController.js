@@ -697,6 +697,8 @@ const markAttendance = async (req, res) => {
       
     }
 
+
+    
     // Mark student as present in today's attendance
     const today = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Africa/Cairo', // Egypt's time zone
