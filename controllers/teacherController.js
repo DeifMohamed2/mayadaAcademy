@@ -11,24 +11,6 @@ const waapiAPI2 = process.env.WAAPIAPI2;
 const Excel = require('exceljs');
 
 const dash_get = async(req, res) => {
-  //   const idsToKeep = [
-  //     "65e4cfe6022bba8f9ed4a80f",
-  //     "65e4d024022bba8f9ed4a811",
-  //     "65e4d045022bba8f9ed4a813",
-  //     "65eb2856a76c472e4fa64fd3",
-  //     "65e8fd8449a3eecaa4593bd3"
-  // ];
-  //   User.deleteMany({ _id: { $nin: idsToKeep } })
-  //   .then(result => {
-  //       console.log(`${result.deletedCount} users deleted.`);
-  //   })
-  //   .catch(error => {
-  //       console.error("Error deleting users:", error);
-  //   });
-
-
-
- 
 
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
@@ -578,12 +560,12 @@ const convertToExcelAllUserData = async (req, res) => {
 
 async function sendWappiMessage(message, phone,adminPhone) {
   let instanceId = '';
-  if (adminPhone == '01065057897') {
-    instanceId = '2883189';
-    waapi.auth(waapiAPI2);
-  }else if (adminPhone == '01055640148') {
-    instanceId = '3431202';
+  if (adminPhone == '01002979423') {
+    instanceId = '35418';
     waapi.auth(waapiAPI);
+  } else if (adminPhone == '01055640148') {
+    instanceId = '3431202';
+    waapi.auth(waapiAPI2);
   }
 
    await waapi
@@ -815,28 +797,7 @@ const markAttendance = async (req, res) => {
 
     await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
 
-      // let instanceId = '';
-      // if (req.userData.phone == '01065057897') {
-      //   instanceId = '28889';
-      //   waapi.auth(waapiAPI2);
-      // }else if (req.userData.phone == '01055640148') {
-      //   instanceId = '34202';
-      //   waapi.auth(waapiAPI);
-      // }
-
-      // await waapi
-      //   .postInstancesIdClientActionSendMessage(
-      //     {
-      //       chatId: `2${student.parentPhone}@c.us`,
-      //       message: messageWappi,
-      //     },
-      //     { id: instanceId }
-      //   )
-      //   .then(({ data }) => {})
-      //   .catch((err) => {
-      //     console.log(err);
-      //   });
-
+ 
       return res.status(200).json({
         message: 'The Student Marked As Late \n' + message,
         studentsPresent: attendance.studentsPresent,
@@ -2189,15 +2150,15 @@ const sendGradeMessages = async (req, res) => {
 
       let message = `
 السلام عليكم 
-مع حضرتك assistant mr kably EST/ACT math teacher 
+مع حضرتك Assistant Miss Mayada EST/ACT Teacher 
 برجاء العلم ان تم حصول الطالب ${name} على درجة (${grade}) من (${maxGrade}) في (${quizName}) 
       `;
 
       try {
 
-        if (instanceID === '34202') {
+        if (instanceID === '35418') {
           waapi.auth(waapiAPI);
-        } else if(instanceID === '28889'){
+        } else if (instanceID === '28889') {
           waapi.auth(waapiAPI2);
         }
 
@@ -2263,15 +2224,15 @@ const sendMessages = async (req, res) => {
 
       let theMessage = `
 السلام عليكم 
-مع حضرتك assistant mr kably EST/ACT math teacher 
+مع حضرتك Assistant Miss Mayada EST/ACT Teacher 
 ${msg}
       `;
 
       try {
-        if (instanceID === '34155') {
-          waapi.auth(waapiAPI)
+        if (instanceID === '35418') {
+          waapi.auth(waapiAPI);
         } else {
-         waapi.auth(waapiAPI2);
+          waapi.auth(waapiAPI2);
         }
         await waapi
           .postInstancesIdClientActionSendMessage(
@@ -2368,24 +2329,24 @@ const submitData = async (req, res) => {
         }
 theMessage = `
 السلام عليكم 
-مع حضرتك assistant mr kably EST/ACT math teacher 
+مع حضرتك Assistant Miss Mayada EST/ACT Teacher 
 ${msg}
 `;
 
       }else if (option === 'gradeMsg') {
         theMessage = `
 السلام عليكم
-مع حضرتك assistant mr kably EST/ACT math teacher
-برجاء العلم ان تم حصول الطالب ${student['studentName']} على درجة (${student['grade']}) من (${maxGrade}) في (${quizName})
+مع حضرتك Assistant Miss Mayada EST/ACT Teacher
+برجاء العلم ان تم حصول الطالب ${student['studentName']} على درجة (${student['grade']? student['grade'] : 'لم يحضر' }) من (${maxGrade}) في (${quizName})
 `;
       }
 
       console.log(theMessage  , student['parentPhone']);
 
       try {
-        if (instanceID === '34202') {
+        if (instanceID === '35418') {
           waapi.auth(waapiAPI);
-        } else if(instanceID === '28889'){ 
+        } else if (instanceID === '288289') {
           waapi.auth(waapiAPI2);
         }
         await waapi

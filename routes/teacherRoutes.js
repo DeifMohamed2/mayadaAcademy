@@ -24,7 +24,7 @@ const authMiddleware =async (req,res,next)=>{
  
       await User.findOne({'_id':decode.userId}).then((result)=>{
         if (result.isTeacher) {
-          
+          req.userData = result;  
           next();
         }else{
           res.clearCookie('token');
@@ -65,15 +65,13 @@ router.get("/logOut", authMiddleware,teacherController.logOut);
 
 router.get("/studentsRequests/:studentID", authMiddleware,teacherController.getSingleUserAllData);
 
-router.get("/studentsRequests/delete/:studentID", authMiddleware,teacherController.confirmDeleteStudent);
-
-router.post("/studentsRequests/delete/:studentID", authMiddleware,teacherController.DeleteStudent);
+router.delete("/studentsRequests/delete/:studentID", authMiddleware,teacherController.DeleteStudent);
 
 router.post("/converStudentRequestsToExcel", authMiddleware,teacherController.converStudentRequestsToExcel);
 
 router.post("/searchForUser", authMiddleware,teacherController.searchForUser);
 
-router.post("/updateUserData/:studentID", authMiddleware,teacherController.updateUserData);
+router.put("/updateUserData/:studentID", authMiddleware,teacherController.updateUserData);
 
 
 // ==================  END Student Requests  ================= //
@@ -140,8 +138,26 @@ router.get('/whatsApp', authMiddleware, teacherController.whatsApp_get);
 router.post('/sendGradeMessages', authMiddleware, teacherController.sendGradeMessages);
 router.post('/sendMessages', authMiddleware, teacherController.sendMessages);
 
+// ================== END Whats App ====================== //
+
+// ==================  whatsApp 2  ================= //
+
+router.get('/whatsApp2', authMiddleware, teacherController.whatsApp2_get);
+
+router.get('/whatsApp2/getDataStudentInWhatsApp', authMiddleware, teacherController.getDataStudentInWhatsApp);
+
+router.post('/whatsApp2/submitData', authMiddleware, teacherController.submitData);
 
 
+// ==================  END whatsApp 2  ================= //
+
+// ==================  Convert Group  ================= //
+
+router.get('/convertGroup', authMiddleware, teacherController.convertGroup_get);
+
+router.get('/getDataToTransferring/:Code', authMiddleware, teacherController.getDataToTransferring);
+
+router.put('/transferStudent/:Code', authMiddleware, teacherController.transferStudent);
 
 
 module.exports = router;

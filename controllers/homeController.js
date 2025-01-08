@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const qrcode = require('qrcode');
 
 const jwtSecret = process.env.JWTSECRET;
-const waapiAPI = process.env.WAAPIAPI2;
+const waapiAPI = process.env.WAAPIAPI;
 waapi.auth(`${waapiAPI}`);
 
 async function sendQRCode(chatId, message, studentCode) {
@@ -22,16 +22,16 @@ async function sendQRCode(chatId, message, studentCode) {
     console.log('Generated QR Code Base64:', base64Image);
     console.log('Sending to Chat ID:', chatId);
 
-    // const response = await waapi.postInstancesIdClientActionSendMedia(
-    //   {
-    //     chatId: chatId, // Target chat ID
-    //     mediaBase64: base64Image,
-    //     mediaName: 'qrcode.png',
-    //     mediaCaption: message,
-    //     asSticker: false, // Set true if you want to send as a sticker
-    //   },
-    //   { id: '2883333389' } // Replace with your actual instance ID
-    // );
+    const response = await waapi.postInstancesIdClientActionSendMedia(
+      {
+        chatId: chatId, // Target chat ID
+        mediaBase64: base64Image,
+        mediaName: 'qrcode.png',
+        mediaCaption: message,
+        asSticker: false, // Set true if you want to send as a sticker
+      },
+      { id: '35418' } // Replace with your actual instance ID
+    );
 
     console.log('QR code sent successfully:', response.data);
   } catch (error) {
@@ -193,6 +193,7 @@ const public_Register_get = (req, res) => {
 // })
 
 // };
+
 const public_Register_post = async (req, res) => {
   const {
     Username,
