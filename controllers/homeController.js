@@ -7,6 +7,8 @@ const qrcode = require('qrcode');
 
 const jwtSecret = process.env.JWTSECRET;
 const waapiAPI = process.env.WAAPIAPI;
+const instanceId = process.env.INSTANCEID;
+
 waapi.auth(`${waapiAPI}`);
 
 async function sendQRCode(chatId, message, studentCode) {
@@ -30,7 +32,7 @@ async function sendQRCode(chatId, message, studentCode) {
         mediaCaption: message,
         asSticker: false, // Set true if you want to send as a sticker
       },
-      { id: '35418' } // Replace with your actual instance ID
+      { id: instanceId } // Replace with your actual instance ID
     );
 
     console.log('QR code sent successfully:', response.data);

@@ -6,10 +6,11 @@ const Attendance = require('../models/Attendance');
 
 const waapi = require('@api/waapi');
 const waapiAPI = process.env.WAAPIAPI;
-const waapiAPI2 = process.env.WAAPIAPI2;
+const instanceId = process.env.INSTANCEID; 
+waapi.auth(waapiAPI);
 
-const Excel = require('exceljs');
-
+const Excel = require('exceljs'); 
+  
 const dash_get = async(req, res) => {
 
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
@@ -559,14 +560,8 @@ const convertToExcelAllUserData = async (req, res) => {
 // =================================================== END MyStudent ================================================ //
 
 async function sendWappiMessage(message, phone,adminPhone) {
-  let instanceId = '';
-  if (adminPhone == '01094239449') {
-    instanceId = '35418';
-    waapi.auth(waapiAPI);
-  } else if (adminPhone == '01055640148') {
-    instanceId = '3431202';
-    waapi.auth(waapiAPI2);
-  }
+ 
+
 
    await waapi
      .postInstancesIdClientActionSendMessage(
@@ -2086,7 +2081,7 @@ const convertAttendaceToExcel = async (req, res) => {
         mediaName: 'attendance_report.xlsx',
         mediaCaption: `Attendance Report for ${student.Username}`,
       },
-      { id: '28889' }
+      { id: instanceId }
     )
     .then(({ data }) => console.log(data))
     .catch((err) => console.error(err));
@@ -2158,11 +2153,7 @@ const sendGradeMessages = async (req, res) => {
 
       try {
 
-        if (instanceID === '35418') {
-          waapi.auth(waapiAPI);
-        } else if (instanceID === '28889') {
-          waapi.auth(waapiAPI2);
-        }
+  
 
         await waapi
           .postInstancesIdClientActionSendMessage(
@@ -2231,11 +2222,7 @@ ${msg}
       `;
 
       try {
-        if (instanceID === '35418') {
-          waapi.auth(waapiAPI);
-        } else {
-          waapi.auth(waapiAPI2);
-        }
+       
         await waapi
           .postInstancesIdClientActionSendMessage(
             {
@@ -2346,11 +2333,7 @@ ${msg}
       console.log(theMessage  , student['parentPhone']);
 
       try {
-        if (instanceID === '35418') {
-          waapi.auth(waapiAPI);
-        } else if (instanceID === '288289') {
-          waapi.auth(waapiAPI2);
-        }
+     
         await waapi
           .postInstancesIdClientActionSendMessage(
             {
