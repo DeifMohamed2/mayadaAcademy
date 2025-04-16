@@ -562,7 +562,6 @@ const convertToExcelAllUserData = async (req, res) => {
 async function sendWappiMessage(message, phone,adminPhone) {
  
 
-
    await waapi
      .postInstancesIdClientActionSendMessage(
        {

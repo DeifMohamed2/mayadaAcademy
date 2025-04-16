@@ -304,45 +304,6 @@
         </form>
 
 
-          <!-- Section for "ارسال درجات" -->
-                        <!-- <div id="gradeMsgSection">
-                          <div class="col-md-4 mb-4">
-                                <input type="text" id="CodeCloumn" class="form-control" placeholder="اسم CodeCloumn">
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="schoolCloumn" class="form-control" placeholder="اسم school">
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="gradeInNumberCloumn" class="form-control" placeholder="grade In Number Cloumn ">
-                            </div>
-
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="phoneCloumnName" class="form-control" placeholder="اكتب اسم ال cloumn بتاع ارقام اولياء الامور">
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="studentPhoneCloumnName" class="form-control" placeholder="اكتب اسم ال cloumn بتاع ارقام الطلاب ">
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="nameCloumnName" class="form-control" placeholder="اكتب اسم ال cloumn بتاع اسماء الطلاب">
-                            </div>
-                            <div class="col-md-4 mb-4">
-                                <input type="text" id="emailCloumn" class="form-control" placeholder="Email">
-                            </div>
-
-                            <div class="upload-container">
-                                <h1>رفع شيت الاكسل</h1>
-                                <div class="file-input-wrapper">
-                                    <label for="file" class="file-label" id="fileLabel">
-                                        <i class="fas fa-upload"></i> اختر الملف لرفعه
-                                    </label>
-                                    <input type="file" id="file" name="file" required onchange="updateFileName()">
-                                </div>
-                                <button class="upload-btn" onclick="handleFile()">رفع الملف</button>
-
-                                <div class="output" id="output"></div>
-                                <h2 class="warning d-none" id="numberOfSend"></h2>
-                            </div>
-                        </div> -->
       </div>
     </section>
 
@@ -356,6 +317,120 @@
 
 
   <%- include("./partials/group.ejs") %>
+
+<!-- 
+<script>
+// Function to handle file reading
+function updateFileName() {
+    const input = document.getElementById('file');
+    const fileLabel = document.getElementById('fileLabel');
+    if (input.files.length > 0) {
+        fileLabel.innerHTML = `<i class="fas fa-file-alt"></i> ${input.files[0].name}`;
+    }
+}
+
+// Function to handle file reading and show "Uploaded" status
+function handleFile() {
+    const input = document.getElementById('file');
+    const fileLabel = document.getElementById('fileLabel');
+
+    if (!input.files.length) {
+        alert('Please select a file!');
+        return;
+    }
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const sheetName = workbook.SheetNames[0];
+        console.log(sheetName);
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        console.log(json);
+
+        displayDataAndSend(json);
+
+        // Update label to indicate that the file is uploaded
+        fileLabel.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name} (Uploaded)`;
+        fileLabel.style.color = "green";
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+// Function to send the data
+async function displayDataAndSend(data) {
+    const output = document.getElementById('output');
+
+    output.innerHTML = 'data is being sent...';
+    const phoneCloumnName = document.getElementById('phoneCloumnName');
+    const studentPhoneCloumnName = document.getElementById('studentPhoneCloumnName');
+    const nameCloumnName = document.getElementById('nameCloumnName');
+    const emailCloumn = document.getElementById('emailCloumn');
+    const schoolCloumn = document.getElementById('schoolCloumn'); 
+    const CodeCloumn = document.getElementById('CodeCloumn');
+
+    const gradeInNumberCloumn = document.getElementById('gradeInNumberCloumn');
+    const centerName = document.getElementById('centerName');
+    const Grade = document.getElementById('Grade');
+    const gradeType = document.getElementById('gradeType');
+    const groupTime = document.getElementById('groupTime');
+    const schoolName = document.getElementById('schoolName');
+
+    // const emailCloumn = document.getElementById('emailCloumn');
+    // const schoolCloumn = document.getElementById('schoolCloumn');
+    // const gradeInNumberCloumn = document.getElementById('gradeInNumberCloumn');
+
+    if (!phoneCloumnName.value || !studentPhoneCloumnName.value || !nameCloumnName.value) {
+        alert('ادخل اسامي ال cloumn');
+        return;
+    }
+
+    const dataSend = {
+        phoneCloumnName: phoneCloumnName.value,
+        studentPhoneCloumnName: studentPhoneCloumnName.value,
+        nameCloumnName: nameCloumnName.value,
+        CodeCloumn: CodeCloumn.value,
+        // emailCloumn: emailCloumn.value,
+        // schoolCloumn: schoolCloumn.value,
+        // gradeInNumberCloumn: gradeInNumberCloumn.value,
+        centerName: centerName.value,
+        Grade: Grade.value,
+        gradeType: gradeType.value,
+        groupTime: groupTime.value,
+        schoolName: schoolName.value,
+        dataToSend: data
+    };
+
+    try {
+        const response = await fetch('/Register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataSend)
+        });
+
+        const responseData = await response.json();
+
+        if (response.ok) {
+            output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
+            output.style.color = "green";
+        } else {
+            output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+            output.style.color = "red";
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+        output.style.color = "red";
+    }
+}
+</script> -->
 
 
 
