@@ -3,11 +3,15 @@
 const centerNames = {
     maadi : [
     { value: 'EST', text: 'EST' },
+    { value: 'SAT', text: 'SAT' },
+    { value: 'Basics', text: 'Basics' },
+
   
     ],
     tagmo3 :[
     { value: 'EST', text: 'EST' },
-    { value: 'ACT', text: 'ACT' }
+    { value: 'SAT', text: 'SAT' },
+    { value: 'Basics', text: 'Basics' },
 
     ]
   }
@@ -16,11 +20,15 @@ const centerNames = {
 const gradeTypeOptions = {
   EST :[
     { value: 'adv', text: 'Advanced' },
-    { value: 'basic', text: 'Basic' }
   ],
-  ACT: [
+  SAT: [
     { value: 'adv', text: 'advanced' }
+  ],
+  Basics: [
+    { value: 'normal', text: 'normal' }
   ]
+  
+
 };
 
 // Group times for each center
@@ -28,42 +36,52 @@ const groupTimes = {
   maadi: {
     EST: {
       adv: [
-        { value: 'group1', text: 'Group(1)' }, 
-        { value: 'group2', text: 'Group(2)' },
-        { value: 'group3', text: 'Group(3)' },
-        { value: 'Test', text: 'Test' },
+        { value: 'group1', text: 'Sunday 6 pm & Wednesday 5:30 PM' },
+       
 
       ],
-      basic: [
-        { value: 'group1', text: "Group(1)" },
-
-      ]
+   
     },
+    SAT: {
+      adv: [
+        { value: 'group1', text: 'Sunday at 2 PM & Wednesday at 3:30 PM' },
+       
+      ],
+   
+    },
+
+    Basics: {
+      normal: [
+        { value: 'group1', text: 'Sunday at 4 PM & Wednesday at 4 PM' },
+       
+      ],
+    },
+
+
  
   },
   tagmo3: {
     EST: {
       adv: [
-        { value: 'group1', text: "Group(1)" },
-        { value: 'group2', text: "Group(2)" },
-        { value: 'group3', text: "Group(3)" },
-        
-              
+        { value: 'group1', text: 'Saturday at 5 PM & Tuesday at 8:30 PM' },
+       
       ],
-      basic :[
-       { value: 'group1', text: "Group(1)" },
-
+   
+    },
+    SAT: {
+      adv: [
+        { value: 'group1', text: 'Saturday at 2 PM & Tuesday at 4:30 PM' },
+       
       ],
-  
+   
     },
 
-    ACT: {
-
-      adv: [
-      { value: 'group1', text: "Group(1)" },
+    Basics: {
+      normal: [
+        { value: 'group1', text: 'Saturday at 7 pm & Tuesday at 6:30 PM' },
+       
       ],
-    }
-  
+    },
   }
 };
 
