@@ -102,13 +102,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-2 mb-4">
-                            <select name="numberSelected" id="numberSelected" class="Grade w-100 text-center" required>
-                                <option value="">اختر الرقم  </option>
-                               <option value="54016">01200077823</option>
-                                <!-- <option value="54015">01094239449</option> -->
-                            </select>
-                        </div>
+                    
                         <div class="col-md-2 mb-4">
                             <select name="chapterGrade" id="optionSelect" class="Grade w-100 text-center" required>
                                 <option value="">اختر نوع الارسال </option>
@@ -201,7 +195,6 @@
 
     <script>
         const optionSelect = document.getElementById('optionSelect');
-        const numberSelected = document.getElementById('numberSelected');
         const msgWithoutPhotoSection = document.getElementById('msgWithoutPhotoSection');
         const msgWithPhotoSection = document.getElementById('msgWithPhotoSection');
         const gradeMsgSection = document.getElementById('gradeMsgSection');
@@ -278,7 +271,7 @@
             const quizName = document.getElementById('quizName');
             const maxGrade = document.getElementById('maxGrade');
 
-            if (!phoneCloumnName.value || !gradeCloumnName.value || !nameCloumnName.value || !quizName.value || !maxGrade.value || !numberSelected.value) {
+            if (!phoneCloumnName.value || !gradeCloumnName.value || !nameCloumnName.value || !quizName.value || !maxGrade.value ) {
                 alert('ادخل اسامي ال cloumn');
                 return;
             }
@@ -289,7 +282,6 @@
                 nameCloumnName: nameCloumnName.value,
                 quizName: quizName.value,
                 maxGrade: maxGrade.value,
-                instanceID: numberSelected.value,
                 dataToSend: data
             };
 
@@ -375,7 +367,7 @@
             const nameCloumnNameMSG = document.getElementById('nameCloumnNameMSG');
             const HWCloumnName = document.getElementById('HWCloumnName');
 
-            if (!phoneCloumnName.value  || !nameCloumnNameMSG.value || !HWCloumnName.value || !numberSelected.value) {
+            if (!phoneCloumnName.value  || !nameCloumnNameMSG.value || !HWCloumnName.value ) {
                 alert('ادخل اسامي ال cloumn');
                 return;
             }
@@ -384,7 +376,6 @@
                 phoneCloumnName: phoneCloumnName.value,
                 nameCloumnName: nameCloumnNameMSG.value,
                 HWCloumnName : HWCloumnName.value ,
-                instanceID: numberSelected.value,
                 dataToSend: data
             };
 
