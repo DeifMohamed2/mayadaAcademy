@@ -21,7 +21,7 @@ const socketio = require('socket.io');
 
 // CONECT to mongodb
 let io
-const dbURI = 'mongodb+srv://3devWay:1qaz2wsx@cluster0.5orkagp.mongodb.net/mayada?retryWrites=true&w=majority&appName=Cluster0'
+const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/mayada?retryWrites=true&w=majority&appName=Cluster0'
 mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then((result) => {
         let server = app.listen(8420);
