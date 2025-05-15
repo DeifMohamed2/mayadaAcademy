@@ -564,6 +564,8 @@ async function sendWappiMessage(message, phone, adminPhone) {
     instanceID = '63771'
   }else if(adminPhone=="01200077825"){
     instanceID = '66610'
+  }else if(adminPhone=="01200077829"){
+    instanceID = '66886'
   }
 
   return waapi
