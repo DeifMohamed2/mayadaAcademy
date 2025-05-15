@@ -569,7 +569,7 @@ async function sendWappiMessage(message, phone, adminPhone) {
   return waapi
     .postInstancesIdClientActionSendMessage(
       {
-        chatId: `2${phone}@c.us`,
+        chatId: `20${phone}@c.us`,
         message: message,
       },
       { id: instanceID }
