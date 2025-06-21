@@ -4,10 +4,7 @@ const WhatsAppInstance = require('../models/WhatsAppInstance');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance'); 
 
-const waapi = require('@api/waapi');
-const waapiAPI = process.env.WAAPIAPI;
-waapi.auth(waapiAPI);
-
+const waziper = require('../utils/waziper');
 const Excel = require('exceljs'); 
   
 const dash_get = async(req, res) => {
@@ -558,31 +555,29 @@ const convertToExcelAllUserData = async (req, res) => {
 
 // =================================================== END MyStudent ================================================ //
 
-async function sendWappiMessage(message, phone, adminPhone) {
+async function sendWappiMessage(message, phone, adminPhone, isExcel = false) {
   let instanceID = ''
   if(adminPhone=="01200077823"){
-    instanceID = '63771'
+    instanceID = '68533DDE7D372'
   }else if(adminPhone=="01200077825"){
-    instanceID = '66610'
+    instanceID = '68533DDE7D372'
   }else if(adminPhone=="01200077829"){
-    instanceID = '66886'
+    instanceID = '68536629B61C9'
   }
 
-  return waapi
-    .postInstancesIdClientActionSendMessage(
-      {
-        chatId: `2${phone}@c.us`,
-        message: message,
-      },
-      { id: instanceID }
-    )
-    .then(({ data }) => {
-      return data; // Return data from the resolved promise
-    })
-    .catch((err) => {
-      console.log(err);
-      throw err; // Re-throw to be caught by caller
-    });
+// Format phone number for Waziper API (without @c.us suffix)
+  let phoneNumber = isExcel ? `20${phone}` : `2${phone}`;
+  
+  // Remove any non-numeric characters
+  phoneNumber = phoneNumber.replace(/\D/g, '');
+  
+  try {
+    const response = await waziper.sendTextMessage(instanceID, phoneNumber, message);
+    return response.data;
+  } catch (err) {
+    console.error('Error sending WhatsApp message:', err.message);
+    throw err;
+  }
 }
 
 
@@ -2141,7 +2136,7 @@ const sendGradeMessages = async (req, res) => {
 
       let message = `
 السلام عليكم 
-مع حضرتك Assistant Miss Mayada EST/ACT Teacher 
+مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
 برجاء العلم ان تم حصول الطالب ${name} على درجة (${grade}) من (${maxGrade}) في (${quizName}) 
       `;
 
@@ -2204,7 +2199,7 @@ const sendMessages = async (req, res) => {
 
       let theMessage = `
 السلام عليكم 
-مع حضرتك Assistant Miss Mayada EST/ACT Teacher 
+مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
 ${msg}
       `;
 
@@ -2297,14 +2292,14 @@ const submitData = async (req, res) => {
         }
 theMessage = `
 السلام عليكم 
-مع حضرتك Assistant Miss Mayada EST/ACT Teacher 
+مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
 ${msg}
 `;
 
       }else if (option === 'gradeMsg') {
         theMessage = `
 السلام عليكم
-مع حضرتك Assistant Miss Mayada EST/ACT Teacher
+مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher
 برجاء العلم ان تم حصول الطالب ${student['studentName']} على درجة (${student['grade']? student['grade'] : 'لم يحضر' }) من (${maxGrade}) في (${quizName})
 `;
       }

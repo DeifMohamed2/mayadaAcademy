@@ -6,38 +6,52 @@ const jwt = require('jsonwebtoken');
 const qrcode = require('qrcode');
 
 const jwtSecret = process.env.JWTSECRET;
-const waapiAPI = process.env.WAAPIAPI;
-const instanceId = process.env.INSTANCEID;
 
-waapi.auth(`${waapiAPI}`);
+const instanceID1 = '68533DDE7D372';
+const instanceID2 = '68533DDE7D372';
+const instanceID3 = '68536629B61C9';
 
-async function sendQRCode(chatId, message, studentCode) {
+console.log('WhatsApp Instance IDs loaded:');
+console.log('instanceID1 (GTA):', instanceID1);
+console.log('instanceID2 (tagmo3):', instanceID2);
+console.log('instanceID3 (Online):', instanceID3);
+
+
+
+async function sendQRCode(chatId, message, studentCode, centerName) {
   try {
-    // Generate a high-quality QR code in Base64 format
-    const qrData = await qrcode.toDataURL(studentCode, {
-      margin: 2, // White border around the QR code
-      scale: 10, // Scale factor (default is 4, increase for better quality)
-      width: 500, // Adjust width for higher resolution (optional)
-    });
-    const base64Image = qrData.split(',')[1]; // Extract only the Base64 data
 
-    console.log('Generated QR Code Base64:', base64Image);
-    console.log('Sending to Chat ID:', chatId);
+    const instanceId = centerName === 'tagmo3'
+      ? instanceID2
+      : centerName === 'GTA'
+        ? instanceID1
+        : instanceID3;
+    
+    console.log('Using WhatsApp instance ID:', instanceId);
+    
+    // Format phone number for Waziper API (remove @c.us suffix)
+    const phoneNumber = chatId.replace('@c.us', '');
+    console.log('Sending to phone number:', phoneNumber);
+    
 
-    const response = await waapi.postInstancesIdClientActionSendMedia(
-      {
-        chatId: chatId, // Target chat ID
-        mediaBase64: base64Image,
-        mediaName: 'qrcode.png',
-        mediaCaption: message,
-        asSticker: false, // Set true if you want to send as a sticker
-      },
-      { id: instanceId } // Replace with your actual instance ID
+    // Then create a publicly accessible URL for the QR code
+    // For this example, we'll use a placeholder URL that generates QR codes
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(studentCode)}`;
+    
+    // Send the QR code as a media message
+    const mediaResponse = await waziper.sendMediaMessage(
+      instanceId,
+      phoneNumber,
+      message,
+      qrCodeUrl,
+      'qrcode.png'
     );
 
-    console.log('QR code sent successfully:', response.data);
+    console.log('QR code sent successfully:', mediaResponse.data);
+    return { success: true };
   } catch (error) {
     console.error('Error sending QR code:', error);
+    return { success: false, error: error.message };
   }
 }
 
@@ -319,13 +333,14 @@ const public_Register_post = async (req, res) => {
           { $push: { students: result._id } },
           { new: true, upsert: true }
         )
-          .then(() => {
-            sendQRCode(
+          .then(async () => {
+            await sendQRCode(
               `2${phone}@c.us`,
               `This is your QR Code \n\n Student Name: ${Username} \n\n Student Code: ${Code} \n\n Grade: ${Grade} \n\n Grade Level: ${GradeLevel} \n\n Attendance Type: ${attendingType} \n\n Book Taken: ${
                 bookTaken ? 'Yes' : 'No'
               } \n\n School: ${schoolName} \n\n Balance: ${balance} \n\n Center Name: ${centerName} \n\n Grade Type: ${gradeType} \n\n Group Time: ${groupTime} `,
-              Code
+              Code,
+              centerName
             );
             res.status(201).redirect('Register');
           })

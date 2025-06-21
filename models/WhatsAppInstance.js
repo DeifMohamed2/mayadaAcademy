@@ -20,6 +20,10 @@ const whatsAppInstanceSchema = new Schema({
     enum: ['connected', 'disconnected', 'connecting' , 'qr'],
     default: 'disconnected'
   },
+    webhookUrl: {
+    type: String,
+    default: null
+  },
   qrCode: {
     type: String,
     default: null
