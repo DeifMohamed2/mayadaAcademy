@@ -642,8 +642,8 @@ const markAttendance = async (req, res) => {
     gradeType,
     attendAbsencet,
     attendOtherGroup,
-    HWwithOutSteps,
-    attendWithOutHW,
+    // HWwithOutSteps,
+    // attendWithOutHW,
   } = req.body;
 
   try {
@@ -657,13 +657,13 @@ const markAttendance = async (req, res) => {
     }
 
     let HWmessage ='';
-if(attendWithOutHW){
-  HWmessage = '*تم تسجيل حضور الطالب بدون واجب*';
-}else if(HWwithOutSteps){
-  HWmessage = '*لقد قام الطالب بحل الواجب لكن بدون خطوات*';
-}else{
-  HWmessage = '*لقد قام الطالب بحل الواجب بالخطوات*';
-}
+// if(attendWithOutHW){
+//   HWmessage = '*تم تسجيل حضور الطالب بدون واجب*';
+// }else if(HWwithOutSteps){
+//   HWmessage = '*لقد قام الطالب بحل الواجب لكن بدون خطوات*';
+// }else{
+//   HWmessage = '*لقد قام الطالب بحل الواجب بالخطوات*';
+// }
 
 
       console.log(student._id);
@@ -802,7 +802,6 @@ if(attendWithOutHW){
 وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
 عدد مرات الغياب: *${student.absences}*.\n\n
 *يرجى الانتباه لمواعيد الحضور مستقبلًا*.\n\n
-${HWmessage}
 التاريخ: ${today}
 الوقت: ${new Date().toLocaleTimeString()}
 *شكرًا لتعاونكم.*`;
@@ -873,7 +872,6 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 وقد تم تسجيل حضوره *بنجاح*.\n
 وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
 عدد مرات الغياب: *${student.absences}*.\n
-${HWmessage}
 التاريخ: ${today}
 الوقت: ${new Date().toLocaleTimeString()}
 *شكرًا لتعاونكم.*`;

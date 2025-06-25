@@ -205,7 +205,7 @@
                                             <input type="checkbox" class="form-check-input" id="attendOtherGroup">
                                             <label class="form-check-label" for="attendOtherGroup">Attend & Ignore Group Policy</label>
                                         </div>
-
+<!-- 
                                     </div>
                                               <div class="col-md-3">
                                         <div class="form-check mt-3">
@@ -220,7 +220,7 @@
                                             <label class="form-check-label" for="attendWithOutHW">Attend WithOut HW</label>
                                         </div>
 
-                                    </div>
+                                    </div> -->
                                 </div>
                             <div class="student-table">
                                     <div class="row" style="margin-bottom: 0 !important;">
@@ -411,8 +411,8 @@
     const attendAbsencet = document.getElementById('attendAbsencet');
     const attendOtherGroup = document.getElementById('attendOtherGroup');
 
-    const HWwithOutSteps = document.getElementById('HWwithOutSteps')
-    const attendWithOutHW = document.getElementById('attendWithOutHW')
+    // const HWwithOutSteps = document.getElementById('HWwithOutSteps')
+    // const attendWithOutHW = document.getElementById('attendWithOutHW')
 
     const table = document.querySelector('tbody');
 
@@ -438,8 +438,8 @@
        spinnerInTabel.classList.add('d-none');
        attendAbsencet.checked = false;
        attendOtherGroup.checked = false;
-       HWwithOutSteps.checked = false;
-       attendWithOutHW.checked = false;
+    //    HWwithOutSteps.checked = false;
+    //    attendWithOutHW.checked = false;
        attendeeID.focus();
     };
 
@@ -545,8 +545,8 @@
             gradeType : gradeType.value,
             attendAbsencet : attendAbsencet.checked,
             attendOtherGroup : attendOtherGroup.checked,
-            HWwithOutSteps : HWwithOutSteps.checked,
-            attendWithOutHW : attendWithOutHW.checked,
+            // HWwithOutSteps : HWwithOutSteps.checked,
+            // attendWithOutHW : attendWithOutHW.checked,
             attendId: attendeeID.value
         };
 
