@@ -4,6 +4,7 @@ const waapi = require('@api/waapi');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const qrcode = require('qrcode');
+const waziper = require('../utils/waziper');
 
 const jwtSecret = process.env.JWTSECRET;
 
