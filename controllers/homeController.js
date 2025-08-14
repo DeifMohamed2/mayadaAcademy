@@ -21,13 +21,15 @@ console.log('instanceID3 (Online):', instanceID3);
 
 async function sendQRCode(chatId, message, studentCode, centerName) {
   try {
+    // Get the appropriate instance ID based on the center name
+    // const instanceId = centerName === 'tagmo3'
+    //   ? instanceID2
+    //   : centerName === 'ZHub'
+    //     ? instanceID1
+    //     : instanceID3; // 'online' center uses instanceID3
+    const instanceId = instanceID1;
 
-    const instanceId = centerName === 'tagmo3'
-      ? instanceID2
-      : centerName === 'GTA'
-        ? instanceID1
-        : instanceID3;
-    
+
     console.log('Using WhatsApp instance ID:', instanceId);
     
     // Format phone number for Waziper API (remove @c.us suffix)
