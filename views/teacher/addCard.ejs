@@ -205,22 +205,22 @@
                                             <input type="checkbox" class="form-check-input" id="attendOtherGroup">
                                             <label class="form-check-label" for="attendOtherGroup">Attend & Ignore Group Policy</label>
                                         </div>
-<!-- 
+
                                     </div>
-                                              <div class="col-md-3">
+                                    <div class="col-md-3">
                                         <div class="form-check mt-3">
-                                            <input type="checkbox" class="form-check-input" id="HWwithOutSteps">
-                                            <label class="form-check-label" for="HWwithOutSteps">HW WithOut Steps</label>
+                                            <input type="checkbox" class="form-check-input" id="attendWithHW">
+                                            <label class="form-check-label" for="attendWithHW">Attend With Homework</label>
                                         </div>
 
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-check mt-3">
-                                            <input type="checkbox" class="form-check-input" id="attendWithOutHW">
-                                            <label class="form-check-label" for="attendWithOutHW">Attend WithOut HW</label>
+                                            <input type="checkbox" class="form-check-input" id="attendWithoutHW">
+                                            <label class="form-check-label" for="attendWithoutHW">Attend Without Homework</label>
                                         </div>
 
-                                    </div> -->
+                                    </div>
                                 </div>
                             <div class="student-table">
                                     <div class="row" style="margin-bottom: 0 !important;">
@@ -410,6 +410,8 @@
 
     const attendAbsencet = document.getElementById('attendAbsencet');
     const attendOtherGroup = document.getElementById('attendOtherGroup');
+    const attendWithHW = document.getElementById('attendWithHW');
+    const attendWithoutHW = document.getElementById('attendWithoutHW');
 
     // const HWwithOutSteps = document.getElementById('HWwithOutSteps')
     // const attendWithOutHW = document.getElementById('attendWithOutHW')
@@ -438,8 +440,8 @@
        spinnerInTabel.classList.add('d-none');
        attendAbsencet.checked = false;
        attendOtherGroup.checked = false;
-    //    HWwithOutSteps.checked = false;
-    //    attendWithOutHW.checked = false;
+       attendWithHW.checked = false;
+       attendWithoutHW.checked = false;
        attendeeID.focus();
     };
 
@@ -545,8 +547,8 @@
             gradeType : gradeType.value,
             attendAbsencet : attendAbsencet.checked,
             attendOtherGroup : attendOtherGroup.checked,
-            // HWwithOutSteps : HWwithOutSteps.checked,
-            // attendWithOutHW : attendWithOutHW.checked,
+            attendWithHW : attendWithHW.checked,
+            attendWithoutHW : attendWithoutHW.checked,
             attendId: attendeeID.value
         };
 

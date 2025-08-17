@@ -108,6 +108,7 @@
                                 <option value="">اختر نوع الارسال </option>
                                 <option value="msgWithoutPhoto">ارسال حاله الواجب</option>
                                 <option value="gradeMsg">ارسال درجات الامتحان</option>
+                                <option value="sendMsg">ارسال رساله عامة</option>
                             </select>
                         </div>
                         <hr>
@@ -183,6 +184,50 @@
                             </div>
                         </div>
 
+                        <!-- Section for "ارسال رساله عامة" -->
+                        <div id="sendMsgSection" class="hidden">
+                            <div class="row">
+                                <div class="col-md-4 mb-4">
+                                    <select id="recipientType" class="form-control">
+                                        <option value="">اختر المُرسل إليه</option>
+                                        <option value="parents">اولياء الامور فقط</option>
+                                        <option value="students">الطلاب فقط</option>
+                                        <option value="both">كلاهما</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-4">
+                                    <input type="text" id="parentPhoneColumnName" class="form-control" placeholder="اسم عمود ارقام اولياء الامور">
+                                </div>
+                                <div class="col-md-4 mb-4">
+                                    <input type="text" id="studentPhoneColumnName" class="form-control" placeholder="اسم عمود ارقام الطلاب">
+                                </div>
+                                <div class="col-md-4 mb-4">
+                                    <input type="text" id="nameCloumnNameGEN" class="form-control" placeholder="اسم عمود اسماء الطلاب (اختياري)">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-4">
+                                    <textarea id="customMessage" class="form-control" rows="4" placeholder="اكتب الرسالة التي تريد ارسالها"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="upload-container">
+                                <h1>رفع شيت الاكسل</h1>
+                                <div class="file-input-wrapper">
+                                    <label for="fileGEN" class="file-label" id="fileLabelGEN">
+                                        <i class="fas fa-upload"></i> اختر الملف لرفعه
+                                    </label>
+                                    <input type="file" id="fileGEN" name="fileGEN" required onchange="updateFileNameGEN()">
+                                </div>
+                                <button class="upload-btn" onclick="handleFileGEN()">رفع الملف</button>
+
+                                <div class="output" id="outputGEN"></div>
+                                <h2 class="warning d-none" id="numberOfSendGEN"></h2>
+                            </div>
+                        </div>
+
                     </div>
                 </main>
             </div>
@@ -198,6 +243,7 @@
         const msgWithoutPhotoSection = document.getElementById('msgWithoutPhotoSection');
         const msgWithPhotoSection = document.getElementById('msgWithPhotoSection');
         const gradeMsgSection = document.getElementById('gradeMsgSection');
+        const sendMsgSection = document.getElementById('sendMsgSection');
 
         // Event listener to show/hide sections based on selection
         optionSelect.addEventListener('change', function () {
@@ -207,6 +253,7 @@
             msgWithoutPhotoSection.classList.add('hidden');
             msgWithPhotoSection.classList.add('hidden');
             gradeMsgSection.classList.add('hidden');
+            sendMsgSection.classList.add('hidden');
 
             // Show corresponding section
             if (selectedValue === 'msgWithoutPhoto') {
@@ -215,6 +262,8 @@
                 msgWithPhotoSection.classList.remove('hidden');
             } else if (selectedValue === 'gradeMsg') {
                 gradeMsgSection.classList.remove('hidden');
+            } else if (selectedValue === 'sendMsg') {
+                sendMsgSection.classList.remove('hidden');
             }
         });
 
@@ -408,12 +457,108 @@
         
     </script>
 
+    <script>
+        // General message upload and send
+        function updateFileNameGEN() {
+            const input = document.getElementById('fileGEN');
+            const fileLabel = document.getElementById('fileLabelGEN');
+            if (input.files.length > 0) {
+                fileLabel.innerHTML = `<i class="fas fa-file-alt"></i> ${input.files[0].name}`;
+            }
+        }
+
+        function handleFileGEN() {
+            const input = document.getElementById('fileGEN');
+            const fileLabel = document.getElementById('fileLabelGEN');
+
+            if (!input.files.length) {
+                alert('Please select a file!');
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet);
+
+                displayDataAndSendGEN(json);
+
+                fileLabel.innerHTML = `<i class=\"fas fa-check-circle\"></i> ${file.name} (Uploaded)`;
+                fileLabel.style.color = "green";
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function displayDataAndSendGEN(data) {
+            const output = document.getElementById('outputGEN');
+            output.innerHTML = 'data is being sent...';
+
+            const recipientType = document.getElementById('recipientType').value;
+            const parentPhoneColumnName = document.getElementById('parentPhoneColumnName').value;
+            const studentPhoneColumnName = document.getElementById('studentPhoneColumnName').value;
+            const nameCloumnNameGEN = document.getElementById('nameCloumnNameGEN').value;
+            const customMessage = document.getElementById('customMessage').value;
+
+            if (!recipientType || !customMessage) {
+                alert('الرجاء اختيار المُرسل إليه وكتابة الرسالة');
+                return;
+            }
+
+            if ((recipientType === 'parents' || recipientType === 'both') && !parentPhoneColumnName) {
+                alert('ادخل اسم عمود ارقام اولياء الامور');
+                return;
+            }
+            if ((recipientType === 'students' || recipientType === 'both') && !studentPhoneColumnName) {
+                alert('ادخل اسم عمود ارقام الطلاب');
+                return;
+            }
+
+            const payload = {
+                recipientType,
+                parentPhoneColumnName,
+                studentPhoneColumnName,
+                nameCloumnName: nameCloumnNameGEN,
+                message: customMessage,
+                dataToSend: data
+            };
+
+            try {
+                const response = await fetch('/teacher/sendCustomMessages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseData = await response.json();
+                if (response.ok) {
+                    output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
+                    output.style.color = 'green';
+                } else {
+                    output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+                    output.style.color = 'red';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+                output.style.color = 'red';
+            }
+        }
+    </script>
+
 
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const numberOfSend = document.getElementById('numberOfSend');
         const numberOfSendMSG = document.getElementById('numberOfSendMSG');
+        const numberOfSendGEN = document.getElementById('numberOfSendGEN');
         const socket = io();
 
         socket.on('sendingMessages', (data) => {
@@ -422,6 +567,8 @@
 
             numberOfSendMSG.classList.remove('d-none');
             numberOfSendMSG.innerHTML = `تم ارسال ${data.nMessages} رساله`;
+            numberOfSendGEN.classList.remove('d-none');
+            numberOfSendGEN.innerHTML = `تم ارسال ${data.nMessages} رساله`;
                 
         });
     </script>

@@ -642,6 +642,8 @@ const markAttendance = async (req, res) => {
     gradeType,
     attendAbsencet,
     attendOtherGroup,
+    attendWithHW,
+    attendWithoutHW,
     // HWwithOutSteps,
     // attendWithOutHW,
   } = req.body;
@@ -867,9 +869,16 @@ const markAttendance = async (req, res) => {
         });
       }
 
+      let hwLine = '';
+      if (attendWithHW) {
+        hwLine = `\nوقد قام الطالب بحل الواجب.`;
+      } else if (attendWithoutHW) {
+        hwLine = `\nولم يقم الطالب بحل الواجب.`;
+      }
+
 const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
 نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
-وقد تم تسجيل حضوره *بنجاح*.\n
+وقد تم تسجيل حضوره *بنجاح*.${hwLine}\n
 وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
 عدد مرات الغياب: *${student.absences}*.\n
 التاريخ: ${today}
@@ -2254,6 +2263,64 @@ ${msg}
 };
 
 
+// General custom messages from Excel
+const sendCustomMessages = async (req, res) => {
+  const {
+    recipientType, // 'parents' | 'students' | 'both'
+    parentPhoneColumnName,
+    studentPhoneColumnName,
+    nameCloumnName,
+    message,
+    dataToSend,
+  } = req.body;
+
+  let n = 0;
+  req.io.emit('sendingMessages', { nMessages: n });
+
+  try {
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    for (const row of dataToSend) {
+      const name = nameCloumnName ? row[nameCloumnName] : undefined;
+      // Use message as-is; optionally we could personalize later
+      const text = message;
+
+      const targets = [];
+      if (recipientType === 'parents' || recipientType === 'both') {
+        const parentPhone = parentPhoneColumnName ? row[parentPhoneColumnName] : undefined;
+        if (parentPhone) targets.push(parentPhone);
+      }
+      if (recipientType === 'students' || recipientType === 'both') {
+        const studentPhone = studentPhoneColumnName ? row[studentPhoneColumnName] : undefined;
+        if (studentPhone) targets.push(studentPhone);
+      }
+
+      for (const phone of targets) {
+        try {
+          await sendWappiMessage(text, phone, req.userData.phone)
+            .then(() => {
+              req.io.emit('sendingMessages', { nMessages: ++n });
+            })
+            .catch((err) => {
+              console.error('Send error:', err);
+            });
+        } catch (err) {
+          console.error('Error sending message:', err);
+        }
+
+        const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+        await delay(randomDelay);
+      }
+    }
+
+    res.status(200).json({ message: 'Messages sent successfully' });
+  } catch (error) {
+    console.error('Error sending custom messages:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 
 // =================================================== END Whats App =================================================== //
 
@@ -2772,6 +2839,10 @@ module.exports = {
   whatsApp_get,
   sendGradeMessages,
   sendMessages,
+  sendCustomMessages,
+  
+  // WhatsApp custom
+  
 
   // WhatsApp 2
   whatsApp2_get,
