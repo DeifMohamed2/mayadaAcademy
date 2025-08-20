@@ -562,7 +562,7 @@ async function sendWappiMessage(message, phone, adminPhone, isExcel = false) {
   }else if(adminPhone=="01200077825"){
     instanceID = '68533DDE7D372'
   }else if(adminPhone=="01200077829"){
-    instanceID = '68536629B61C9'
+    instanceID = '68533DDE7D372'
   }
 
 // Format phone number for Waziper API (without @c.us suffix)
