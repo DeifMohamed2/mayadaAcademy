@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const whatsAppInstanceSchema = new Schema({
-  instanceId: {
+  sessionId: {
     type: String,
     required: true,
     unique: true
@@ -17,14 +17,14 @@ const whatsAppInstanceSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['connected', 'disconnected', 'connecting' , 'qr'],
+    enum: ['connected', 'disconnected', 'connecting', 'qr'],
     default: 'disconnected'
   },
-    webhookUrl: {
+  qrCode: {
     type: String,
     default: null
   },
-  qrCode: {
+  apiKey: {
     type: String,
     default: null
   },
@@ -36,6 +36,12 @@ const whatsAppInstanceSchema = new Schema({
     type: Date,
     default: Date.now
   }
+});
+
+// Pre-save middleware to update the updatedAt field
+whatsAppInstanceSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 module.exports = mongoose.model('WhatsAppInstance', whatsAppInstanceSchema); 

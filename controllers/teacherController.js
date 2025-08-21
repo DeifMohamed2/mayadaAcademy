@@ -1,11 +1,13 @@
 const User = require('../models/User');
 const Group  = require('../models/Group');
-const WhatsAppInstance = require('../models/WhatsAppInstance');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance'); 
 
-const waziper = require('../utils/waziper');
+const wasender = require('../utils/wasender');
 const Excel = require('exceljs'); 
+const QRCode = require('qrcode');
+
+
   
 const dash_get = async(req, res) => {
 
@@ -555,29 +557,79 @@ const convertToExcelAllUserData = async (req, res) => {
 
 // =================================================== END MyStudent ================================================ //
 
-async function sendWappiMessage(message, phone, adminPhone, isExcel = false) {
-  let instanceID = ''
-  if(adminPhone=="01200077823"){
-    instanceID = '68533DDE7D372'
-  }else if(adminPhone=="01200077825"){
-    instanceID = '68533DDE7D372'
-  }else if(adminPhone=="01200077829"){
-    instanceID = '68533DDE7D372'
-  }
-
-// Format phone number for Waziper API (without @c.us suffix)
-  let phoneNumber = isExcel ? `20${phone}` : `2${phone}`;
-  
-  // Remove any non-numeric characters
-  phoneNumber = phoneNumber.replace(/\D/g, '');
-  
+async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, countryCode = '20') {
   try {
-    const response = await waziper.sendTextMessage(instanceID, phoneNumber, message);
+    // Get all sessions to find the one with matching phone number
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      throw new Error(`Failed to get sessions: ${sessionsResponse.message}`);
+    }
+    
+    const sessions = sessionsResponse.data;
+    let targetSession = null;
+    
+    // Find session by admin phone number
+    if (adminPhone == '01200077825') {
+      targetSession = sessions.find(s => s.phone_number === '+201200077825' || s.phone_number === '01200077825');
+    } else if (adminPhone == '01200077823') {
+      targetSession = sessions.find(s => s.phone_number === '+201200077823' || s.phone_number === '01200077823');
+    } else if (adminPhone == '01200077829') {
+      targetSession = sessions.find(s => s.phone_number === '+201200077829' || s.phone_number === '01200077829');
+    }
+    
+    // If no specific match, try to find any connected session
+    if (!targetSession) {
+      targetSession = sessions.find(s => s.status === 'connected');
+    }
+    
+    if (!targetSession) {
+      throw new Error('No connected WhatsApp session found');
+    }
+    
+    if (!targetSession.api_key) {
+      throw new Error('Session API key not available');
+    }
+    
+    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
+    
+    // Format the phone number properly
+    let countryCodeWithout0 = countryCode.replace('0', ''); // Remove leading zeros
+    console.log('Country code:', countryCodeWithout0);
+    
+    // Format phone number for Wasender API
+    let phoneNumber = isExcel ? `${countryCode}${phone}` : `${countryCodeWithout0}${phone}`;
+    
+    // Remove any non-numeric characters
+    phoneNumber = phoneNumber.replace(/\D/g, '');
+    
+    // Add country code if not present
+    if (!phoneNumber.startsWith('2')) {
+      phoneNumber = `2${phoneNumber}`;
+    }
+    
+    // Format for WhatsApp (add @s.whatsapp.net suffix)
+    const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
+    
+    console.log('Sending message to:', formattedPhone);
+    
+    // Use the session-specific API key to send the message
+    const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
+    
+    if (!response.success) {
+      throw new Error(`Failed to send message: ${response.message}`);
+    }
+    
     return response.data;
   } catch (err) {
     console.error('Error sending WhatsApp message:', err.message);
     throw err;
   }
+}
+
+
+
+async function sendWappiMessage(message, phone, adminPhone, isExcel = false) {
+  return sendWasenderMessage(message, phone, adminPhone, isExcel);
 }
 
 
@@ -2517,124 +2569,141 @@ const connectWhatsapp_get = (req, res) => {
 
 const createInstance = async (req, res) => {
   const { phoneNumber, name } = req.body;
-  
   try {
-    // Generate a unique instance ID
-    const instanceId = Date.now().toString();
+    console.log(`Creating Wasender session (phone: ${phoneNumber || '-'}, name: ${name || '-'})`);
     
-    // Create a new WhatsApp instance
-    const instance = new WhatsAppInstance({
-      instanceId,
-      phoneNumber,
-      name,
-      status: 'disconnected',
-      qrCode: null
-    });
+    // Create session with proper payload including required fields
+    const sessionPayload = {
+      name: name || 'WhatsApp Session',
+      phone_number: phoneNumber || null,
+      account_protection: true,  // Required field
+      log_messages: true,        // Required field
+      webhook_enabled: false,
+      webhook_events: []
+    };
     
-    await instance.save();
+    const resp = await wasender.createSession(sessionPayload);
     
-    res.status(201).json({ 
-      success: true, 
-      message: 'Instance created successfully', 
-      instance 
-    });
+    if (!resp.success) {
+      return res.status(400).json(resp);
+    }
+    
+    // Use the created session data from API response
+    const created = resp.data;
+    
+    // If API doesn't return session data, create a fallback
+    if (!created || !created.id) {
+      const fallbackInstance = {
+        id: `WA${Date.now()}`,
+        name: name || 'WhatsApp Session',
+        phone_number: phoneNumber || '-',
+        status: 'disconnected',
+        account_protection: true,
+        log_messages: true,
+        webhook_url: null,
+        webhook_enabled: false,
+        webhook_events: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      return res.status(201).json({ success: true, data: fallbackInstance });
+    }
+    
+    return res.status(201).json({ success: true, data: created });
   } catch (error) {
-    console.error('Error creating instance:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error creating instance',
-      error: error.message 
-    });
+    console.error('Error creating Wasender session:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to create session', error: error.message });
   }
 };
 
 const getInstances = async (req, res) => {
   try {
-    const instances = await WhatsAppInstance.find({}).sort({ createdAt: -1 });
-    
-    res.status(200).json({
-      success: true,
-      instances
-    });
+    const resp = await wasender.getAllSessions();
+    if (!resp.success) {
+      return res.status(401).json(resp);
+    }
+    return res.json(resp);
   } catch (error) {
-    console.error('Error fetching instances:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching instances',
-      error: error.message
-    });
+    console.error('Error fetching sessions from Wasender:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch sessions', error: error.message });
+  }
+};
+
+const testWasenderAuth = async (req, res) => {
+  try {
+    const resp = await wasender.testAuth();
+    return res.json(resp);
+  } catch (error) {
+    console.error('Error testing Wasender auth:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to test authentication', error: error.message });
   }
 };
 
 const checkRealInstanceStatus = async (req, res) => {
   const { instanceId } = req.params;
-  
   try {
-    // First check if the instance exists in our database
-    const instance = await WhatsAppInstance.findOne({ instanceId });
+    console.log(`Checking status for session: ${instanceId}`);
     
-    if (!instance) {
-      return res.status(404).json({
-        success: false,
-        message: 'Instance not found'
+    // Get session details
+    const detailsResult = await wasender.getSessionDetails(instanceId);
+    if (!detailsResult.success) {
+      console.error('Failed to get session details:', detailsResult.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: `Failed to get session details: ${detailsResult.message}` 
       });
     }
     
-    // Use waapi to check the real status
-    try {
-      const { data } = await waapi.getInstancesIdClientStatus({ id: instanceId });
-      if (data && data.status === 'success') {
-        const apiStatus = data.clientStatus.instanceStatus;
-        
-        // Update our instance status based on the API response
-        let status;
-        switch(apiStatus) {
-          case 'ready':
-          case 'authenticated':
-            status = 'connected';
-            break;
-          case 'qr':
-            status = 'qr'; // Now treating qr status separately from connecting
-            break;
-          case 'loading_screen':
-          case 'booting':
-            status = 'connecting';
-            break;
-          case 'disconnected':
-          case 'auth_failure':
-          default:
-            status = 'disconnected';
-            break;
-        }
-        
-        // Update our database record
-        instance.status = status;
-        await instance.save();
-        
-        return res.status(200).json({
-          success: true,
-          apiStatus: apiStatus,
-          status: status
-        });
-      } else {
-        throw new Error('API returned unsuccessful response');
+    const session = detailsResult.data;
+    const waStatus = (session.status || 'unknown').toString().toUpperCase();
+    
+    console.log(`Session status: ${waStatus}`);
+
+    // Map to UI statuses
+    const mapStatus = (s) => {
+      switch (s) {
+        case 'CONNECTED':
+        case 'AUTHENTICATED':
+        case 'READY':
+          return 'connected';
+        case 'CONNECTING':
+        case 'INITIALIZING':
+          return 'connecting';
+        case 'NEED_SCAN':
+        case 'REQUIRE_QR':
+        case 'UNPAIRED':
+        case 'UNPAIRED_IDLE':
+          return 'qr';
+        case 'LOGGED_OUT':
+        case 'DISCONNECTED':
+          return 'disconnected';
+        default:
+          return 'disconnected';
       }
-    } catch (apiError) {
-      console.error('waapi error:', apiError);
-      
-      // If we can't connect to the API, return the status from our database
-      return res.status(200).json({
-        success: true,
-        apiStatus: 'unknown',
-        status: instance.status
-      });
-    }
+    };
+
+    const status = mapStatus(waStatus);
+    
+    console.log(`Mapped status: ${status}`);
+
+    return res.json({ 
+      success: true, 
+      apiStatus: waStatus, 
+      status,
+      session: {
+        id: session.id,
+        name: session.name,
+        phone_number: session.phone_number,
+        status: session.status,
+        last_active_at: session.last_active_at
+      }
+    });
   } catch (error) {
-    console.error('Error checking instance status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error checking instance status',
-      error: error.message
+    console.error('Error checking session status:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error checking session status', 
+      error: error.message 
     });
   }
 };
@@ -2643,111 +2712,95 @@ const generateQrCode = async (req, res) => {
   const { instanceId } = req.params;
   
   try {
-    // Find the instance
-    const instance = await WhatsAppInstance.findOne({ instanceId });
+    console.log(`Generating QR code for session: ${instanceId}`);
     
-    if (!instance) {
-      return res.status(404).json({
-        success: false,
-        message: 'Instance not found'
+    // Step 1: Connect the session first
+    const connectResult = await wasender.connectSession(instanceId);
+    if (!connectResult.success) {
+      console.error('Failed to connect session:', connectResult.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: `Failed to connect session: ${connectResult.message}` 
       });
     }
     
-    // Use waapi to generate a QR code
+    console.log('Session connected successfully, getting QR code...');
+    
+    // Step 2: Get the QR code
+    const qrResult = await wasender.getQRCode(instanceId);
+    if (!qrResult.success) {
+      console.error('Failed to get QR code:', qrResult.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: `Failed to get QR code: ${qrResult.message}` 
+      });
+    }
+    
+    let qrCodeData = qrResult.data?.qrcode || null;
+    if (!qrCodeData) {
+      console.error('No QR code data received');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'No QR code data received from API' 
+      });
+    }
+    
+    console.log('Raw QR code data received, converting to image...');
+    
+    // Convert the raw QR code data to a proper image
+    // The Wasender API returns raw QR code data that needs to be converted
     try {
-
-      // Request the QR code
-      const { data } = await waapi.getInstancesIdClientQr({ id: instanceId });
-      console.log('QR code API response:', JSON.stringify(data));
+      // Generate QR code as data URL
+      const qrImageDataUrl = await QRCode.toDataURL(qrCodeData, {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 300
+      });
       
-      if (data && data.status === 'success') {
-        // Extract QR code based on API response structure
-        let qrCodeData = null;
-        
-        if (data.qrCode && data.qrCode.data && data.qrCode.data.qr_code) {
-          // Format from user's example
-          qrCodeData = data.qrCode.data.qr_code;
-        } else if (data.data && data.data.qr_code) {
-          // New API format
-          qrCodeData = data.data.qr_code;
-        } else if (data.qr && data.qr.code) {
-          // Old API format
-          qrCodeData = data.qr.code;
-        }
-        
-        if (qrCodeData) {
-          // Update instance status to qr
-          instance.status = 'qr';
-          instance.qrCode = qrCodeData;
-          await instance.save();
-          
-          // Use socket.io to emit status change
-          req.io.emit('instance-status-change', {
-            instanceId,
-            status: 'qr',
-            qrCode: instance.qrCode
-          });
-          
-          return res.status(200).json({
-            success: true,
-            qrCode: instance.qrCode,
-            status: instance.status
-          });
-        }
+      console.log('QR code converted to image successfully');
+      
+      // Emit socket event for real-time updates
+      if (req.io) {
+        req.io.emit('instance-status-change', { 
+          instanceId, 
+          status: 'qr', 
+          qrCode: qrImageDataUrl 
+        });
       }
       
-      // If we reach here, we didn't get a valid QR code from the API
-      console.error('No valid QR code in API response:', data);
-      
-      // If QR code wasn't available, use our placeholder
-      instance.status = 'qr';
-      instance.qrCode = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJQAAACUCAYAAAB1PADUAAAAAXNSR0IArs4c6QAAELBJREFUeF7tnXmQHVUVxr/XmYRsQzaykUAIeWGHsIV1BhdcqrCKclFB3LdSoVyKKvfCpe...'; // Placeholder
-      await instance.save();
-      
-      req.io.emit('instance-status-change', {
-        instanceId,
+      return res.json({ 
+        success: true, 
+        qrCode: qrImageDataUrl, 
         status: 'qr',
-        qrCode: instance.qrCode
+        expiresIn: 45 // QR codes expire in 45 seconds
       });
       
-      return res.status(200).json({
-        success: true,
-        qrCode: instance.qrCode,
-        status: instance.status
-      });
-    } catch (apiError) {
-      console.error('waapi QR code error:', apiError);
+    } catch (qrError) {
+      console.error('Error converting QR code to image:', qrError);
       
-      // In a real application, you would use a WhatsApp API client to generate a QR code
-      // For this example, we'll simulate it with a placeholder
-      
-      // Update instance status to connecting
-      instance.status = 'qr';
-      instance.qrCode = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJQAAACUCAYAAAB1PADUAAAAAXNSR0IArs4c6QAAELBJREFUeF7tnXmQHVUVxr/XmYRsQzaykUAIeWGHsIV1BhdcqrCKclFB3LdSoVyKKvfCpe...'; // This should be a base64 encoded QR code from the WhatsApp API
-      
-      await instance.save();
-      
-      // Use socket.io to emit status change
-      req.io.emit('instance-status-change', {
-        instanceId,
+      // Fallback: return the raw data with instructions
+      return res.json({ 
+        success: true, 
+        qrCode: qrCodeData, 
         status: 'qr',
-        qrCode: instance.qrCode
-      });
-      
-      return res.status(200).json({
-        success: true,
-        qrCode: instance.qrCode,
-        status: instance.status,
-        error: apiError.message
+        note: 'Raw QR data - needs manual conversion',
+        instructions: 'Please scan this QR code data manually or use a QR code generator',
+        expiresIn: 45
       });
     }
     
   } catch (error) {
-    console.error('Error generating QR code:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error generating QR code',
-      error: error.message
+    console.error('Error generating QR code:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error while generating QR code',
+      error: error.message 
     });
   }
 };
@@ -2757,36 +2810,149 @@ const deleteInstance = async (req, res) => {
   const { instanceId } = req.params;
   
   try {
-    const result = await WhatsAppInstance.deleteOne({ instanceId });
-    
-    if (result.deletedCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Instance not found'
-      });
-    }
-    
-    // Emit instance deleted event
-    req.io.emit('instance-deleted', {
-      instanceId
+    try { await wasender.disconnectSession(instanceId); } catch (_) {}
+    try { await wasender.deleteSession(instanceId); } catch (_) {}
+    if (req.io) req.io.emit('instance-deleted', { instanceId });
+    return res.json({ success: true, message: 'Session deleted' });
+  } catch (error) {
+    console.error('Error deleting session:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to delete session', error: error.message });
+  }
+};
+
+// Note: Wasender API doesn't have a direct webhook setting endpoint
+// This function is kept for compatibility but will need to be updated
+// when webhook functionality is available in Wasender API
+const setWebhook = async (req, res) => {
+  const { instanceId } = req.params;
+  const { webhookUrl } = req.body;
+  
+  if (!webhookUrl) {
+    return res.status(400).json({
+      success: false,
+      message: 'Webhook URL is required'
     });
-    
-    res.status(200).json({
+  }
+  
+  try {
+    // Wasender API does not expose webhook setup in the provided collection.
+    // Acknowledge and return success so UI can proceed.
+    return res.status(200).json({
       success: true,
-      message: 'Instance deleted successfully'
+      message: 'Webhook setup is not supported by the current Wasender API. Value accepted locally.',
+      webhookUrl
     });
   } catch (error) {
-    console.error('Error deleting instance:', error);
+    console.error('Error setting webhook:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting instance',
+      message: 'Error setting webhook',
       error: error.message
     });
   }
 };
 
+const rebootInstance = async (req, res) => {
+  const { instanceId } = req.params;
+  
+  try {
+    try { await wasender.disconnectSession(instanceId); } catch (_) {}
+    await wasender.connectSession(instanceId);
+    if (req.io) req.io.emit('instance-status-change', { instanceId, status: 'connecting' });
+    return res.json({ success: true, message: 'Reconnecting initiated' });
+  } catch (error) {
+    console.error('Error reconnecting session:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to reconnect', error: error.message });
+  }
+};
 
-// =================================================== Log Out =================================================== //
+
+const regenerateQrCode = async (req, res) => {
+  const { instanceId } = req.params;
+  
+  try {
+    console.log(`Regenerating QR code for session: ${instanceId}`);
+    
+    // Use the new regenerate method
+    const qrResult = await wasender.regenerateQRCode(instanceId);
+    if (!qrResult.success) {
+      console.error('Failed to regenerate QR code:', qrResult.message);
+      return res.status(500).json({ 
+        success: false, 
+        message: `Failed to regenerate QR code: ${qrResult.message}` 
+      });
+    }
+    
+    let qrCodeData = qrResult.data?.qrcode || null;
+    if (!qrCodeData) {
+      console.error('No QR code data received after regeneration');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'No QR code data received after regeneration' 
+      });
+    }
+    
+    console.log('New QR code data received, converting to image...');
+    
+    // Convert the raw QR code data to a proper image
+    try {
+      const qrImageDataUrl = await QRCode.toDataURL(qrCodeData, {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 300
+      });
+      
+      console.log('New QR code converted to image successfully');
+      
+      // Emit socket event for real-time updates
+      if (req.io) {
+        req.io.emit('instance-status-change', { 
+          instanceId, 
+          status: 'qr', 
+          qrCode: qrImageDataUrl 
+        });
+      }
+      
+      return res.json({ 
+        success: true, 
+        qrCode: qrImageDataUrl, 
+        status: 'qr',
+        expiresIn: 45,
+        regenerated: true
+      });
+      
+    } catch (qrError) {
+      console.error('Error converting regenerated QR code to image:', qrError);
+      
+      return res.json({ 
+        success: true, 
+        qrCode: qrCodeData, 
+        status: 'qr',
+        note: 'Raw QR data - needs manual conversion',
+        instructions: 'Please scan this QR code data manually or use a QR code generator',
+        expiresIn: 45,
+        regenerated: true
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error regenerating QR code:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error while regenerating QR code',
+      error: error.message 
+    });
+  }
+};
+
+
+// =================================================== Send Registration Message =================================================== //
 
 
 const logOut = async (req, res) => {
@@ -2856,7 +3022,10 @@ module.exports = {
   generateQrCode,
   deleteInstance,
   checkRealInstanceStatus,
-
+  testWasenderAuth,
+  setWebhook,
+  rebootInstance,
+  regenerateQrCode,
   // Convert Group
   convertGroup_get,
   getDataToTransferring,

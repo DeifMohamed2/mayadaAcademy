@@ -1,54 +1,79 @@
 const User = require('../models/User');
 const Group = require('../models/Group');
-const waapi = require('@api/waapi');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const qrcode = require('qrcode');
-const waziper = require('../utils/waziper');
+const wasender = require('../utils/wasender');
 
 const jwtSecret = process.env.JWTSECRET;
 
-const instanceID1 = '68533DDE7D372';
-const instanceID2 = '68533DDE7D372';
-const instanceID3 = '68536629B61C9';
-
-console.log('WhatsApp Instance IDs loaded:');
-console.log('instanceID1 (GTA):', instanceID1);
-console.log('instanceID2 (tagmo3):', instanceID2);
-console.log('instanceID3 (Online):', instanceID3);
-
+async function findWasenderSession(centerName) {
+  try {
+    // Get all sessions to find the one with matching phone number
+    const sessionsResponse = await wasender.getAllSessions();
+    if (!sessionsResponse.success) {
+      throw new Error(`Failed to get sessions: ${sessionsResponse.message}`);
+    }
+    
+    const sessions = sessionsResponse.data;
+    let targetSession = null;
+    
+    // Find session by center name mapping to admin phone numbers
+    if (centerName === 'ZHub') {
+      targetSession = sessions.find(s => s.phone_number === '+201200077825' || s.phone_number === '01200077825');
+    } else if (centerName === 'tagmo3') {
+      targetSession = sessions.find(s => s.phone_number === '+201200077823' || s.phone_number === '01200077823');
+    } else if (centerName === 'online') {
+      targetSession = sessions.find(s => s.phone_number === '+201200077829' || s.phone_number === '01200077829');
+    }
+    
+    // If no specific match, try to find any connected session
+    if (!targetSession) {
+      targetSession = sessions.find(s => s.status === 'connected');
+    }
+    
+    if (!targetSession) {
+      throw new Error('No connected WhatsApp session found');
+    }
+    
+    if (!targetSession.api_key) {
+      throw new Error('Session API key not available');
+    }
+    
+    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number}) for center: ${centerName}`);
+    return targetSession;
+  } catch (err) {
+    console.error('Error finding Wasender session:', err.message);
+    throw err;
+  }
+}
 
 
 async function sendQRCode(chatId, message, studentCode, centerName) {
   try {
-    // Get the appropriate instance ID based on the center name
-    // const instanceId = centerName === 'tagmo3'
-    //   ? instanceID2
-    //   : centerName === 'ZHub'
-    //     ? instanceID1
-    //     : instanceID3; // 'online' center uses instanceID3
-    const instanceId = instanceID1;
+    console.log('Sending QR code for center:', centerName);
 
-
-    console.log('Using WhatsApp instance ID:', instanceId);
+    // Find the appropriate session for this center
+    const targetSession = await findWasenderSession(centerName);
     
-    // Format phone number for Waziper API (remove @c.us suffix)
-    const phoneNumber = chatId.replace('@c.us', '');
+    // Format phone number for Wasender API (remove @c.us suffix and add @s.whatsapp.net)
+    const phoneNumber = chatId.replace('@c.us', '') + '@s.whatsapp.net';
     console.log('Sending to phone number:', phoneNumber);
     
-
-    // Then create a publicly accessible URL for the QR code
-    // For this example, we'll use a placeholder URL that generates QR codes
+    // Create a publicly accessible URL for the QR code
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(studentCode)}`;
     
-    // Send the QR code as a media message
-    const mediaResponse = await waziper.sendMediaMessage(
-      instanceId,
+    // Send the QR code as an image message
+    const mediaResponse = await wasender.sendImageMessage(
+      targetSession.api_key,
       phoneNumber,
-      message,
       qrCodeUrl,
-      'qrcode.png'
+      message
     );
+
+    if (!mediaResponse.success) {
+      throw new Error(`Failed to send QR code: ${mediaResponse.message}`);
+    }
 
     console.log('QR code sent successfully:', mediaResponse.data);
     return { success: true };
@@ -337,15 +362,31 @@ const public_Register_post = async (req, res) => {
           { new: true, upsert: true }
         )
           .then(async () => {
-            await sendQRCode(
-              `2${phone}@c.us`,
-              `This is your QR Code \n\n Student Name: ${Username} \n\n Student Code: ${Code} \n\n Grade: ${Grade} \n\n Grade Level: ${GradeLevel} \n\n Attendance Type: ${attendingType} \n\n Book Taken: ${
-                bookTaken ? 'Yes' : 'No'
-              } \n\n School: ${schoolName} \n\n Balance: ${balance} \n\n Center Name: ${centerName} \n\n Grade Type: ${gradeType} \n\n Group Time: ${groupTime} `,
-              Code,
-              centerName
-            );
-            res.status(201).redirect('Register');
+            try {
+              console.log("Attempting to send QR code to student...");
+              
+              // Use the formatted phone with country code
+              const qrResult = await sendQRCode(
+                `2${phone}@c.us`,
+                `This is your QR Code \n\n Student Name: ${Username} \n\n Student Code: ${Code} \n\n Grade: ${Grade} \n\n Grade Level: ${GradeLevel} \n\n Attendance Type: ${attendingType} \n\n Book Taken: ${
+                  bookTaken ? 'Yes' : 'No'
+                } \n\n School: ${schoolName} \n\n Balance: ${balance} \n\n Center Name: ${centerName} \n\n Grade Type: ${gradeType} \n\n Group Time: ${groupTime} `,
+                Code,
+                centerName
+              );
+              
+              console.log("QR code sending result:", qrResult);
+              
+              res
+                .status(201)
+                .redirect('Register');
+            } catch (qrError) {
+              console.error("Failed to send QR code:", qrError);
+              // Still redirect to Register even if QR code sending fails
+              res
+                .status(201)
+                .redirect('Register');
+            }
           })
           .catch((err) => {
             console.log(err);

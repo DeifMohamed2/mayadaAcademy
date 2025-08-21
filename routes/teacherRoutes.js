@@ -149,8 +149,9 @@ router.get('/getInstances', authMiddleware, teacherController.getInstances);
 router.get('/generateQrCode/:instanceId', authMiddleware, teacherController.generateQrCode);
 router.delete('/deleteInstance/:instanceId', authMiddleware, teacherController.deleteInstance);
 router.get('/checkRealInstanceStatus/:instanceId', authMiddleware, teacherController.checkRealInstanceStatus);
-// router.post('/setWebhook/:instanceId', authMiddleware, teacherController.setWebhook);
-// router.post('/rebootInstance/:instanceId', authMiddleware, teacherController.rebootInstance);
+router.post('/setWebhook/:instanceId', authMiddleware, teacherController.setWebhook);
+router.post('/rebootInstance/:instanceId', authMiddleware, teacherController.rebootInstance);
+router.post('/regenerateQrCode/:instanceId', authMiddleware, teacherController.regenerateQrCode);
 
 // ================== END Whats App ====================== //
 

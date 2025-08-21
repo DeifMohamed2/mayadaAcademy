@@ -4,633 +4,328 @@
     <%- include("./partials/head.ejs") %>
 
 <body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2">
+                <%- include("./partials/nav.ejs") %>
+            </div>
 
+            <div class="col-lg-10">
+                <main class="p-4">
+                    <div class="row mb-3">
+                        <div class="col-md-6"></div>
+                        <div class="col-md-6">
+                            <div class="left">
+                                <%- include("./partials/top.ejs") %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Header Section -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="mb-1 text-white fw-bold">
+                                        <i class="fab fa-whatsapp text-success me-2"></i>
+                                        إدارة واتساب
+                                    </h2>
+                                    <p class="text-muted mb-0">إدارة جلسات واتساب وإرسال الرسائل</p>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button id="refreshInstances" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-sync-alt me-1"></i>
+                                        تحديث
+                                    </button>
+                                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addSessionModal" disabled>
+                                        <i class="fas fa-plus me-1"></i>
+                                        إضافة جلسة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sessions Grid -->
+                    <div class="row" id="sessionsContainer">
+                        <div class="col-12 text-center py-5" id="loadingSessions">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">جاري التحميل...</span>
+                            </div>
+                            <p class="mt-3 text-muted">جاري تحميل الجلسات...</p>
+                        </div>
+                        
+                        <div class="col-12 text-center py-5 d-none" id="noSessions">
+                            <div class="empty-state">
+                                <i class="fab fa-whatsapp fa-4x text-muted mb-3"></i>
+                                <h5 class="text-white">لا توجد جلسات واتساب</h5>
+                                <p class="text-muted">ابدأ بإضافة جلسة واتساب جديدة</p>
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSessionModal" disabled>
+                                    <i class="fas fa-plus me-2"></i>
+                                    إضافة جلسة جديدة
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Session Modal -->
+    <div class="modal fade" id="addSessionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fab fa-whatsapp text-success me-2"></i>
+                        إضافة جلسة واتساب جديدة
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <form id="createSessionForm">
+                        <div class="mb-3">
+                            <label for="sessionName" class="form-label fw-semibold text-white">اسم الجلسة</label>
+                            <input type="text" class="form-control" id="sessionName" placeholder="مثال: واتساب الأعمال" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label fw-semibold text-white">رقم الهاتف (اختياري)</label>
+                            <input type="text" class="form-control" id="phoneNumber" placeholder="+966501234567">
+                            <div class="form-text text-muted">سيتم استخدام هذا الرقم للعرض فقط</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-plus me-2"></i>
+                                إنشاء الجلسة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal fade" id="qrCodeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-qrcode text-success me-2"></i>
+                        ربط واتساب
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0 text-center">
+                    <div id="qrCodeContainer" class="mb-4">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                        <p class="mt-3 text-muted">جاري إنشاء رمز QR...</p>
+                    </div>
+                    
+                    <div class="alert alert-info text-start">
+                        <h6 class="alert-heading fw-bold mb-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            خطوات الربط
+                        </h6>
+                        <ol class="mb-0">
+                            <li>افتح تطبيق واتساب على هاتفك</li>
+                            <li>اذهب إلى <strong>الإعدادات</strong> → <strong>الأجهزة المرتبطة</strong></li>
+                            <li>انقر على <strong>ربط جهاز</strong></li>
+                            <li>امسح رمز QR الموجود أعلاه</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إغلاق</button>
+                        <button type="button" class="btn btn-primary" id="refreshQRBtn">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            تحديث الرمز
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Details Modal -->
+    <div class="modal fade" id="sessionDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-info-circle text-success me-2"></i>
+                        تفاصيل الجلسة
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <div id="sessionDetailsContent">
+                        <!-- Session details will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Cairo', sans-serif;
         }
 
-        .upload-container {
-            background-color: transparent;
-            border: 2px solid #e3b228;
-            border-radius: 10px;
-            padding: 30px;
-            width: 100%;
-            max-width: 600px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            color: #ffffff;
-            font-size: 2rem;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            width: 100%;
-        }
-
-        .file-label {
-            display: block;
-            background-color: transparent;
-            border: 2px dashed #e3b228;
-            border-radius: 5px;
-            padding: 15px;
-            color: #e3b228;
-            cursor: pointer;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .file-label:hover {
-            background-color: #e3b228;
-            color: rgb(0, 0, 0);
-        }
-
-        #file , #fileMSG {
-            display: none;
-        }
-
-        .upload-btn {
-            margin-top: 20px;
-            padding: 15px 30px;
-            border: 2px solid #e3b228;
-            background-color: transparent;
-            color: #e3b228;
-            border-radius: 5px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .upload-btn:hover {
-            background-color: #e3b228;
-            color: rgb(0, 0, 0);
-            transform: scale(1.05);
-        }
-
-        .output {
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
-      <style>
         body {
             background-color: #121212;
             color: #ffffff;
         }
         
-        .instance-card {
-            transition: all 0.3s ease;
+        .session-card {
+            background-color: #1e1e1e;
+            border: 1px solid rgba(37, 211, 102, 0.2);
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
-        }
-        
-        .instance-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(13, 110, 253, 0.3) !important;
-        }
-        
-        .card-header-custom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            background: linear-gradient(45deg, #0d6efd, #0a58ca);
-        }
-        
-        .instance-title {
-            display: flex;
-            align-items: center;
-        }
-        
-        .instance-icon {
-            width: 36px;
-            height: 36px;
-            background-color: #25D366;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
-        }
-        
-        .instance-icon i {
-            font-size: 20px;
-            color: white;
-        }
-        
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.15);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
+            height: 100%;
             transition: all 0.3s ease;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
         
-        .btn-icon:hover {
-            background-color: #dc3545;
+        .session-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            border-color: rgba(37, 211, 102, 0.4);
+        }
+
+        .session-header {
+            background: linear-gradient(135deg, #128C7E, #25D366);
             color: white;
-            transform: scale(1.1);
+            padding: 15px 20px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
         }
-        
-        .card-body {
+
+        .session-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1));
+        }
+
+        .session-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-connected {
+            background-color: rgba(37, 211, 102, 0.2);
+            color: #25D366;
+            border: 1px solid rgba(37, 211, 102, 0.3);
+        }
+
+        .status-connecting {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .status-disconnected {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .status-qr {
+            background-color: rgba(13, 110, 253, 0.2);
+            color: #0d6efd;
+            border: 1px solid rgba(13, 110, 253, 0.3);
+        }
+
+        .session-body {
             padding: 20px;
             background-color: #1e1e1e;
         }
         
-        .info-row {
+        .session-info {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .info-label {
-            display: flex;
-            align-items: center;
-            font-weight: 600;
-            margin-right: 10px;
-            min-width: 100px;
-        }
-        
-        .info-label i {
-            margin-right: 8px;
-            font-size: 16px;
-        }
-        
-        .info-value {
-            font-weight: 500;
-            color: #e0e0e0;
-        }
-        
-        .status-container {
-            display: flex;
-            background-color: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .status-container.success {
-            background-color: rgba(40, 167, 69, 0.1);
-            border-left: 4px solid #28a745;
-        }
-        
-        .status-container.warning {
-            background-color: rgba(255, 193, 7, 0.1);
-            border-left: 4px solid #ffc107;
-        }
-        
-        .status-container.danger {
-            background-color: rgba(220, 53, 69, 0.1);
-            border-left: 4px solid #dc3545;
-        }
-        
-        .status-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 15px;
-            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
-        }
-        
-        .status-container.success .status-icon {
-            background-color: #28a745;
-        }
-        
-        .status-container.warning .status-icon {
-            background-color: #ffc107;
-        }
-        
-        .status-container.danger .status-icon {
-            background-color: #dc3545;
-        }
-        
-        .status-icon i {
-            font-size: 18px;
-            color: white;
-        }
-        
-        .status-details {
-            flex: 1;
-        }
-        
-        .status-label {
-            font-size: 0.8rem;
-            color: #aaaaaa;
-            margin-bottom: 2px;
-        }
-        
-        .status-text {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .status-container.success .status-text {
-            color: #28a745;
-        }
-        
-        .status-container.warning .status-text {
-            color: #ffc107;
-        }
-        
-        .status-container.danger .status-text {
-            color: #dc3545;
-        }
-        
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            font-size: 0.7rem;
-            font-weight: 600;
-            padding: 4px 8px;
-            border-radius: 10px;
-        }
-        
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-        }
-        
-        .btn-outline-info {
-            border-color: #0dcaf0;
-            color: #0dcaf0;
-        }
-        
-        .btn-outline-info:hover {
-            background-color: #0dcaf0;
-            color: #fff;
-        }
-        
-        .card-footer-custom {
-            padding: 15px 20px;
-            background-color: #2d2d2d;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .generate-qr-btn {
-            width: 100%;
-            padding: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
-        
-        .generate-qr-btn:not(:disabled):hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.4);
-        }
-        
-        .generate-qr-btn:disabled {
-            background-color: #495057;
-            border-color: #495057;
-            opacity: 0.7;
-        }
-        
-        /* QR Code Modal Styles */
-        #qrCodeModal .modal-content {
-            border-radius: 15px;
-            border: none;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-        }
-        
-        #qrCodeModal .modal-header {
-            border-radius: 15px 15px 0 0;
-            background: linear-gradient(135deg, #1e3a8a, #0d6efd);
-            padding: 15px 20px;
-        }
-        
-        #qrCodeContainer {
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
-            transition: all 0.5s ease;
-            position: relative;
-        }
-        
-        #qrCodeContainer img {
-            max-width: 280px;
-            margin: 0 auto;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            animation: pulse-light 2s infinite;
-        }
-        
-        @keyframes pulse-light {
-            0% {
-                box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
-            }
-        }
-        
-        .qr-instructions {
-            background-color: rgba(13, 110, 253, 0.05);
-            border-radius: 10px;
-            padding: 15px;
-            border-left: 4px solid #0d6efd;
-            transition: all 0.3s ease;
-        }
-        
-        .qr-instructions ol {
-            margin-bottom: 0;
-            padding-right: 20px;
-        }
-        
-        .qr-instructions li {
-            margin-bottom: 8px;
-        }
-        
-        .alert-primary {
-            background: linear-gradient(90deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05));
-            border: none;
-            border-left: 4px solid #0d6efd;
-            border-radius: 10px;
-        }
-        
-        .whatsapp-icon {
-            background-color: #25D366;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .form-control {
-            background-color: #2d2d2d;
-            border-color: #0d6efd;
-            color: white;
-        }
-        
-        .form-control:focus {
-            background-color: #2d2d2d;
-            border-color: #0d6efd;
-            color: white;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-        
-        .form-control::placeholder {
-            color: #aaa;
-        }
-        
-        .btn-primary {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        
-        .btn-primary:hover {
-            background-color: #0b5ed7;
-            border-color: #0b5ed7;
-        }
-        
-        label {
-            color: #ddd;
-        }
-        
-        .alert-info {
-            background-color: rgba(13, 202, 240, 0.1);
-            border-color: rgba(13, 202, 240, 0.3);
-            color: #0dcaf0;
-            border-radius: 10px;
-        }
-        
-        .modal-content {
-            border: none;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background-color: #5a6268;
-            border-color: #545b62;
-        }
-        
-        /* Enhanced styling for WhatsApp instance cards */
-        .instance-card {
-            border: 1px solid rgba(29, 78, 216, 0.2);
-            background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 
-                        0 2px 5px rgba(13, 110, 253, 0.15) !important;
-        }
-        
-        .instance-card:hover {
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 
-                        0 5px 15px rgba(13, 110, 253, 0.3) !important;
-            border-color: rgba(29, 78, 216, 0.5);
-        }
-        
-        .card-header-custom {
-            background: linear-gradient(135deg, #1e3a8a, #0d6efd);
-            padding: 18px 20px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .card-header-custom::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100px;
-            height: 100%;
-            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%);
-            transform: skewX(-15deg);
-        }
-        
-        .instance-icon {
-            width: 42px;
-            height: 42px;
-            background: linear-gradient(135deg, #25D366, #128C7E);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 
-                        0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-        
-        .instance-icon i {
-            font-size: 22px;
-        }
-        
-        .card-body {
-            background: linear-gradient(165deg, #1e1e1e, #262626);
-            padding: 25px;
-        }
-        
-        .info-row {
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
             background-color: rgba(255, 255, 255, 0.03);
             border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 15px;
             transition: all 0.3s ease;
         }
-        
-        .info-row:hover {
+
+        .session-info:hover {
             background-color: rgba(255, 255, 255, 0.05);
             transform: translateX(2px);
         }
+
+        .session-info:last-child {
+            margin-bottom: 0;
+        }
+
+        .session-info-icon {
+            width: 32px;
+            height: 32px;
+            background-color: rgba(37, 211, 102, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 0.75rem;
+            color: #25D366;
+        }
+
+        .session-info-content {
+            flex: 1;
+        }
         
-        .info-label {
+        .session-info-label {
+            font-size: 0.75rem;
             color: #9ca3af;
+            margin-bottom: 0.25rem;
         }
-        
-        .info-label i {
-            color: #0d6efd;
-        }
-        
-        .info-value {
+
+        .session-info-value {
+            font-weight: 600;
+            color: #e0e0e0;
             font-family: 'Courier New', monospace;
             letter-spacing: 0.5px;
         }
-        
-        .status-container {
-            margin: 10px 0 25px;
-            border-radius: 12px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 1;
-            overflow: hidden;
-        }
-        
-        .status-container::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
-            z-index: -1;
-        }
-        
-        .status-container:hover {
-            transform: translateY(-2px);
-        }
-        
-        .status-container.success {
-            background: linear-gradient(90deg, rgba(40,167,69,0.15) 0%, rgba(0,0,0,0.1) 100%);
-        }
-        
-        .status-container.warning {
-            background: linear-gradient(90deg, rgba(255,193,7,0.15) 0%, rgba(0,0,0,0.1) 100%);
-        }
-        
-        .status-container.danger {
-            background: linear-gradient(90deg, rgba(220,53,69,0.15) 0%, rgba(0,0,0,0.1) 100%);
-        }
-        
-        .status-icon {
-            width: 48px;
-            height: 48px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
-            }
-        }
-        
-        .status-container.success .status-icon {
-            background: linear-gradient(135deg, #28a745, #20c997);
-        }
-        
-        .status-container.warning .status-icon {
-            background: linear-gradient(135deg, #ffc107, #fd7e14);
-        }
-        
-        .status-container.danger .status-icon {
-            background: linear-gradient(135deg, #dc3545, #e83e8c);
-        }
-        
-        .status-text {
-            font-size: 1.2rem;
-            font-weight: 700;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-        }
-        
-        .status-badge {
-            background-color: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 4px;
-        }
-        
-        .action-buttons {
-            margin-bottom: 10px;
-        }
-        
-        .btn-outline-info {
-            border-radius: 20px;
-            padding: 8px 16px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            border-width: 2px;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-outline-info:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(13, 202, 240, 0.3);
-        }
-        
-        .card-footer-custom {
-            background: linear-gradient(to bottom, #2d2d2d, #232323);
+
+        .session-actions {
             padding: 20px;
+            background: linear-gradient(to bottom, #2d2d2d, #232323);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .generate-qr-btn {
+
+        .btn-action {
             border-radius: 10px;
-            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
             border: none;
             position: relative;
             overflow: hidden;
             z-index: 1;
-            font-weight: 700;
         }
-        
-        .generate-qr-btn::before {
+
+        .btn-action::before {
             content: '';
             position: absolute;
             top: 0;
@@ -641,611 +336,793 @@
             transition: left 0.7s ease;
             z-index: -1;
         }
-        
-        .generate-qr-btn:hover::before {
+
+        .btn-action:hover::before {
             left: 100%;
         }
-        
-        .generate-qr-btn:disabled {
-            background: linear-gradient(135deg, #495057, #343a40);
-        }
-        
-        /* Refresh button enhancement */
-        #refreshInstances {
-            border-radius: 20px;
-            padding: 6px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, #0dcaf0, #0d6efd);
-            border: none;
-            font-weight: 500;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-        
-        #refreshInstances:hover {
+
+        .btn-action:not(:disabled):hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.4);
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
         }
         
-        #refreshInstances i {
-            transition: transform 0.5s ease;
+        .btn-action:disabled {
+            background: linear-gradient(135deg, #495057, #343a40);
+            opacity: 0.7;
         }
         
-        #refreshInstances:hover i {
-            transform: rotate(180deg);
+        .empty-state {
+            padding: 3rem 1rem;
         }
-        
-        /* Enhanced for the add form */
-        .card-header.bg-primary {
-            background: linear-gradient(135deg, #1e3a8a, #0d6efd) !important;
+
+        .empty-state i {
+            opacity: 0.5;
         }
-        
-        .input-group-text {
-            background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
-        }
-        
-        .input-group {
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+
+        .qr-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            transition: all 0.5s ease;
+            position: relative;
             overflow: hidden;
         }
-        
-        #createInstanceForm button[type="submit"] {
+
+        .qr-container img {
+            max-width: 250px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-content {
             border: none;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            background-color: #1a1a1a;
+            border: 1px solid rgba(37, 211, 102, 0.2);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #128C7E, #25D366);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            background-color: #1a1a1a;
+        }
+        
+        .form-control {
+            background-color: #2d2d2d;
+            border: 1px solid #25D366;
+            color: #ffffff;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
             transition: all 0.3s ease;
         }
         
-        #createInstanceForm button[type="submit"]:hover {
+        .form-control:focus {
+            background-color: #2d2d2d;
+            border-color: #25D366;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(37, 211, 102, 0.25);
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(13, 110, 253, 0.4);
+        }
+        
+        .form-control::placeholder {
+            color: #aaaaaa;
+        }
+
+        .btn {
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border: none;
+            color: #ffffff;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #128C7E, #075E54);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-outline-primary {
+            border-color: #25D366;
+            color: #25D366;
+            background: transparent;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #25D366;
+            border-color: #25D366;
+            color: #000000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(37, 211, 102, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #128C7E, #075E54);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+            background: transparent;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: #ffffff;
+        }
+        
+        .alert {
+            border-radius: 12px;
+            border: none;
+        }
+        
+        .alert-info {
+            background-color: rgba(37, 211, 102, 0.1);
+            border-color: rgba(37, 211, 102, 0.3);
+            color: #25D366;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .alert-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            border-color: rgba(40, 167, 69, 0.3);
+            color: #28a745;
+        }
+
+        .alert-danger {
+            background-color: rgba(220, 53, 69, 0.1);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: #dc3545;
+        }
+
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .text-success {
+            color: #25D366 !important;
+        }
+
+        .text-muted {
+            color: #aaaaaa !important;
+        }
+
+        .text-white {
+            color: #ffffff !important;
+        }
+
+        .text-primary {
+            color: #25D366 !important;
+        }
+
+        .fw-bold {
+            font-weight: 700 !important;
+        }
+
+        .fw-semibold {
+            font-weight: 600 !important;
+        }
+
+        .me-2 {
+            margin-right: 0.5rem !important;
+        }
+
+        .mb-1 {
+            margin-bottom: 0.25rem !important;
+        }
+
+        .mb-2 {
+            margin-bottom: 0.5rem !important;
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem !important;
+        }
+
+        .mb-4 {
+            margin-bottom: 1.5rem !important;
+        }
+
+        .mt-3 {
+            margin-top: 1rem !important;
+        }
+
+        .py-5 {
+            padding-top: 3rem !important;
+            padding-bottom: 3rem !important;
+        }
+
+        .p-4 {
+            padding: 1.5rem !important;
+        }
+
+        .gap-2 {
+            gap: 0.5rem !important;
+        }
+
+        .d-none {
+            display: none !important;
+        }
+
+        .d-flex {
+            display: flex !important;
+        }
+
+        .d-grid {
+            display: grid !important;
+        }
+
+        .justify-content-between {
+            justify-content: space-between !important;
+        }
+
+        .justify-content-center {
+            justify-content: center !important;
+        }
+
+        .align-items-center {
+            align-items: center !important;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        .text-start {
+            text-align: start !important;
+        }
+
+        .border-0 {
+            border: 0 !important;
+        }
+
+        .border-top {
+            border-top: 1px solid #dee2e6 !important;
+        }
+
+        .pb-0 {
+            padding-bottom: 0 !important;
+        }
+
+        .pt-0 {
+            padding-top: 0 !important;
+        }
+
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+
+        .dropdown-menu {
+            background-color: #2d2d2d;
+            border: 1px solid rgba(37, 211, 102, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .dropdown-item {
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-item:hover {
+            background-color: rgba(37, 211, 102, 0.1);
+            color: #25D366;
+        }
+
+        .btn-close-white {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        .btn-light {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        .btn-light:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
         }
     </style>
 
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-lg-2">
-                <%- include("./partials/nav.ejs") %>
-            </div>
-
-            <div class="col-lg-10">
-                <main>
-                    <div class="row">
-                        <div class="col-md-6"></div>
-
-                        <div class="col-md-6">
-                            <div class="left" style="margin-top: 0.2rem;">
-                                <%- include("./partials/top.ejs") %>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row mb-4 d-none">
-                        <div class="col-12">
-                            <div class="card shadow-sm bg-dark text-white border-0">
-                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">إضافة رقم واتس جديد</h5>
-                                    <div class="whatsapp-icon">
-                                        <i class="fab fa-whatsapp fa-lg"></i>
-                        </div>
-                        </div>
-                                <div class="card-body">
-                                    <form id="createInstanceForm" class="row g-3">
-                                        <div class="col-md-5">
-                                            <label for="phoneNumber" class="form-label">رقم الهاتف</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-primary text-white">
-                                                    <i class="fas fa-phone"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="phoneNumber" placeholder="أدخل رقم الهاتف" required>
-                                            </div>
-                        </div>
-                                        <div class="col-md-5">
-                                            <label for="name" class="form-label">اسم الرقم</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-primary text-white">
-                                                    <i class="fas fa-user"></i>
-                                                </span>
-                                                <input type="text" class="form-control" id="name" placeholder="أدخل اسم الرقم" required>
-                        </div>
-                            </div>
-                                        <div class="col-md-2 d-flex align-items-end">
-                                            <button type="submit" class="btn btn-primary w-100">
-                                                <i class="fas fa-plus-circle me-1"></i> إضافة
-                                            </button>
-                            </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        </div>
-
-                            <div class="row">
-                        <div class="col-12">
-                            <div class="card shadow-sm bg-dark text-white border-0">
-                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">أرقام الواتس المتاحة</h5>
-                                    <button id="refreshInstances" class="btn btn-sm btn-light">
-                                        <i class="fas fa-sync-alt me-2"></i> تحديث
-                                    </button>
-                            </div>
-                                <div class="card-body">
-                                    <div class="row mb-3">
-                                        <div class="col-12">
-                                            <div class="alert alert-info text-center" role="alert">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                اضغط على "إنشاء رمز QR" لتوليد رمز QR للاتصال بواتساب
-                            </div>
-                                </div>
-                            </div>
-                                    <div id="instancesList" class="row">
-                                        <!-- Instances will be loaded here dynamically -->
-                                        <div class="col-12 text-center py-5" id="loadingInstances">
-                                            <div class="spinner-grow text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
-                                                <span class="visually-hidden">جاري التحميل...</span>
-                        </div>
-                                            <p class="mt-2 text-muted">جاري تحميل أرقام الواتساب...</p>
-                            </div>
-                                        <div class="col-12 text-center py-5 d-none" id="noInstances">
-                                            <i class="fas fa-phone-slash fa-4x text-muted mb-3"></i>
-                                            <p class="text-muted">لا توجد أرقام واتس مضافة حتى الآن</p>
-                                            <button class="btn btn-outline-primary mt-3" onclick="document.getElementById('phoneNumber').focus()">
-                                                <i class="fas fa-plus-circle me-2"></i> أضف رقم جديد
-                                            </button>
-                        </div>
-                            </div>
-                            </div>
-                            </div>
-                            </div>
-                            </div>
-                </main>
-                                </div>
-                            </div>
-                        </div>
-
-    <!-- QR Code Modal -->
-    <div class="modal fade" id="qrCodeModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark text-white border-primary">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-qrcode me-2"></i>
-                        مسح رمز QR للاتصال
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                <div class="modal-body text-center">
-                    <div id="qrCodeContainer" class="mb-3 p-3 bg-white rounded">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">جاري التحميل...</span>
-            </div>
-                        <p class="text-dark mt-2">جاري إنشاء رمز QR...</p>
-                    </div>
-                    <div class="alert alert-primary d-flex align-items-center" role="alert">
-                        <div class="me-3">
-                            <i class="fas fa-mobile-alt fa-2x"></i>
-                        </div>
-                        <p id="qrCodeStatus" class="mb-0">
-                            قم بفتح واتساب على هاتفك وامسح رمز QR للاتصال
-                        </p>
-                    </div>
-                    <div class="qr-instructions d-none mt-3">
-                        <ol class="text-start text-muted">
-                            <li>افتح تطبيق واتساب على هاتفك</li>
-                            <li>انقر على القائمة أو الإعدادات وحدد الأجهزة المرتبطة</li>
-                            <li>انقر على ربط جهاز</li>
-                            <li>وجّه كاميرا هاتفك نحو هذه الشاشة لمسح الرمز</li>
-                        </ol>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="../assest/bootstrap.bundle.min.js"></script>
-    <script src="../assest/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const socket = io();
-            const instancesList = document.getElementById('instancesList');
-            const loadingInstances = document.getElementById('loadingInstances');
-            const noInstances = document.getElementById('noInstances');
-            const createInstanceForm = document.getElementById('createInstanceForm');
+            const sessionsContainer = document.getElementById('sessionsContainer');
+            const loadingSessions = document.getElementById('loadingSessions');
+            const noSessions = document.getElementById('noSessions');
+            const createSessionForm = document.getElementById('createSessionForm');
             const qrCodeModal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
-            const qrCodeContainer = document.getElementById('qrCodeContainer');
-            const qrCodeStatus = document.getElementById('qrCodeStatus');
-            let currentInstanceId = null;
+            const sessionDetailsModal = new bootstrap.Modal(document.getElementById('sessionDetailsModal'));
+            let currentSessionId = null;
+            let qrRefreshTimer = null;
+            let qrRefreshCountdown = 45; // 45 seconds countdown
 
-            // Function to load all instances
-            async function loadInstances() {
+            // Load sessions on page load
+            loadSessions();
+
+            // Refresh button with loading state
+            document.getElementById('refreshInstances').addEventListener('click', async function() {
+                const refreshBtn = this;
+                const originalText = refreshBtn.innerHTML;
+                
+                // Show loading state
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري التحديث...';
+                
                 try {
-                    loadingInstances.classList.remove('d-none');
-                    noInstances.classList.add('d-none');
+                    await loadSessions();
+                    showAlert('تم تحديث الجلسات بنجاح', 'success');
+                } catch (error) {
+                    showAlert('حدث خطأ أثناء تحديث الجلسات', 'danger');
+                } finally {
+                    // Restore button state
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = originalText;
+                }
+            });
+
+            // Create session form
+            createSessionForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const sessionName = document.getElementById('sessionName').value;
+                const phoneNumber = document.getElementById('phoneNumber').value;
+                
+                try {
+                    const response = await fetch('/teacher/createInstance', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            name: sessionName, 
+                            phoneNumber: phoneNumber 
+                        })
+                    });
                     
-                    const response = await fetch('/teacher/getInstances');
                     const data = await response.json();
-                    
-                    loadingInstances.classList.add('d-none');
                     
                     if (!data.success) {
                         throw new Error(data.message);
                     }
                     
-                    const instances = data.instances;
+                    // Close modal and reset form
+                    bootstrap.Modal.getInstance(document.getElementById('addSessionModal')).hide();
+                    createSessionForm.reset();
                     
-                    if (instances.length === 0) {
-                        noInstances.classList.remove('d-none');
-                    } else {
-                        // Clear the instances list
-                        instancesList.innerHTML = '';
-                        
-                        // Create instance cards
-                        instances.forEach(instance => {
-                            instancesList.appendChild(createInstanceCard(instance));
-                            checkRealInstanceStatus(instance.instanceId);
-                        });
-                    }
+                    // Reload sessions
+                    loadSessions();
+                    
+                    // Show success message
+                    showAlert('تم إنشاء الجلسة بنجاح', 'success');
+                    
                 } catch (error) {
-                    console.error('Error loading instances:', error);
-                    loadingInstances.classList.add('d-none');
-                    
-                    // Show error message
-                    instancesList.innerHTML = `
-                        <div class="col-12 text-center py-5">
-                            <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                            <p>حدث خطأ أثناء تحميل الأرقام</p>
-                            <button class="btn btn-primary" onclick="loadInstances()">إعادة المحاولة</button>
-                        </div>
-                    `;
+                    console.error('Error creating session:', error);
+                    showAlert('حدث خطأ أثناء إنشاء الجلسة', 'danger');
                 }
-            }
+            });
 
-            // Function to check the real status from waapi
-            async function checkRealInstanceStatus(instanceId) {
+            // Load sessions function
+            async function loadSessions() {
                 try {
-                    const response = await fetch(`/teacher/checkRealInstanceStatus/${instanceId}`);
+                    loadingSessions.classList.remove('d-none');
+                    noSessions.classList.add('d-none');
+                    
+                    const response = await fetch('/teacher/getInstances');
                     const data = await response.json();
                     
-                    if (data.success) {
-                        updateInstanceStatusUI(instanceId, data.apiStatus);
+                    console.log('API Response:', data);
+                    
+                    loadingSessions.classList.add('d-none');
+                    
+                    if (!data.success) {
+                        throw new Error(data.message);
+                    }
+                    
+                    const sessions = data.data || [];
+                    
+                    if (!sessions || sessions.length === 0) {
+                        noSessions.classList.remove('d-none');
+                    } else {
+                        renderSessions(sessions);
                     }
                 } catch (error) {
-                    console.error('Error checking real instance status:', error);
+                    console.error('Error loading sessions:', error);
+                    loadingSessions.classList.add('d-none');
+                    showAlert('حدث خطأ أثناء تحميل الجلسات', 'danger');
                 }
             }
 
-            // Function to update the instance status UI based on API response
-            function updateInstanceStatusUI(instanceId, apiStatus) {
-                const card = document.querySelector(`[data-instance-id="${instanceId}"]`);
-                if (!card) return;
+            // Render sessions
+            function renderSessions(sessions) {
+                sessionsContainer.innerHTML = '';
                 
-                const statusIcon = card.querySelector('.fa-check-circle, .fa-sync-alt, .fa-times-circle');
-                const statusText = card.querySelector('.status-text');
-                const generateQrButton = card.querySelector('.generate-qr');
-                
-                let status;
-                
-                // Map waapi instance status to our status
-                switch(apiStatus) {
-                    case 'ready':
-                    case 'authenticated':
-                        status = 'connected';
-                        break;
-                    case 'qr':
-                        status = 'qr';
-                        break;
-                    case 'loading_screen':
-                    case 'booting':
-                        status = 'connecting';
-                        break;
-                    case 'disconnected':
-                    case 'auth_failure':
-                    default:
-                        status = 'disconnected';
-                        break;
-                }
-                
-                // Update status icon class
-                statusIcon.className = getStatusIcon(status);
-                
-                // Update status text class and content
-                statusText.className = `status-text ms-2 text-${getStatusClass(status)}`;
-                statusText.textContent = getStatusText(status);
-                
-                // Disable generate QR button if the instance is connected
-                generateQrButton.disabled = status === 'connected';
-                
-                // Add a badge with API status for more detail
-                const statusDetail = card.querySelector('.status-detail');
-                if (statusDetail) {
-                    statusDetail.textContent = apiStatus;
-                }
+                sessions.forEach(session => {
+                    const sessionCard = createSessionCard(session);
+                    sessionsContainer.appendChild(sessionCard);
+                });
             }
 
-            // Function to create an instance card
-            function createInstanceCard(instance) {
-                const statusClass = getStatusClass(instance.status);
-                const statusText = getStatusText(instance.status);
-                const statusIcon = getStatusIcon(instance.status);
+            // Create session card
+            function createSessionCard(session) {
+                const sessionId = session.id || session.sessionId;
+                const phoneNumber = session.phone_number || session.phoneNumber || '-';
+                const createdAt = session.created_at || session.createdAt;
+                const status = session.status || 'disconnected';
+                
+                const statusClass = getStatusClass(status);
+                const statusText = getStatusText(status);
                 
                 const card = document.createElement('div');
-                card.className = 'col-md-4 mb-4';
-                card.dataset.instanceId = instance.instanceId;
+                card.className = 'col-lg-4 col-md-6 mb-4';
+                card.dataset.sessionId = sessionId;
                 
                 card.innerHTML = `
-                    <div class="card h-100 shadow-lg instance-card bg-dark text-white border-0">
-                        <div class="card-header-custom bg-primary">
-                            <div class="instance-title">
-                                <div class="instance-icon">
-                                    <i class="fab fa-whatsapp"></i>
+                    <div class="session-card">
+                        <div class="session-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 fw-bold">${session.name}</h6>
+                                    <span class="session-status status-${statusClass}">
+                                        <i class="fas ${getStatusIcon(status)} me-1"></i>
+                                        ${statusText}
+                                    </span>
                                 </div>
-                                <h5 class="mb-0">${instance.name}</h5>
-                            </div>
-                            <button class="btn btn-icon delete-instance" data-id="${instance.instanceId}" title="حذف الرقم" disabled>
-                                <i class="fas fa-trash-alt"></i>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
                             </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="showSessionDetails('${sessionId}')">
+                                            <i class="fas fa-info-circle me-2"></i>التفاصيل
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="deleteSession('${sessionId}')">
+                                            <i class="fas fa-trash me-2"></i>حذف
+                                        </a></li>
+                                    </ul>
                         </div>
-                        
-                        <div class="card-body">
-                            <div class="info-row">
-                                <div class="info-label">
-                                    <i class="fas fa-phone-alt text-primary"></i>
-                                    <span>رقم الهاتف:</span>
                                 </div>
-                                <div class="info-value">${instance.phoneNumber}</div>
                             </div>
                             
-                            <div class="info-row">
-                                <div class="info-label">
-                                    <i class="fas fa-calendar-alt text-primary"></i>
-                                    <span>تاريخ الإضافة:</span>
+                        <div class="session-body">
+                            <div class="session-info">
+                                <div class="session-info-icon">
+                                    <i class="fas fa-phone"></i>
                                 </div>
-                                <div class="info-value">${new Date(instance.createdAt).toLocaleDateString('ar-EG')}</div>
+                                <div class="session-info-content">
+                                    <div class="session-info-label">رقم الهاتف</div>
+                                    <div class="session-info-value">${phoneNumber}</div>
+                                </div>
                             </div>
                             
-                            <div class="status-container ${statusClass}">
-                                <div class="status-icon">
-                                    <i class="${statusIcon}"></i>
+                            <div class="session-info">
+                                <div class="session-info-icon">
+                                    <i class="fas fa-calendar"></i>
                                 </div>
-                                <div class="status-details">
-                                    <div class="status-label">الحالة:</div>
-                                    <div class="status-text">${statusText}</div>
-                                    <div class="status-badge badge bg-${statusClass} status-detail">
-                                        <i class="fas fa-circle fa-xs me-1"></i>
-                                        <span>checking...</span>
+                                <div class="session-info-content">
+                                    <div class="session-info-label">تاريخ الإنشاء</div>
+                                    <div class="session-info-value">${new Date(createdAt).toLocaleDateString('ar-EG')}</div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline-info check-status" data-id="${instance.instanceId}">
-                                    <i class="fas fa-sync-alt me-1"></i> تحديث الحالة
-                                </button>
+                        <div class="session-actions">
+                            <div class="d-grid gap-2">
+                                ${status === 'connected' ? 
+                                    `<button class="btn btn-success btn-action" disabled>
+                                        <i class="fas fa-check me-2"></i>متصل
+                                    </button>` :
+                                    `<button class="btn btn-primary btn-action" onclick="connectSession('${sessionId}')">
+                                        <i class="fas fa-qrcode me-2"></i>ربط واتساب
+                                    </button>`
+                                }
                             </div>
-                        </div>
-                        
-                        <div class="card-footer-custom">
-                            <button class="btn btn-primary generate-qr-btn generate-qr" data-id="${instance.instanceId}" ${instance.status === 'connected' ? 'disabled' : ''}>
-                                <i class="fas fa-qrcode me-2"></i> إنشاء رمز QR
-                            </button>
                         </div>
                     </div>
                 `;
                 
-                // Add event listener to generate QR button
-                card.querySelector('.generate-qr').addEventListener('click', function() {
-                    const instanceId = this.dataset.id;
-                    generateQrCode(instanceId);
-                });
-                
-                // Add event listener to delete button
-                card.querySelector('.delete-instance').addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    const instanceId = this.dataset.id;
-                    deleteInstance(instanceId);
-                });
-                
-                // Add event listener to check status button
-                card.querySelector('.check-status').addEventListener('click', function() {
-                    const instanceId = this.dataset.id;
-                    checkRealInstanceStatus(instanceId);
-                    
-                    // Add loading animation to button
-                    this.innerHTML = '<i class="fas fa-sync-alt fa-spin me-1"></i> جاري التحديث...';
-                    this.disabled = true;
-                    
-                    // Re-enable button after 2 seconds
-                    setTimeout(() => {
-                        this.innerHTML = '<i class="fas fa-sync-alt me-1"></i> تحديث الحالة';
-                        this.disabled = false;
-                    }, 2000);
-                });
-                
                 return card;
             }
             
-     
-            // Function to get status icon
-            function getStatusIcon(status) {
-                switch(status) {
-                    case 'connected':
-                        return 'fas fa-check-circle';
-                    case 'connecting':
-                    case 'qr':
-                        return 'fas fa-sync-alt fa-spin';
-                    case 'disconnected':
-                    default:
-                        return 'fas fa-times-circle';
+            // Connect session
+            window.connectSession = async function(sessionId) {
+                currentSessionId = sessionId;
+                qrCodeModal.show();
+                
+                // Clear any existing timer
+                if (qrRefreshTimer) {
+                    clearInterval(qrRefreshTimer);
+                    qrRefreshTimer = null;
                 }
-            }
-
-            // Function to generate QR code
-            async function generateQrCode(instanceId) {
+                
+                // Reset countdown
+                qrRefreshCountdown = 45;
+                
                 try {
-                    // Show the QR code modal
-                    qrCodeModal.show();
-                    
-                    // Set current instance ID
-                    currentInstanceId = instanceId;
-                    
-                    // Reset QR code container
-                    qrCodeContainer.innerHTML = `
-                        <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;">
-                            <span class="visually-hidden">جاري التحميل...</span>
+                    await generateAndDisplayQR(sessionId);
+                    startQRRefreshTimer(sessionId);
+                } catch (error) {
+                    console.error('Error connecting session:', error);
+                    document.getElementById('qrCodeContainer').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${error.message}
                         </div>
-                        <p class="text-dark mt-2">جاري إنشاء رمز QR...</p>
                     `;
-                    
-                    qrCodeStatus.innerHTML = 'قم بفتح واتساب على هاتفك وامسح رمز QR للاتصال';
-                    
-                    // Hide instructions initially
-                    document.querySelector('.qr-instructions').classList.add('d-none');
-                    
-                    // Request QR code generation
-                    const response = await fetch(`/teacher/generateQrCode/${instanceId}`);
-                    const data = await response.json();
-                    
-                    console.log("QR Code Response:", data);
-                    
-                    if (!data.success) {
-                        throw new Error(data.message || 'فشل في إنشاء رمز QR');
-                    }
-                    
-                    // Display QR code
-                    if (data.qrCode) {
-                        console.log("QR Code received, length:", data.qrCode.length);
-                        console.log("QR Code starts with:", data.qrCode.substring(0, 50) + "...");
-                        
-                        // Check if it's a valid data URL
-                        if (!data.qrCode.startsWith('data:image')) {
-                            console.warn("QR code doesn't appear to be a valid data URL");
-                            // Try to fix it if it's just a base64 string without proper prefix
-                            if (!data.qrCode.includes(',') && !data.qrCode.includes(':')) {
-                                data.qrCode = 'data:image/png;base64,' + data.qrCode;
-                                console.log("Fixed QR code format");
-                            }
-                        }
-                        
-                        qrCodeContainer.innerHTML = `
-                            <div class="qr-image-container text-center">
-                                <img src="${data.qrCode}" alt="QR Code" class="img-fluid" onerror="this.onerror=null; this.src='https://via.placeholder.com/300?text=QR+Code+Error'; console.error('QR code image failed to load');">
-                                <div class="qr-scan-overlay">
-                                    <div class="scan-animation"></div>
+                }
+            };
+
+            // Generate and display QR code
+            async function generateAndDisplayQR(sessionId) {
+                const qrContainer = document.getElementById('qrCodeContainer');
+                
+                // Show loading state
+                qrContainer.innerHTML = `
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <p class="mt-3 text-muted">جاري إنشاء رمز QR...</p>
+                `;
+                
+                const response = await fetch(`/teacher/generateQrCode/${sessionId}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message);
+                }
+                
+                if (data.qrCode) {
+                    // Check if it's a data URL (image) or raw data
+                    if (data.qrCode.startsWith('data:image/')) {
+                        // It's a proper image
+                        qrContainer.innerHTML = `
+                            <div class="qr-container">
+                                <img src="${data.qrCode}" alt="QR Code" class="img-fluid">
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        سيتم تحديث الرمز تلقائياً خلال <span id="qrCountdown">${qrRefreshCountdown}</span> ثانية
+                                    </small>
                                 </div>
                             </div>
                         `;
-                        qrCodeStatus.innerHTML = 'جاري الاتصال... افتح واتساب وامسح رمز QR';
-                        
-                        // Show instructions
-                        document.querySelector('.qr-instructions').classList.remove('d-none');
                     } else {
-                        throw new Error('لم يتم استلام رمز QR من الخادم');
-                    }
-                    
-                    // Add scan animation styles dynamically
-                    if (!document.getElementById('scan-animation-style')) {
-                        const style = document.createElement('style');
-                        style.id = 'scan-animation-style';
-                        style.textContent = `
-                            .qr-image-container {
-                                position: relative;
-                                display: inline-block;
-                                margin: 0 auto;
-                            }
-                            .qr-scan-overlay {
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                width: 100%;
-                                height: 100%;
-                                pointer-events: none;
-                            }
-                            .scan-animation {
-                                position: absolute;
-                                height: 2px;
-                                width: 100%;
-                                background: rgba(13, 110, 253, 0.8);
-                                box-shadow: 0 0 8px 2px rgba(13, 110, 253, 0.8);
-                                top: 0;
-                                animation: scan 2s infinite ease-in-out;
-                            }
-                            @keyframes scan {
-                                0% {
-                                    top: 0;
-                                }
-                                50% {
-                                    top: 100%;
-                                }
-                                100% {
-                                    top: 0;
-                                }
-                            }
+                        // It's raw QR data, show instructions
+                        qrContainer.innerHTML = `
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    QR Code Data Received
+                                </h6>
+                                <p class="mb-2">The QR code data has been received but needs to be converted to an image.</p>
+                                <div class="bg-dark p-3 rounded">
+                                    <code class="text-light">${data.qrCode.substring(0, 100)}...</code>
+                                </div>
+                                <p class="mt-2 mb-0">
+                                    <strong>Instructions:</strong> Please use a QR code generator to convert this data into a scannable QR code.
+                                </p>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        سيتم تحديث الرمز تلقائياً خلال <span id="qrCountdown">${qrRefreshCountdown}</span> ثانية
+                                    </small>
+                                </div>
+                            </div>
                         `;
-                        document.head.appendChild(style);
                     }
                     
-                    // Start polling for status change
-                    startStatusPolling(instanceId);
+                    // Start polling for status
+                    startStatusPolling(sessionId);
+                } else {
+                    throw new Error('لم يتم استلام رمز QR');
+                }
+            }
+
+            // Start QR refresh timer
+            function startQRRefreshTimer(sessionId) {
+                if (qrRefreshTimer) {
+                    clearInterval(qrRefreshTimer);
+                }
+                
+                qrRefreshTimer = setInterval(async () => {
+                    qrRefreshCountdown--;
+                    
+                    // Update countdown display
+                    const countdownElement = document.getElementById('qrCountdown');
+                    if (countdownElement) {
+                        countdownElement.textContent = qrRefreshCountdown;
+                    }
+                    
+                    // When countdown reaches 0, regenerate QR code
+                    if (qrRefreshCountdown <= 0) {
+                        clearInterval(qrRefreshTimer);
+                        qrRefreshTimer = null;
+                        
+                        try {
+                            // Use the new regenerate endpoint
+                            const response = await fetch(`/teacher/regenerateQrCode/${sessionId}`);
+                            const data = await response.json();
+                            
+                            if (!data.success) {
+                                throw new Error(data.message);
+                            }
+                            
+                            if (data.qrCode) {
+                                const qrContainer = document.getElementById('qrCodeContainer');
+                                
+                                // Check if it's a data URL (image) or raw data
+                                if (data.qrCode.startsWith('data:image/')) {
+                                    // It's a proper image
+                                    qrContainer.innerHTML = `
+                                        <div class="qr-container">
+                                            <img src="${data.qrCode}" alt="QR Code" class="img-fluid">
+                                            <div class="mt-3">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    سيتم تحديث الرمز تلقائياً خلال <span id="qrCountdown">${qrRefreshCountdown}</span> ثانية
+                                                </small>
+                                            </div>
+                                        </div>
+                                    `;
+                                } else {
+                                    // It's raw QR data, show instructions
+                                    qrContainer.innerHTML = `
+                                        <div class="alert alert-info">
+                                            <h6 class="alert-heading">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                QR Code Data Received
+                                            </h6>
+                                            <p class="mb-2">The QR code data has been received but needs to be converted to an image.</p>
+                                            <div class="bg-dark p-3 rounded">
+                                                <code class="text-light">${data.qrCode.substring(0, 100)}...</code>
+                                            </div>
+                                            <p class="mt-2 mb-0">
+                                                <strong>Instructions:</strong> Please use a QR code generator to convert this data into a scannable QR code.
+                                            </p>
+                                            <div class="mt-3">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    سيتم تحديث الرمز تلقائياً خلال <span id="qrCountdown">${qrRefreshCountdown}</span> ثانية
+                                                </small>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }
+                            
+                            qrRefreshCountdown = 45; // Reset countdown
+                            startQRRefreshTimer(sessionId); // Restart timer
+                        } catch (error) {
+                            console.error('Error regenerating QR code:', error);
+                            const qrContainer = document.getElementById('qrCodeContainer');
+                            qrContainer.innerHTML = `
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    فشل في تحديث رمز QR: ${error.message}
+                                </div>
+                            `;
+                        }
+                    }
+                }, 1000);
+            }
+
+            // Refresh QR button with loading state
+            document.getElementById('refreshQRBtn').addEventListener('click', async function() {
+                if (!currentSessionId) return;
+                
+                const refreshBtn = this;
+                const originalText = refreshBtn.innerHTML;
+                
+                // Show loading state
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحديث...';
+                
+                try {
+                    // Reset countdown
+                    qrRefreshCountdown = 45;
+                    
+                    // Clear existing timer
+                    if (qrRefreshTimer) {
+                        clearInterval(qrRefreshTimer);
+                        qrRefreshTimer = null;
+                    }
+                    
+                    await generateAndDisplayQR(currentSessionId);
+                    startQRRefreshTimer(currentSessionId);
+                    
+                    showAlert('تم تحديث رمز QR بنجاح', 'success');
                 } catch (error) {
-                    console.error('Error generating QR code:', error);
-                    
-                    // Show error message
-                    qrCodeContainer.innerHTML = `
-                        <div class="text-center">
-                            <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                            <p class="text-dark">حدث خطأ أثناء إنشاء رمز QR: ${error.message}</p>
-                            <button class="btn btn-outline-danger mt-3" onclick="generateQrCode('${instanceId}')">
-                                <i class="fas fa-redo me-2"></i> إعادة المحاولة
-                            </button>
-                        </div>
-                    `;
-                    
-                    qrCodeStatus.innerHTML = 'فشل الاتصال. حاول مرة أخرى';
-                }
-            }
-            
-            // Function to poll for status changes
-            let pollingInterval;
-            function startStatusPolling(instanceId) {
-                // Clear any existing interval
-                if (pollingInterval) {
-                    clearInterval(pollingInterval);
-                }
-                
-                // Check status immediately
-                checkRealInstanceStatus(instanceId);
-                
-                // Then check every 3 seconds
-                pollingInterval = setInterval(() => {
-                    checkRealInstanceStatus(instanceId);
-                }, 3000);
-            }
-            
-            // Stop polling when modal is closed
-            document.getElementById('qrCodeModal').addEventListener('hidden.bs.modal', function () {
-                if (pollingInterval) {
-                    clearInterval(pollingInterval);
-                    pollingInterval = null;
+                    console.error('Error refreshing QR code:', error);
+                    showAlert('حدث خطأ أثناء تحديث رمز QR', 'danger');
+                } finally {
+                    // Restore button state
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = originalText;
                 }
             });
 
-            // Function to delete an instance
-            async function deleteInstance(instanceId) {
-                if (confirm('هل أنت متأكد من حذف هذا الرقم؟')) {
+            // Show session details
+            window.showSessionDetails = async function(sessionId) {
+                try {
+                    const response = await fetch(`/teacher/checkRealInstanceStatus/${sessionId}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const detailsContent = document.getElementById('sessionDetailsContent');
+                        detailsContent.innerHTML = `
+                            <div class="session-info">
+                                <div class="session-info-icon">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="session-info-content">
+                                    <div class="session-info-label">حالة الجلسة</div>
+                                    <div class="session-info-value">${getStatusText(data.status)}</div>
+                                </div>
+                            </div>
+                            <div class="session-info">
+                                <div class="session-info-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="session-info-content">
+                                    <div class="session-info-label">آخر تحديث</div>
+                                    <div class="session-info-value">${new Date().toLocaleString('ar-EG')}</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        sessionDetailsModal.show();
+                    }
+                } catch (error) {
+                    console.error('Error loading session details:', error);
+                    showAlert('حدث خطأ أثناء تحميل التفاصيل', 'danger');
+                }
+            };
+
+            // Delete session
+            window.deleteSession = async function(sessionId) {
+                if (confirm('هل أنت متأكد من حذف هذه الجلسة؟')) {
                     try {
-                        const response = await fetch(`/teacher/deleteInstance/${instanceId}`, {
+                        const response = await fetch(`/teacher/deleteInstance/${sessionId}`, {
                             method: 'DELETE'
                         });
                         
@@ -1255,183 +1132,183 @@
                             throw new Error(data.message);
                         }
                         
-                        // Remove the instance card from the list
-                        const card = document.querySelector(`[data-instance-id="${instanceId}"]`);
+                        // Remove the session card
+                        const card = document.querySelector(`[data-session-id="${sessionId}"]`);
                         if (card) {
                             card.remove();
                         }
                         
-                        // Check if there are no instances left
-                        if (instancesList.children.length === 0) {
-                            noInstances.classList.remove('d-none');
+                        // Check if no sessions left
+                        if (sessionsContainer.children.length === 0) {
+                            noSessions.classList.remove('d-none');
                         }
+                        
+                        showAlert('تم حذف الجلسة بنجاح', 'success');
                     } catch (error) {
-                        console.error('Error deleting instance:', error);
-                        alert('حدث خطأ أثناء حذف الرقم');
+                        console.error('Error deleting session:', error);
+                        showAlert('حدث خطأ أثناء حذف الجلسة', 'danger');
                     }
                 }
+            };
+
+            // Status polling
+            let pollingInterval;
+            function startStatusPolling(sessionId) {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                }
+                
+                pollingInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch(`/teacher/checkRealInstanceStatus/${sessionId}`);
+                        const data = await response.json();
+                        
+                        if (data.success && data.status === 'connected') {
+                            clearInterval(pollingInterval);
+                            qrCodeModal.hide();
+                            loadSessions();
+                            showAlert('تم ربط واتساب بنجاح!', 'success');
+                        }
+                    } catch (error) {
+                        console.error('Error polling status:', error);
+                    }
+                }, 3000);
             }
 
-            // Function to get status class
+            // Socket events
+            socket.on('instance-status-change', function(data) {
+                const card = document.querySelector(`[data-session-id="${data.instanceId}"]`);
+                if (card) {
+                    // Update card status
+                    const statusElement = card.querySelector('.session-status');
+                    const statusClass = getStatusClass(data.status);
+                    const statusText = getStatusText(data.status);
+                    
+                    statusElement.className = `session-status status-${statusClass}`;
+                    statusElement.innerHTML = `<i class="fas ${getStatusIcon(data.status)} me-1"></i>${statusText}`;
+                    
+                    // Update action button
+                    const actionButton = card.querySelector('.btn-action');
+                    if (data.status === 'connected') {
+                        actionButton.className = 'btn btn-success btn-action';
+                        actionButton.disabled = true;
+                        actionButton.innerHTML = '<i class="fas fa-check me-2"></i>متصل';
+                    }
+                }
+            });
+
+            socket.on('instance-deleted', function(data) {
+                const card = document.querySelector(`[data-session-id="${data.instanceId}"]`);
+                if (card) {
+                    card.remove();
+                }
+                if (sessionsContainer.children.length === 0) {
+                    noSessions.classList.remove('d-none');
+                }
+            });
+
+            // Utility functions
             function getStatusClass(status) {
-                switch(status) {
+                switch(status.toLowerCase()) {
                     case 'connected':
-                        return 'success';
+                    case 'authenticated':
+                    case 'ready':
+                        return 'connected';
                     case 'connecting':
+                    case 'initializing':
+                        return 'connecting';
                     case 'qr':
-                        return 'warning';
+                    case 'need_scan':
+                    case 'require_qr':
+                    case 'unpaired':
+                    case 'unpaired_idle':
+                        return 'qr';
+                    case 'logged_out':
                     case 'disconnected':
                     default:
-                        return 'danger';
+                        return 'disconnected';
                 }
             }
 
-            // Function to get status text
             function getStatusText(status) {
-                switch(status) {
+                switch(status.toLowerCase()) {
                     case 'connected':
+                    case 'authenticated':
+                    case 'ready':
                         return 'متصل';
                     case 'connecting':
+                    case 'initializing':
                         return 'جاري الاتصال';
                     case 'qr':
-                        return 'في انتظار مسح الرمز';
+                    case 'need_scan':
+                    case 'require_qr':
+                    case 'unpaired':
+                    case 'unpaired_idle':
+                        return 'في انتظار الربط';
+                    case 'logged_out':
                     case 'disconnected':
                     default:
                         return 'غير متصل';
                 }
             }
 
-            // Handle instance creation form submission
-            createInstanceForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const phoneNumber = document.getElementById('phoneNumber').value;
-                const name = document.getElementById('name').value;
-                
-                try {
-                    const response = await fetch('/teacher/createInstance', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                        body: JSON.stringify({ phoneNumber, name })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (!data.success) {
-                        throw new Error(data.message);
-                    }
-                    
-                    // Clear form fields
-                    document.getElementById('phoneNumber').value = '';
-                    document.getElementById('name').value = '';
-                    
-                    // Hide no instances message if it's visible
-                    noInstances.classList.add('d-none');
-                    
-                    // Add the new instance card
-                    instancesList.prepend(createInstanceCard(data.instance));
-                    
-                    // Check real status
-                    checkRealInstanceStatus(data.instance.instanceId);
-            } catch (error) {
-                    console.error('Error creating instance:', error);
-                    alert('حدث خطأ أثناء إضافة الرقم');
+            function getStatusIcon(status) {
+                switch(status.toLowerCase()) {
+                    case 'connected':
+                    case 'authenticated':
+                    case 'ready':
+                        return 'fa-check-circle';
+                    case 'connecting':
+                    case 'initializing':
+                        return 'fa-sync-alt fa-spin';
+                    case 'qr':
+                    case 'need_scan':
+                    case 'require_qr':
+                    case 'unpaired':
+                    case 'unpaired_idle':
+                        return 'fa-qrcode';
+                    case 'logged_out':
+                    case 'disconnected':
+                    default:
+                        return 'fa-times-circle';
                 }
-            });
+            }
 
-            // Handle refresh button click
-            document.getElementById('refreshInstances').addEventListener('click', loadInstances);
-
-            // Socket event listeners for real-time updates
-            socket.on('instance-status-change', function(data) {
-                // Update the instance card status
-                const card = document.querySelector(`[data-instance-id="${data.instanceId}"]`);
+            function showAlert(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
                 
-                if (card) {
-                    const statusContainer = card.querySelector('.status-container');
-                    const statusIcon = card.querySelector('.status-icon i');
-                    const statusText = card.querySelector('.status-text');
-                    const statusBadge = card.querySelector('.status-badge');
-                    const generateQrButton = card.querySelector('.generate-qr');
-                    
-                    // Update status classes
-                    statusContainer.className = `status-container ${getStatusClass(data.status)}`;
-                    
-                    // Update icon class
-                    statusIcon.className = getStatusIcon(data.status);
-                    
-                    // Update text and content
-                    statusText.textContent = getStatusText(data.status);
-                    
-                    // Update badge
-                    statusBadge.className = `status-badge badge bg-${getStatusClass(data.status)} status-detail`;
-                    
-                    // Disable generate QR button if the instance is connected
-                    generateQrButton.disabled = data.status === 'connected';
-                    
-                    // Apply a highlight effect to show the status change
-                    statusContainer.style.transition = 'all 0.3s ease';
-                    statusContainer.style.transform = 'scale(1.05)';
-                    
-                    setTimeout(() => {
-                        statusContainer.style.transform = 'scale(1)';
-                    }, 500);
-                }
+                document.body.appendChild(alertDiv);
                 
-                // Update QR code modal if it's open for this instance
-                if (currentInstanceId === data.instanceId) {
-                    if (data.status === 'connected') {
-                        qrCodeContainer.innerHTML = `
-                            <div class="text-center">
-                                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                                <h5 class="text-dark">تم الاتصال بنجاح!</h5>
-                            </div>
-                        `;
-                        qrCodeStatus.innerHTML = 'تم الاتصال بنجاح. يمكنك استخدام الرقم الآن.';
-                        
-                        // Hide instructions
-                        document.querySelector('.qr-instructions').classList.add('d-none');
-                        
-                        // Auto-close modal after a delay
                         setTimeout(() => {
-                            qrCodeModal.hide();
-                        }, 3000);
-                        
-                        // Stop polling
-                        if (pollingInterval) {
-                            clearInterval(pollingInterval);
-                            pollingInterval = null;
-                        }
-                    } else if (data.status === 'qr') {
-                        qrCodeStatus.innerHTML = 'في انتظار مسح الرمز - اسرع قبل انتهاء صلاحية الرمز';
-                        // Show instructions
-                        document.querySelector('.qr-instructions').classList.remove('d-none');
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
                     }
-                }
-            });
+                }, 5000);
+            }
 
-            socket.on('instance-deleted', function(data) {
-                // Remove the instance card from the list
-                const card = document.querySelector(`[data-instance-id="${data.instanceId}"]`);
-                
-                if (card) {
-                    card.remove();
+            // Stop polling when modal is closed
+            document.getElementById('qrCodeModal').addEventListener('hidden.bs.modal', function () {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
                 }
                 
-                // Check if there are no instances left
-                if (instancesList.children.length === 0) {
-                    noInstances.classList.remove('d-none');
+                // Clear QR refresh timer
+                if (qrRefreshTimer) {
+                    clearInterval(qrRefreshTimer);
+                    qrRefreshTimer = null;
                 }
+                
+                // Reset current session
+                currentSessionId = null;
             });
-
-            // Load instances on page load
-            loadInstances();
         });
     </script>
-
-
 </body>
-
 </html>
