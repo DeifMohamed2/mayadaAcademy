@@ -120,76 +120,52 @@ const searchForUser = async (req, res) => {
 
 const converStudentRequestsToExcel = async (req, res) => {
   try {
-    // Fetch user data
+    // Fetch user data with only the required fields
     const users = await User.find(query, {
       Username: 1,
-      Email: 1,
-      gov: 1,
-      Markez: 1,
-      gender: 1,
-      phone: 1,
-      WhatsApp: 1,
-      parentPhone: 1,
-      place: 1,
       Code: 1,
-      createdAt: 1,
-      updatedAt: 1,
-      subscribe: 1,
+      phone: 1,
+      parentPhone: 1,
+      schoolName: 1,
     });
 
     // Create a new Excel workbook
     const workbook = new Excel.Workbook();
-    const worksheet = workbook.addWorksheet('Users Data');
+    const worksheet = workbook.addWorksheet('Students Data');
 
+    // Add headers with proper spacing
     const headerRow = worksheet.addRow([
-      '#',
       'User Name',
       'Student Code',
-      'Student Phone',
-      'Parent Phone',
-      'Government',
-      'Markez',
-      'createdAt',
-      'subscribe',
+      'School Name',
+      'Phone Number',
+      'Parent Phone Number',
     ]);
-    headerRow.font = { bold: true };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFFF00' },
-    };
+    
+    // Style headers - bold text only, no colors
+    headerRow.font = { bold: true, size: 12 };
+    
+    // Set column widths for better spacing
+    worksheet.columns = [
+      { key: 'Username', width: 25 },
+      { key: 'Code', width: 15 },
+      { key: 'schoolName', width: 30 },
+      { key: 'phone', width: 20 },
+      { key: 'parentPhone', width: 20 },
+    ];
 
-    // Add user data to the worksheet with alternating row colors
-    let c = 0;
+    // Add user data to the worksheet - no colors, simple formatting
     users.forEach((user) => {
-      c++;
       const row = worksheet.addRow([
-        c,
-        user.Username,
-        user.Code,
-        user.phone,
-        user.WhatsApp,
-        user.parentPhone,
-        user.gov,
-        user.Markez,
-        user.createdAt.toLocaleDateString(),
-        user.subscribe,
+        user.Username || '',
+        user.Code || '',
+        user.schoolName || '',
+        user.phone || '',
+        user.parentPhone || '',
       ]);
-
-      // Apply different fill color based on subscription status
-      if (!user.subscribe) {
-        row.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FF0000' },
-        }; // Red fill for non-subscribed users
-      } else if (c % 2 === 0) {
-        row.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'DDDDDD' },
-        }; // Alternate fill color for subscribed users
-      }
+      
+      // Simple formatting - no colors, just clean data
+      row.font = { size: 11 };
     });
 
     const excelBuffer = await workbook.xlsx.writeBuffer();
@@ -201,7 +177,7 @@ const converStudentRequestsToExcel = async (req, res) => {
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="UsersData.xlsx"`
+      `attachment; filename="StudentsData.xlsx"`
     );
 
     // Send Excel file as response
