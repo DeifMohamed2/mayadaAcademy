@@ -208,6 +208,192 @@
             margin-right: 8px;
         }
 
+        .progress-details {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(30, 30, 30, 0.8);
+            border-radius: 15px;
+            border: 1px solid rgba(37, 211, 102, 0.2);
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .stat-card.success {
+            background-color: rgba(37, 211, 102, 0.2);
+            border: 1px solid #25D366;
+        }
+
+        .stat-card.error {
+            background-color: rgba(255, 59, 48, 0.2);
+            border: 1px solid #FF3B30;
+        }
+
+        .stat-card.info {
+            background-color: rgba(0, 122, 255, 0.2);
+            border: 1px solid #007AFF;
+        }
+
+        .stat-card.warning {
+            background-color: rgba(255, 149, 0, 0.2);
+            border: 1px solid #FF9500;
+        }
+
+        .stat-card i {
+            font-size: 20px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .stat-card span {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .error-log {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(255, 59, 48, 0.1);
+            border: 1px solid #FF3B30;
+            border-radius: 10px;
+        }
+
+        .error-log h6 {
+            color: #FF3B30;
+            margin-bottom: 15px;
+        }
+
+        .error-item {
+            background-color: rgba(255, 59, 48, 0.1);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .error-item:hover {
+            background-color: rgba(255, 59, 48, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 59, 48, 0.2);
+        }
+
+        .error-item .error-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .error-item .student-name {
+            font-weight: bold;
+            color: #FF3B30;
+            font-size: 16px;
+        }
+
+        .error-item .phone-number {
+            color: #FF9500;
+            font-weight: 600;
+            font-size: 14px;
+            background-color: rgba(255, 149, 0, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 149, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .error-item .phone-number:hover {
+            background-color: rgba(255, 149, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        .error-item .phone-number::after {
+            content: "انقر للنسخ";
+            position: absolute;
+            top: -25px;
+            right: 0;
+            background-color: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .error-item .phone-number:hover::after {
+            opacity: 1;
+        }
+
+        .error-item .error-message {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(255, 59, 48, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #FF3B30;
+        }
+
+        .error-item .error-timestamp {
+            color: #888;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 8px;
+        }
+
+        .error-item i {
+            margin-left: 6px;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background-color: rgba(37, 211, 102, 0.1);
+            border-color: #25D366;
+            color: #25D366;
+        }
+
+        .alert-danger {
+            background-color: rgba(255, 59, 48, 0.1);
+            border-color: #FF3B30;
+            color: #FF3B30;
+        }
+
+        .alert-warning {
+            background-color: rgba(255, 149, 0, 0.1);
+            border-color: #FF9500;
+            color: #FF9500;
+        }
+
+        .alert-info {
+            background-color: rgba(0, 122, 255, 0.1);
+            border-color: #007AFF;
+            color: #007AFF;
+        }
+
+        .alert i {
+            margin-left: 8px;
+        }
+
         .whatsapp-icon {
             background: linear-gradient(135deg, #25D366, #128C7E);
             width: 40px;
@@ -388,6 +574,53 @@
                                     <div class="message-counter d-none" id="numberOfSendMSG">
                                         <i class="fas fa-check-circle"></i> تم إرسال <span id="msgCountMSG">0</span> رسالة
                                     </div>
+                                    <div class="progress-details d-none" id="progressDetailsMSG">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="stat-card success">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    <span id="successCountMSG">0</span> نجح
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card error">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    <span id="errorCountMSG">0</span> فشل
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card info">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span id="currentStudentMSG">-</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card warning">
+                                                    <i class="fas fa-percentage"></i>
+                                                    <span id="progressPercentMSG">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="error-log d-none" id="errorLogMSG">
+                                            <h6><i class="fas fa-exclamation-triangle"></i> تفاصيل الأخطاء:</h6>
+                                            
+                                            <!-- Export Button -->
+                                            <div class="mb-3 text-center">
+                                              <button id="exportErrorsBtnMSG" class="upload-btn" style="background-color: #FF9500; border-color: #FF9500; color: white; margin: 0;">
+                                                <i class="fas fa-download me-2"></i> تصدير الأخطاء إلى Excel
+                                              </button>
+                                            </div>
+                                            
+                                            <div class="error-summary mb-3">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    إجمالي الرسائل الفاشلة: <span id="totalErrorsMSG">0</span>
+                                                    <br><small>يمكنك رؤية التفاصيل أدناه مع أرقام الهواتف</small>
+                                                </div>
+                                            </div>
+                                            <div id="errorDetailsMSG"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -470,6 +703,53 @@
                                     <div class="message-counter d-none" id="numberOfSend">
                                         <i class="fas fa-check-circle"></i> تم إرسال <span id="msgCount">0</span> رسالة
                                     </div>
+                                    <div class="progress-details d-none" id="progressDetails">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="stat-card success">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    <span id="successCount">0</span> نجح
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card error">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    <span id="errorCount">0</span> فشل
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card info">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span id="currentStudent">-</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card warning">
+                                                    <i class="fas fa-percentage"></i>
+                                                    <span id="progressPercent">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="error-log d-none" id="errorLog">
+                                            <h6><i class="fas fa-exclamation-triangle"></i> تفاصيل الأخطاء:</h6>
+                                            
+                                            <!-- Export Button -->
+                                            <div class="mb-3 text-center">
+                                              <button id="exportErrorsBtn" class="upload-btn" style="background-color: #FF9500; border-color: #FF9500; color: white; margin: 0;">
+                                                <i class="fas fa-download me-2"></i> تصدير الأخطاء إلى Excel
+                                              </button>
+                                            </div>
+                                            
+                                            <div class="error-summary mb-3">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    إجمالي الرسائل الفاشلة: <span id="totalErrors">0</span>
+                                                    <br><small>يمكنك رؤية التفاصيل أدناه مع أرقام الهواتف</small>
+                                                </div>
+                                            </div>
+                                            <div id="errorDetails"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -541,6 +821,53 @@
                                     <div class="output" id="outputGEN"></div>
                                     <div class="message-counter d-none" id="numberOfSendGEN">
                                         <i class="fas fa-check-circle"></i> تم إرسال <span id="msgCountGEN">0</span> رسالة
+                                    </div>
+                                    <div class="progress-details d-none" id="progressDetailsGEN">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="stat-card success">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    <span id="successCountGEN">0</span> نجح
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card error">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    <span id="errorCountGEN">0</span> فشل
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card info">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span id="currentStudentGEN">-</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card warning">
+                                                    <i class="fas fa-percentage"></i>
+                                                    <span id="progressPercentGEN">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="error-log d-none" id="errorLogGEN">
+                                            <h6><i class="fas fa-exclamation-triangle"></i> تفاصيل الأخطاء:</h6>
+                                            
+                                            <!-- Export Button -->
+                                            <div class="mb-3 text-center">
+                                              <button id="exportErrorsBtnGEN" class="upload-btn" style="background-color: #FF9500; border-color: #FF9500; color: white; margin: 0;">
+                                                <i class="fas fa-download me-2"></i> تصدير الأخطاء إلى Excel
+                                              </button>
+                                            </div>
+                                            
+                                            <div class="error-summary mb-3">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    إجمالي الرسائل الفاشلة: <span id="totalErrorsGEN">0</span>
+                                                    <br><small>يمكنك رؤية التفاصيل أدناه مع أرقام الهواتف</small>
+                                                </div>
+                                            </div>
+                                            <div id="errorDetailsGEN"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -630,7 +957,7 @@
         async function displayDataAndSend(data) {
             const output = document.getElementById('output');
 
-            output.innerHTML = 'data is being sent...';
+            output.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جاري إرسال الرسائل...</div>';
             const phoneCloumnName = document.getElementById('phoneCloumnName');
             const gradeCloumnName = document.getElementById('gradeCloumnName');
             const nameCloumnName = document.getElementById('nameCloumnName');
@@ -638,7 +965,7 @@
             const maxGrade = document.getElementById('maxGrade');
 
             if (!phoneCloumnName.value || !gradeCloumnName.value || !nameCloumnName.value || !quizName.value || !maxGrade.value ) {
-                alert('ادخل اسامي ال cloumn');
+                output.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> الرجاء إدخال جميع أسماء الأعمدة المطلوبة</div>';
                 return;
             }
 
@@ -663,16 +990,22 @@
                 const responseData = await response.json();
 
                 if (response.ok) {
-                    output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
-                    output.style.color = "green";
+                    output.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> تم إرسال جميع الرسائل بنجاح</div>`;
+                } else if (response.status === 207) {
+                    // Partial success
+                    output.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            تم إرسال الرسائل مع وجود ${responseData.errorCount} أخطاء
+                            <br><small>الرسائل الناجحة: ${responseData.successCount} | الرسائل الفاشلة: ${responseData.errorCount}</small>
+                        </div>
+                    `;
                 } else {
-                    output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                    output.style.color = "red";
+                    output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ أثناء الإرسال: ${responseData.message || 'خطأ غير معروف'}</div>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                output.style.color = "red";
+                output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ في الاتصال: ${error.message}</div>`;
             }
         }
     
@@ -876,20 +1209,392 @@
         const numberOfSend = document.getElementById('numberOfSend');
         const numberOfSendMSG = document.getElementById('numberOfSendMSG');
         const numberOfSendGEN = document.getElementById('numberOfSendGEN');
+        
+        // Progress details for grade messages
+        const progressDetails = document.getElementById('progressDetails');
+        const successCount = document.getElementById('successCount');
+        const errorCount = document.getElementById('errorCount');
+        const currentStudent = document.getElementById('currentStudent');
+        const progressPercent = document.getElementById('progressPercent');
+        const errorLog = document.getElementById('errorLog');
+        const errorDetails = document.getElementById('errorDetails');
+        const totalErrors = document.getElementById('totalErrors');
+        
+        // Progress details for homework messages
+        const progressDetailsMSG = document.getElementById('progressDetailsMSG');
+        const successCountMSG = document.getElementById('successCountMSG');
+        const errorCountMSG = document.getElementById('errorCountMSG');
+        const currentStudentMSG = document.getElementById('currentStudentMSG');
+        const progressPercentMSG = document.getElementById('progressPercentMSG');
+        const errorLogMSG = document.getElementById('errorLogMSG');
+        const errorDetailsMSG = document.getElementById('errorDetailsMSG');
+        const totalErrorsMSG = document.getElementById('totalErrorsMSG');
+        
+        // Progress details for general messages
+        const progressDetailsGEN = document.getElementById('progressDetailsGEN');
+        const successCountGEN = document.getElementById('successCountGEN');
+        const errorCountGEN = document.getElementById('errorCountGEN');
+        const currentStudentGEN = document.getElementById('currentStudentGEN');
+        const progressPercentGEN = document.getElementById('progressPercentGEN');
+        const errorLogGEN = document.getElementById('errorLogGEN');
+        const errorDetailsGEN = document.getElementById('errorDetailsGEN');
+        const totalErrorsGEN = document.getElementById('totalErrorsGEN');
+        
         const socket = io();
 
         socket.on('sendingMessages', (data) => {
-            numberOfSend.classList.remove('d-none');
-            numberOfSend.innerHTML = `تم ارسال ${data.nMessages} رساله`;
-
-            numberOfSendMSG.classList.remove('d-none');
-            numberOfSendMSG.innerHTML = `تم ارسال ${data.nMessages} رساله`;
-            numberOfSendGEN.classList.remove('d-none');
-            numberOfSendGEN.innerHTML = `تم ارسال ${data.nMessages} رساله`;
-                
+            // Determine which section this update belongs to based on the current active section
+            let activeSection = 'grade'; // default
+            
+            // Check which section is currently visible
+            if (!gradeMsgSection.classList.contains('hidden')) {
+                activeSection = 'grade';
+            } else if (!msgWithoutPhotoSection.classList.contains('hidden')) {
+                activeSection = 'homework';
+            } else if (!sendMsgSection.classList.contains('hidden')) {
+                activeSection = 'general';
+            }
+            
+            // Update the appropriate progress details section
+            if (activeSection === 'grade') {
+                updateProgressSection(progressDetails, successCount, errorCount, currentStudent, progressPercent, errorLog, errorDetails, numberOfSend, data, totalErrors);
+            } else if (activeSection === 'homework') {
+                updateProgressSection(progressDetailsMSG, successCountMSG, errorCountMSG, currentStudentMSG, progressPercentMSG, errorLogMSG, errorDetailsMSG, numberOfSendMSG, data, totalErrorsMSG);
+            } else if (activeSection === 'general') {
+                updateProgressSection(progressDetailsGEN, successCountGEN, errorCountGEN, currentStudentGEN, progressPercentGEN, errorLogGEN, errorDetailsGEN, numberOfSendGEN, data, totalErrorsGEN);
+            }
         });
+        
+        function updateProgressSection(progressDetails, successCount, errorCount, currentStudent, progressPercent, errorLog, errorDetails, numberOfSend, data, totalErrorsElement) {
+            // Show progress details
+            progressDetails.classList.remove('d-none');
+            
+            // Update counters
+            if (data.totalMessages) {
+                numberOfSend.classList.remove('d-none');
+                
+                const percent = Math.round((data.nMessages / data.totalMessages) * 100);
+                progressPercent.textContent = `${percent}%`;
+                
+                if (data.nMessages) {
+                    numberOfSend.innerHTML = `تم إرسال ${data.nMessages} من ${data.totalMessages} رسالة`;
+                }
+            }
+            
+            // Update statistics
+            if (data.successCount !== undefined) successCount.textContent = data.successCount;
+            if (data.errorCount !== undefined) errorCount.textContent = data.errorCount;
+            if (data.currentStudent) currentStudent.textContent = data.currentStudent;
+            
+            // Handle status changes
+            if (data.status === 'starting') {
+                console.log('🚀 Starting message sending...');
+            } else if (data.status === 'progress') {
+                if (data.lastResult === 'error') {
+                    console.log(`❌ Error sending to ${data.currentStudent}: ${data.lastError}`);
+                } else {
+                    console.log(`✅ Success sending to ${data.currentStudent}`);
+                }
+            } else if (data.status === 'completed') {
+                console.log(`✅ Completed: ${data.successCount} success, ${data.errorCount} errors`);
+                
+                // Show error details if any
+                if (data.errors && data.errors.length > 0) {
+                    errorLog.classList.remove('d-none');
+                    errorDetails.innerHTML = '';
+                    
+                    // Update total errors count
+                    if (totalErrorsElement) {
+                        totalErrorsElement.textContent = data.errors.length;
+                    }
+                    
+                    data.errors.forEach(error => {
+                        const errorItem = document.createElement('div');
+                        errorItem.className = 'error-item';
+                        errorItem.innerHTML = `
+                            <div class="error-header">
+                                <span class="student-name"><i class="fas fa-user"></i> ${error.student}</span>
+                                <span class="phone-number" onclick="copyPhoneNumber('${error.phone || ''}')" title="انقر للنسخ"><i class="fas fa-phone"></i> ${error.phone || 'غير متوفر'}</span>
+                            </div>
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-circle"></i> ${error.error}
+                            </div>
+                            <div class="error-timestamp">
+                                <small><i class="fas fa-clock"></i> ${new Date(error.timestamp).toLocaleString('ar-EG')}</small>
+                            </div>
+                        `;
+                        errorDetails.appendChild(errorItem);
+                    });
+                }
+            } else if (data.status === 'failed') {
+                console.error(`💥 Critical error: ${data.error}`);
+                alert(`حدث خطأ حرج: ${data.error}`);
+            }
+        }
+
+        // Function to copy phone number to clipboard
+        function copyPhoneNumber(phoneNumber) {
+            if (phoneNumber && phoneNumber !== 'غير متوفر') {
+                navigator.clipboard.writeText(phoneNumber).then(() => {
+                    // Show temporary success message
+                    const tempMessage = document.createElement('div');
+                    tempMessage.className = 'copy-success-message';
+                    tempMessage.innerHTML = '<i class="fas fa-check"></i> تم نسخ رقم الهاتف';
+                    tempMessage.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background-color: #25D366;
+                        color: white;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        z-index: 9999;
+                        font-weight: 600;
+                        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+                    `;
+                    document.body.appendChild(tempMessage);
+                    
+                    setTimeout(() => {
+                        tempMessage.remove();
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy phone number:', err);
+                    alert('فشل في نسخ رقم الهاتف');
+                });
+            }
+        }
     </script>
 
+    <script>
+        // Export function for Grade Messages (errorLog)
+        async function exportErrorsToExcel() {
+            const exportBtn = document.getElementById('exportErrorsBtn');
+            const originalText = exportBtn.innerHTML;
+            
+            try {
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري التصدير...';
+                
+                const errorElements = document.querySelectorAll('#errorDetails .error-item');
+                const errors = [];
+                
+                errorElements.forEach((errorElement) => {
+                    const studentName = errorElement.querySelector('.student-name')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    const phoneNumber = errorElement.querySelector('.phone-number')?.textContent?.replace(/^[^0-9\s]+/, '').trim() || '';
+                    const errorMessage = errorElement.querySelector('.error-message')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    
+                    errors.push({
+                        student: studentName,
+                        phone: phoneNumber,
+                        hwStatus: 'Failed',
+                        error: errorMessage
+                    });
+                });
+                
+                if (errors.length === 0) {
+                    alert('لا توجد أخطاء للتصدير');
+                    return;
+                }
+                
+                const response = await fetch('/teacher/exportErrorDetailsToExcel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ errors })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ErrorDetails_Grade_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showSuccessMessage('تم تصدير الأخطاء بنجاح');
+                } else {
+                    const errorData = await response.json();
+                    alert(`فشل في تصدير الأخطاء: ${errorData.message || 'خطأ غير معروف'}`);
+                }
+                
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('حدث خطأ أثناء التصدير: ' + error.message);
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalText;
+            }
+        }
+
+        // Export function for Homework Messages (errorLogMSG)
+        async function exportErrorsToExcelMSG() {
+            const exportBtn = document.getElementById('exportErrorsBtnMSG');
+            const originalText = exportBtn.innerHTML;
+            
+            try {
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري التصدير...';
+                
+                const errorElements = document.querySelectorAll('#errorDetailsMSG .error-item');
+                const errors = [];
+                
+                errorElements.forEach((errorElement) => {
+                    const studentName = errorElement.querySelector('.student-name')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    const phoneNumber = errorElement.querySelector('.phone-number')?.textContent?.replace(/^[^0-9\s]+/, '').trim() || '';
+                    const errorMessage = errorElement.querySelector('.error-message')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    
+                    errors.push({
+                        student: studentName,
+                        phone: phoneNumber,
+                        hwStatus: 'Failed',
+                        error: errorMessage
+                    });
+                });
+                
+                if (errors.length === 0) {
+                    alert('لا توجد أخطاء للتصدير');
+                    return;
+                }
+                
+                const response = await fetch('/teacher/exportErrorDetailsToExcel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ errors })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ErrorDetails_Homework_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showSuccessMessage('تم تصدير الأخطاء بنجاح');
+                } else {
+                    const errorData = await response.json();
+                    alert(`فشل في تصدير الأخطاء: ${errorData.message || 'خطأ غير معروف'}`);
+                }
+                
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('حدث خطأ أثناء التصدير: ' + error.message);
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalText;
+            }
+        }
+
+        // Export function for General Messages (errorLogGEN)
+        async function exportErrorsToExcelGEN() {
+            const exportBtn = document.getElementById('exportErrorsBtnGEN');
+            const originalText = exportBtn.innerHTML;
+            
+            try {
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري التصدير...';
+                
+                const errorElements = document.querySelectorAll('#errorDetailsGEN .error-item');
+                const errors = [];
+                
+                errorElements.forEach((errorElement) => {
+                    const studentName = errorElement.querySelector('.student-name')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    const phoneNumber = errorElement.querySelector('.phone-number')?.textContent?.replace(/^[^0-9\s]+/, '').trim() || '';
+                    const errorMessage = errorElement.querySelector('.error-message')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    
+                    errors.push({
+                        student: studentName,
+                        phone: phoneNumber,
+                        hwStatus: 'Failed',
+                        error: errorMessage
+                    });
+                });
+                
+                if (errors.length === 0) {
+                    alert('لا توجد أخطاء للتصدير');
+                    return;
+                }
+                
+                const response = await fetch('/teacher/exportErrorDetailsToExcel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ errors })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ErrorDetails_General_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showSuccessMessage('تم تصدير الأخطاء بنجاح');
+                } else {
+                    const errorData = await response.json();
+                    alert(`فشل في تصدير الأخطاء: ${errorData.message || 'خطأ غير معروف'}`);
+                }
+                
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('حدث خطأ أثناء التصدير: ' + error.message);
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalText;
+            }
+        }
+
+        // Helper function to show success messages
+        function showSuccessMessage(message) {
+            const successMessage = document.createElement('div');
+            successMessage.className = 'copy-success-message';
+            successMessage.innerHTML = `<i class="fas fa-check"></i> ${message}`;
+            successMessage.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: #25D366;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                z-index: 9999;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            `;
+            document.body.appendChild(successMessage);
+            
+            setTimeout(() => {
+                successMessage.remove();
+            }, 3000);
+        }
+
+        // Add event listeners when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Attach export functions to buttons
+            const exportBtn = document.getElementById('exportErrorsBtn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportErrorsToExcel);
+            }
+            
+            const exportBtnMSG = document.getElementById('exportErrorsBtnMSG');
+            if (exportBtnMSG) {
+                exportBtnMSG.addEventListener('click', exportErrorsToExcelMSG);
+            }
+            
+            const exportBtnGEN = document.getElementById('exportErrorsBtnGEN');
+            if (exportBtnGEN) {
+                exportBtnGEN.addEventListener('click', exportErrorsToExcelGEN);
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -81,6 +81,156 @@
         .hidden {
             display: none;
         }
+
+        .progress-details {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            border: 1px solid #e3b228;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .stat-card.success {
+            background-color: rgba(37, 211, 102, 0.2);
+            border: 1px solid #25D366;
+        }
+
+        .stat-card.error {
+            background-color: rgba(255, 59, 48, 0.2);
+            border: 1px solid #FF3B30;
+        }
+
+        .stat-card.info {
+            background-color: rgba(0, 122, 255, 0.2);
+            border: 1px solid #007AFF;
+        }
+
+        .stat-card.warning {
+            background-color: rgba(255, 149, 0, 0.2);
+            border: 1px solid #FF9500;
+        }
+
+        .stat-card i {
+            font-size: 20px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .stat-card span {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .error-log {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(255, 59, 48, 0.1);
+            border: 1px solid #FF3B30;
+            border-radius: 10px;
+        }
+
+        .error-log h6 {
+            color: #FF3B30;
+            margin-bottom: 15px;
+        }
+
+        .error-item {
+            background-color: rgba(255, 59, 48, 0.1);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .error-item:hover {
+            background-color: rgba(255, 59, 48, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 59, 48, 0.2);
+        }
+
+        .error-item .error-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .error-item .student-name {
+            font-weight: bold;
+            color: #FF3B30;
+            font-size: 16px;
+        }
+
+        .error-item .phone-number {
+            color: #FF9500;
+            font-weight: 600;
+            font-size: 14px;
+            background-color: rgba(255, 149, 0, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 149, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .error-item .phone-number:hover {
+            background-color: rgba(255, 149, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        .error-item .phone-number::after {
+            content: "انقر للنسخ";
+            position: absolute;
+            top: -25px;
+            right: 0;
+            background-color: #333;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .error-item .phone-number:hover::after {
+            opacity: 1;
+        }
+
+        .error-item .error-message {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(255, 59, 48, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #FF3B30;
+        }
+
+        .error-item .error-timestamp {
+            color: #888;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 8px;
+        }
+
+        .error-item i {
+            margin-left: 6px;
+        }
     input[type="radio"] {
         width: 20px !important;
         height: 20px !important;
@@ -175,6 +325,55 @@
                       <div class="col-md-12 mb-4 hidden" id="nMessagesBox" style="color: #e3b228;">
                         <h2>يتم الان ارسال الرسائل برجاء عدم اعاده تحميل الصفحه</h2>
                         <div id="numberOfSendMSG" style=" border: 1px solid #e3b228 ; padding: 10px; border-radius: 20px; width: 10%; text-align: center;"></div>
+                        
+                        <!-- Progress Details -->
+                        <div class="progress-details mt-3" id="progressDetails" style="display: none;">
+                          <div class="row">
+                            <div class="col-md-3">
+                              <div class="stat-card success">
+                                <i class="fas fa-check-circle"></i>
+                                <span id="successCount">0</span> نجح
+                              </div>
+                            </div>
+                            <div class="col-md-3">
+                              <div class="stat-card error">
+                                <i class="fas fa-times-circle"></i>
+                                <span id="errorCount">0</span> فشل
+                              </div>
+                            </div>
+                            <div class="col-md-3">
+                              <div class="stat-card info">
+                                <i class="fas fa-clock"></i>
+                                <span id="currentStudent">-</span>
+                              </div>
+                            </div>
+                            <div class="col-md-3">
+                              <div class="stat-card warning">
+                                <i class="fas fa-percentage"></i>
+                                <span id="progressPercent">0%</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="error-log mt-3" id="errorLog" style="display: none;">
+                            <h6 style="color: #e3b228;"><i class="fas fa-exclamation-triangle"></i> تفاصيل الأخطاء:</h6>
+                            
+                            <!-- Export Button -->
+                            <div class="mb-3 text-center">
+                              <button id="exportErrorsBtn" class="upload-btn" style="background-color: #FF9500; border-color: #FF9500; color: white; margin: 0;">
+                                <i class="fas fa-download me-2"></i> تصدير الأخطاء إلى Excel
+                              </button>
+                            </div>
+                            
+                            <div class="error-summary mb-3">
+                              <div class="alert alert-warning" style="background-color: rgba(255, 149, 0, 0.1); border-color: #FF9500; color: #FF9500;">
+                                <i class="fas fa-info-circle"></i>
+                                إجمالي الرسائل الفاشلة: <span id="totalErrors">0</span>
+                                <br><small>يمكنك رؤية التفاصيل أدناه مع أرقام الهواتف</small>
+                              </div>
+                            </div>
+                            <div id="errorDetails"></div>
+                          </div>
+                        </div>
                       </div>
 
                         <!-- Section for "ارسال درجات" -->
@@ -413,11 +612,17 @@
       })
       if(response.ok){
         console.log('Data submitted successfully!');
-        alert('Data submitted successfully!');
+        alert('تم إرسال جميع الرسائل بنجاح!');
+        window.location.reload();
+      }else if(response.status === 207){
+        // Partial success
+        const responseData = await response.json();
+        alert(`تم إرسال الرسائل مع وجود ${responseData.errorCount} أخطاء\nالرسائل الناجحة: ${responseData.successCount}\nالرسائل الفاشلة: ${responseData.errorCount}`);
         window.location.reload();
       }else{
         console.log('Failed to submit data!');
-        alert('Failed to submit data!');
+        const responseData = await response.json();
+        alert(`فشل في إرسال البيانات: ${responseData.message || 'خطأ غير معروف'}`);
       }
       
   
@@ -430,16 +635,209 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const numberOfSendMSG = document.getElementById('numberOfSendMSG');
-      const socket = io();
+      const progressDetails = document.getElementById('progressDetails');
+      const successCount = document.getElementById('successCount');
+      const errorCount = document.getElementById('errorCount');
+      const currentStudent = document.getElementById('currentStudent');
+      const progressPercent = document.getElementById('progressPercent');
+              const errorLog = document.getElementById('errorLog');
+        const errorDetails = document.getElementById('errorDetails');
+        const totalErrors = document.getElementById('totalErrors');
+        
+        const socket = io();
 
       socket.on('sendingMessages', (data) => {
-        numberOfSendMSG.classList.remove('d-none');
-        numberOfSendMSG.innerHTML = `تم ارسال ${data.nMessages} رساله`;
-
-
+        // Show progress details
+        progressDetails.style.display = 'block';
+        
+        // Update counters
+        if (data.totalMessages) {
+          numberOfSendMSG.classList.remove('d-none');
+          
+          const percent = Math.round((data.nMessages / data.totalMessages) * 100);
+          progressPercent.textContent = `${percent}%`;
+          
+          if (data.nMessages) {
+            numberOfSendMSG.innerHTML = `تم إرسال ${data.nMessages} من ${data.totalMessages} رسالة`;
+          }
+        }
+        
+        // Update statistics
+        if (data.successCount !== undefined) successCount.textContent = data.successCount;
+        if (data.errorCount !== undefined) errorCount.textContent = data.errorCount;
+        if (data.currentStudent) currentStudent.textContent = data.currentStudent;
+        
+        // Handle status changes
+        if (data.status === 'starting') {
+          console.log('🚀 Starting message sending...');
+        } else if (data.status === 'progress') {
+          if (data.lastResult === 'error') {
+            console.log(`❌ Error sending to ${data.currentStudent}: ${data.lastError}`);
+          } else {
+            console.log(`✅ Success sending to ${data.currentStudent}`);
+          }
+        } else if (data.status === 'completed') {
+          console.log(`✅ Completed: ${data.successCount} success, ${data.errorCount} errors`);
+          
+                                             // Show error details if any
+             if (data.errors && data.errors.length > 0) {
+               errorLog.style.display = 'block';
+               errorDetails.innerHTML = '';
+               
+               // Update total errors count
+               if (totalErrors) {
+                 totalErrors.textContent = data.errors.length;
+               }
+               
+               data.errors.forEach(error => {
+                 const errorItem = document.createElement('div');
+                 errorItem.className = 'error-item';
+                 errorItem.innerHTML = `
+                   <div class="error-header">
+                     <span class="student-name"><i class="fas fa-user"></i> ${error.student}</span>
+                     <span class="phone-number" onclick="copyPhoneNumber('${error.phone || ''}')" title="انقر للنسخ"><i class="fas fa-phone"></i> ${error.phone || 'غير متوفر'}</span>
+                   </div>
+                   <div class="error-message">
+                     <i class="fas fa-exclamation-circle"></i> ${error.error}
+                   </div>
+                   <div class="error-timestamp">
+                     <small><i class="fas fa-clock"></i> ${new Date(error.timestamp).toLocaleString('ar-EG')}</small>
+                   </div>
+                 `;
+                 errorDetails.appendChild(errorItem);
+               });
+             }
+        } else if (data.status === 'failed') {
+          console.error(`💥 Critical error: ${data.error}`);
+          alert(`حدث خطأ حرج: ${data.error}`);
+        }
       });
     </script>
 
+    <script>
+      // Function to copy phone number to clipboard
+      function copyPhoneNumber(phoneNumber) {
+        if (phoneNumber && phoneNumber !== 'غير متوفر') {
+          navigator.clipboard.writeText(phoneNumber).then(() => {
+            // Show temporary success message
+            const tempMessage = document.createElement('div');
+            tempMessage.className = 'copy-success-message';
+            tempMessage.innerHTML = '<i class="fas fa-check"></i> تم نسخ رقم الهاتف';
+            tempMessage.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background-color: #25D366;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 8px;
+              z-index: 9999;
+              font-weight: 600;
+              box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            `;
+            document.body.appendChild(tempMessage);
+            
+            setTimeout(() => {
+              tempMessage.remove();
+            }, 2000);
+          }).catch(err => {
+            console.error('Failed to copy phone number:', err);
+            alert('فشل في نسخ رقم الهاتف');
+          });
+        }
+      }
+
+      // Export function for WhatsApp2
+      async function exportErrorsToExcel() {
+        const exportBtn = document.getElementById('exportErrorsBtn');
+        const originalText = exportBtn.innerHTML;
+        
+        try {
+          exportBtn.disabled = true;
+          exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري التصدير...';
+          
+          const errorElements = document.querySelectorAll('#errorDetails .error-item');
+          const errors = [];
+          
+          errorElements.forEach((errorElement) => {
+            const studentName = errorElement.querySelector('.student-name')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+            const phoneNumber = errorElement.querySelector('.phone-number')?.textContent?.replace(/^[^0-9\s]+/, '').trim() || '';
+            const errorMessage = errorElement.querySelector('.error-message')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+            
+            errors.push({
+              student: studentName,
+              phone: phoneNumber,
+              hwStatus: 'Failed',
+              error: errorMessage
+            });
+          });
+          
+          if (errors.length === 0) {
+            alert('لا توجد أخطاء للتصدير');
+            return;
+          }
+          
+          const response = await fetch('/teacher/exportErrorDetailsToExcel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ errors })
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ErrorDetails_WhatsApp2_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'copy-success-message';
+            successMessage.innerHTML = '<i class="fas fa-check"></i> تم تصدير الأخطاء بنجاح';
+            successMessage.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background-color: #25D366;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 8px;
+              z-index: 9999;
+              font-weight: 600;
+              box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            `;
+            document.body.appendChild(successMessage);
+            
+            setTimeout(() => {
+              successMessage.remove();
+            }, 3000);
+            
+          } else {
+            const errorData = await response.json();
+            alert(`فشل في تصدير الأخطاء: ${errorData.message || 'خطأ غير معروف'}`);
+          }
+          
+        } catch (error) {
+          console.error('Error exporting to Excel:', error);
+          alert('حدث خطأ أثناء التصدير: ' + error.message);
+        } finally {
+          exportBtn.disabled = false;
+          exportBtn.innerHTML = originalText;
+        }
+      }
+
+      // Add event listener when DOM is loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        const exportBtn = document.getElementById('exportErrorsBtn');
+        if (exportBtn) {
+          exportBtn.addEventListener('click', exportErrorsToExcel);
+        }
+      });
+    </script>
 
  
 </body>

@@ -320,13 +320,86 @@ class WasenderClient {
       const body = r.data;
       
       if (!body.success) {
-        return { success: false, message: body.error || 'Failed to send message' };
+        // Extract detailed error information
+        let errorMessage = 'Unknown API error';
+        let errorDetails = null;
+        
+        if (body.error) {
+          if (typeof body.error === 'string') {
+            errorMessage = body.error;
+          } else if (typeof body.error === 'object') {
+            // Extract meaningful error information from object
+            if (body.error.message) {
+              errorMessage = body.error.message;
+            } else if (body.error.error) {
+              errorMessage = body.error.error;
+            } else if (body.error.detail) {
+              errorMessage = body.error.detail;
+            } else if (body.error.description) {
+              errorMessage = body.error.description;
+            } else {
+              // Try to find any string value in the error object
+              const errorValues = Object.values(body.error).filter(val => typeof val === 'string');
+              if (errorValues.length > 0) {
+                errorMessage = errorValues[0];
+              } else {
+                errorMessage = 'API returned error object';
+                errorDetails = body.error;
+              }
+            }
+          }
+        } else if (body.message) {
+          errorMessage = body.message;
+        }
+        
+        return { 
+          success: false, 
+          message: errorMessage,
+          error: errorMessage,
+          details: body,
+          errorDetails: errorDetails
+        };
       }
       
       return { success: true, data: body.data ?? body };
     } catch (error) {
       console.error('Wasender Send Message Error:', error.response?.status, error.response?.data);
-      return { success: false, message: 'Failed to send message', error: error.response?.data };
+      
+      // Provide more specific error messages based on HTTP status codes
+      let errorMessage = 'Failed to send message';
+      let errorDetails = error.response?.data;
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Unauthorized - Session expired or invalid';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Forbidden - Access denied to WhatsApp service';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'WhatsApp service not found';
+      } else if (error.response?.status === 422) {
+        errorMessage = 'Validation error - Check phone number format';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Rate limit exceeded - Too many requests';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'WhatsApp service internal error';
+      } else if (error.response?.status === 502) {
+        errorMessage = 'WhatsApp service temporarily unavailable';
+      } else if (error.response?.status === 503) {
+        errorMessage = 'WhatsApp service overloaded';
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage = 'Connection refused - WhatsApp service down';
+      } else if (error.code === 'ENOTFOUND') {
+        errorMessage = 'WhatsApp service not found';
+      } else if (error.code === 'ETIMEDOUT') {
+        errorMessage = 'Connection timeout - WhatsApp service slow';
+      }
+      
+      return { 
+        success: false, 
+        message: errorMessage, 
+        error: errorDetails || error.message,
+        status: error.response?.status,
+        code: error.code
+      };
     }
   }
 
@@ -337,13 +410,32 @@ class WasenderClient {
       const body = r.data;
       
       if (!body.success) {
-        return { success: false, message: body.error || 'Failed to send image' };
+        const errorMessage = body.error || body.message || 'Unknown API error';
+        return { 
+          success: false, 
+          message: String(errorMessage),
+          error: String(errorMessage)
+        };
       }
       
       return { success: true, data: body.data ?? body };
     } catch (error) {
       console.error('Wasender Send Image Error:', error.response?.status, error.response?.data);
-      return { success: false, message: 'Failed to send image', error: error.response?.data };
+      
+      let errorMessage = 'Failed to send image';
+      if (error.response?.status === 401) {
+        errorMessage = 'Unauthorized - Session expired or invalid';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Rate limit exceeded - Too many requests';
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage = 'Connection refused - WhatsApp service down';
+      }
+      
+      return { 
+        success: false, 
+        message: errorMessage, 
+        error: error.response?.data || error.message 
+      };
     }
   }
 

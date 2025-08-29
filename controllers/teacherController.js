@@ -538,10 +538,15 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     // Get all sessions to find the one with matching phone number
     const sessionsResponse = await wasender.getAllSessions();
     if (!sessionsResponse.success) {
-      throw new Error(`Failed to get sessions: ${sessionsResponse.message}`);
+      throw new Error(`WhatsApp sessions unavailable: ${sessionsResponse.message}`);
     }
     
     const sessions = sessionsResponse.data;
+    
+    if (!sessions || sessions.length === 0) {
+      throw new Error('No WhatsApp sessions found - Please check WhatsApp connection');
+    }
+    
     let targetSession = null;
     
     // Find session by admin phone number
@@ -559,14 +564,51 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     }
     
     if (!targetSession) {
-      throw new Error('No connected WhatsApp session found');
+      // Check if there are sessions but none are connected
+      const disconnectedSessions = sessions.filter(s => s.status !== 'connected');
+      if (disconnectedSessions.length > 0) {
+        const statuses = disconnectedSessions.map(s => `${s.name}: ${s.status}`).join(', ');
+        throw new Error(`WhatsApp sessions exist but none are connected. Statuses: ${statuses}`);
+      } else {
+        throw new Error('WhatsApp not connected - No active session found');
+      }
     }
     
     if (!targetSession.api_key) {
-      throw new Error('Session API key not available');
+      throw new Error('WhatsApp session expired - API key not available');
+    }
+    
+    // Check session status more thoroughly
+    if (targetSession.status === 'disconnected') {
+      throw new Error('WhatsApp session disconnected - Please reconnect');
+    } else if (targetSession.status === 'connecting') {
+      throw new Error('WhatsApp session still connecting - Please wait and try again');
+    } else if (targetSession.status === 'failed') {
+      throw new Error('WhatsApp session failed - Please check connection and try again');
     }
     
     console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
+    
+    // Validate phone number format
+    if (!phone || phone.trim() === '') {
+      throw new Error('Phone number is empty or invalid');
+    }
+    
+    // Check for common phone number format issues
+    if (phone.includes('+') && !phone.startsWith('+20')) {
+      throw new Error(`Invalid country code in phone number: ${phone}`);
+    }
+    
+    // Check for Egyptian phone number patterns
+    if (phone.startsWith('0') && phone.length !== 11) {
+      throw new Error(`Invalid Egyptian phone number length: ${phone} (should be 11 digits starting with 0)`);
+    }
+    
+    // Check if phone number contains only digits (after removing +)
+    const cleanPhone = phone.replace('+', '');
+    if (!/^\d+$/.test(cleanPhone)) {
+      throw new Error(`Phone number contains invalid characters: ${phone}`);
+    }
     
     // Format the phone number properly
     let countryCodeWithout0 = countryCode.replace('0', ''); // Remove leading zeros
@@ -577,6 +619,16 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     
     // Remove any non-numeric characters
     phoneNumber = phoneNumber.replace(/\D/g, '');
+    
+    // Validate phone number length
+    if (phoneNumber.length < 10 || phoneNumber.length > 15) {
+      throw new Error(`Invalid phone number format: ${phone} (length: ${phoneNumber.length})`);
+    }
+    
+    // Check if phone number contains only digits
+    if (!/^\d+$/.test(phoneNumber)) {
+      throw new Error(`Phone number contains invalid characters: ${phone}`);
+    }
     
     // Add country code if not present
     if (!phoneNumber.startsWith('2')) {
@@ -591,14 +643,133 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     // Use the session-specific API key to send the message
     const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
     
+    // Debug: Log the full response for troubleshooting
+    console.log('Full WhatsApp API Response:', JSON.stringify(response, null, 2));
+    
     if (!response.success) {
-      throw new Error(`Failed to send message: ${response.message}`);
+      // Debug: Log the response structure
+      console.log('WhatsApp API Response:', {
+        success: response.success,
+        message: response.message,
+        error: response.error,
+        errorType: typeof response.error,
+        errorKeys: response.error && typeof response.error === 'object' ? Object.keys(response.error) : 'N/A'
+      });
+      
+      // Check for specific API errors
+      if (response.error) {
+        // Convert error to string and check for specific patterns
+        const errorStr = String(response.error).toLowerCase();
+        
+        if (errorStr.includes('not-authorized') || errorStr.includes('unauthorized')) {
+          throw new Error('WhatsApp session expired - Please reconnect');
+        } else if (errorStr.includes('not-found') || errorStr.includes('notfound')) {
+          throw new Error('Phone number not found on WhatsApp');
+        } else if (errorStr.includes('blocked') || errorStr.includes('block')) {
+          throw new Error('Phone number blocked this WhatsApp account');
+        } else if (errorStr.includes('invalid') || errorStr.includes('format')) {
+          throw new Error('Invalid phone number format');
+        } else if (errorStr.includes('rate-limit') || errorStr.includes('rate limit') || errorStr.includes('too many')) {
+          throw new Error('Rate limit exceeded - Please wait before sending more messages');
+        } else if (errorStr.includes('timeout')) {
+          throw new Error('Request timeout - WhatsApp service slow');
+        } else if (errorStr.includes('connection') || errorStr.includes('network')) {
+          throw new Error('Network connection issue - Please check internet');
+        } else {
+          // Try to extract more specific error information
+          if (response.details && response.details.error) {
+            throw new Error(`WhatsApp API error: ${response.details.error}`);
+          } else if (response.status) {
+            // Handle specific HTTP status codes
+            let errorMessage = 'Unknown error';
+            
+            if (response.status === 422) {
+              // 422 typically means validation error
+              if (response.error && typeof response.error === 'object') {
+                if (response.error.message) {
+                  errorMessage = response.error.message;
+                } else if (response.error.error) {
+                  errorMessage = response.error.error;
+                } else if (response.error.detail) {
+                  errorMessage = response.error.detail;
+                } else if (response.error.description) {
+                  errorMessage = response.error.description;
+                } else if (response.error.validation) {
+                  errorMessage = `Validation error: ${response.error.validation}`;
+                } else if (response.error.constraints) {
+                  errorMessage = `Validation failed: ${response.error.constraints}`;
+                } else {
+                  // Try to find any string value in the object
+                  const errorValues = Object.values(response.error).filter(val => typeof val === 'string');
+                  if (errorValues.length > 0) {
+                    errorMessage = errorValues[0];
+                  } else {
+                    errorMessage = 'Phone number validation failed';
+                  }
+                }
+              } else if (typeof response.error === 'string') {
+                errorMessage = response.error;
+              } else {
+                errorMessage = 'Phone number validation failed - Check format';
+              }
+            } else {
+              // Handle other status codes
+              if (response.error && typeof response.error === 'object') {
+                if (response.error.message) {
+                  errorMessage = response.error.message;
+                } else if (response.error.error) {
+                  errorMessage = response.error.error;
+                } else if (response.error.detail) {
+                  errorMessage = response.error.detail;
+                } else if (response.error.description) {
+                  errorMessage = response.error.description;
+                } else {
+                  // Try to find any string value in the object
+                  const errorValues = Object.values(response.error).filter(val => typeof val === 'string');
+                  if (errorValues.length > 0) {
+                    errorMessage = errorValues[0];
+                  } else {
+                    errorMessage = JSON.stringify(response.error);
+                  }
+                }
+              } else if (typeof response.error === 'string') {
+                errorMessage = response.error;
+              }
+            }
+            
+            throw new Error(`WhatsApp API error (Status: ${response.status}): ${errorMessage}`);
+          } else {
+            throw new Error(`WhatsApp API error: ${response.error}`);
+          }
+        }
+      } else {
+        // Check if we have additional error details
+        if (response.details && response.details.message) {
+          throw new Error(`Message sending failed: ${response.details.message}`);
+        } else if (response.status) {
+          throw new Error(`Message sending failed (Status: ${response.status}): ${response.message}`);
+        } else {
+          throw new Error(`Message sending failed: ${response.message}`);
+        }
+      }
     }
     
     return response.data;
   } catch (err) {
     console.error('Error sending WhatsApp message:', err.message);
-    throw err;
+    
+    // Provide more specific error messages based on error type
+    if (err.message.includes('fetch')) {
+      throw new Error('Network error - Check internet connection');
+    } else if (err.message.includes('timeout')) {
+      throw new Error('Request timeout - WhatsApp service may be slow');
+    } else if (err.message.includes('ECONNREFUSED')) {
+      throw new Error('WhatsApp service unavailable - Please try again later');
+    } else if (err.message.includes('ENOTFOUND')) {
+      throw new Error('WhatsApp service not found - Check configuration');
+    } else {
+      throw err; // Re-throw the original error if it's already specific
+    }
   }
 }
 
@@ -2167,22 +2338,29 @@ const sendGradeMessages = async (req, res) => {
     maxGrade,
   } = req.body;
 
-  let n = 0;
+  let successCount = 0;
+  let errorCount = 0;
+  let errors = [];
+  
+  // Emit initial status
   req.io.emit('sendingMessages', {
-    nMessages: n,
+    nMessages: 0,
+    totalMessages: dataToSend.length,
+    successCount: 0,
+    errorCount: 0,
+    status: 'starting'
   });
-
-
 
   try {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    for (const student of dataToSend) {
-      const grade = student[gradeCloumnName] ?? 0; // Default grade to 0 if undefined or null
+    for (let i = 0; i < dataToSend.length; i++) {
+      const student = dataToSend[i];
+      const grade = student[gradeCloumnName] ?? 0;
       const phone = student[phoneCloumnName];
       const name = student[nameCloumnName];
 
-      console.log(quizName, student, grade, phone);
+      console.log(`Processing ${i + 1}/${dataToSend.length}: ${name} (${phone})`);
 
       let message = `
 السلام عليكم 
@@ -2191,37 +2369,102 @@ const sendGradeMessages = async (req, res) => {
       `;
 
       try {
-
-        await sendWappiMessage(message, phone, req.userData.phone)
-          .then((result) => {
-            console.log(result);
-            req.io.emit('sendingMessages', {
-              nMessages: ++n,
-            });
-          })
-          .catch((err) => {
-            console.error(err);
-          });
-
-
+        const result = await sendWappiMessage(message, phone, req.userData.phone);
+        successCount++;
+        
+        // Emit progress update
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: dataToSend.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: name,
+          lastResult: 'success'
+        });
+        
+        console.log(`✅ Success: Message sent to ${name}`);
+        
       } catch (err) {
-        console.error(`Error sending message to ${name}:`, err);
+        errorCount++;
+        const errorInfo = {
+          student: name,
+          phone: phone,
+          error: err.message,
+          timestamp: new Date().toISOString()
+        };
+        errors.push(errorInfo);
+        
+        // Emit progress update with error
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: dataToSend.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: name,
+          lastResult: 'error',
+          lastError: err.message
+        });
+        
+        console.error(`❌ Error sending message to ${name}:`, err.message);
       }
 
       // Introduce a random delay between 1 and 5 seconds
       const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
       console.log(
-        `Delaying for ${
-          randomDelay / 1000
-        } seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );
       await delay(randomDelay);
     }
 
-    res.status(200).json({ message: 'Messages sent successfully' });
+    // Emit final status
+    req.io.emit('sendingMessages', {
+      nMessages: dataToSend.length,
+      totalMessages: dataToSend.length,
+      successCount,
+      errorCount,
+      status: 'completed',
+      errors: errors
+    });
+
+    if (errorCount > 0) {
+      res.status(207).json({ 
+        message: `Messages completed with ${errorCount} errors`,
+        successCount,
+        errorCount,
+        errors,
+        totalMessages: dataToSend.length
+      });
+    } else {
+      res.status(200).json({ 
+        message: 'All messages sent successfully',
+        successCount,
+        errorCount: 0,
+        totalMessages: dataToSend.length
+      });
+    }
+    
   } catch (error) {
-    console.error('Error sending messages:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Critical error in sendGradeMessages:', error);
+    
+    // Emit error status
+    req.io.emit('sendingMessages', {
+      nMessages: 0,
+      totalMessages: dataToSend.length,
+      successCount,
+      errorCount,
+      status: 'failed',
+      error: error.message
+    });
+    
+    res.status(500).json({ 
+      message: 'Critical error occurred while sending messages',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: dataToSend.length
+    });
   }
 };
 
@@ -2230,17 +2473,26 @@ const sendMessages = async (req, res) => {
   const { phoneCloumnName, nameCloumnName, dataToSend, HWCloumnName  } =
     req.body;
 
-  let n = 0;
+  let successCount = 0;
+  let errorCount = 0;
+  let errors = [];
+  
+  // Emit initial status
   req.io.emit('sendingMessages', {
-    nMessages: n,
+    nMessages: 0,
+    totalMessages: dataToSend.length,
+    successCount: 0,
+    errorCount: 0,
+    status: 'starting'
   });
 
   try {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    for (const student of dataToSend) {
+    for (let i = 0; i < dataToSend.length; i++) {
+      const student = dataToSend[i];
       let msg = '';
-      console.log(student[HWCloumnName]);
+      
       if (!student[HWCloumnName]) {
         msg = `لم يقم الطالب ${student[nameCloumnName]} بحل واجب حصة اليوم`;
       } else {
@@ -2254,39 +2506,102 @@ ${msg}
       `;
 
       try {
-       
-        await sendWappiMessage(theMessage, student[phoneCloumnName], req.userData.phone)
-        .then((result) => {
-          console.log(result);
-          req.io.emit('sendingMessages', {
-            nMessages: ++n,
-          });
-        })
-        .catch((err) => {
-          console.error(err);
+        const result = await sendWappiMessage(theMessage, student[phoneCloumnName], req.userData.phone);
+        successCount++;
+        
+        // Emit progress update
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: dataToSend.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: student[nameCloumnName],
+          lastResult: 'success'
         });
-      
-        } catch (err) {
-        console.error(
-          `Error sending message to ${student[nameCloumnName]}:`,
-          err
-        );
+        
+        console.log(`✅ Success: Message sent to ${student[nameCloumnName]}`);
+        
+      } catch (err) {
+        errorCount++;
+        const errorInfo = {
+          student: student[nameCloumnName],
+          phone: student[phoneCloumnName],
+          error: err.message,
+          timestamp: new Date().toISOString()
+        };
+        errors.push(errorInfo);
+        
+        // Emit progress update with error
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: dataToSend.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: student[nameCloumnName],
+          lastResult: 'error',
+          lastError: err.message
+        });
+        
+        console.error(`❌ Error sending message to ${student[nameCloumnName]}:`, err.message);
       }
 
-      // Introduce a random delay between 1 and 10 seconds
+      // Introduce a random delay between 1 and 5 seconds
       const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
       console.log(
-        `Delaying for ${
-          randomDelay / 1000
-        } seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );
       await delay(randomDelay);
     }
 
-    res.status(200).json({ message: 'Messages sent successfully' });
+    // Emit final status
+    req.io.emit('sendingMessages', {
+      nMessages: dataToSend.length,
+      totalMessages: dataToSend.length,
+      successCount,
+      errorCount,
+      status: 'completed',
+      errors: errors
+    });
+
+    if (errorCount > 0) {
+      res.status(207).json({ 
+        message: `Messages completed with ${errorCount} errors`,
+        successCount,
+        errorCount,
+        errors,
+        totalMessages: dataToSend.length
+      });
+    } else {
+      res.status(200).json({ 
+        message: 'All messages sent successfully',
+        successCount,
+        errorCount: 0,
+        totalMessages: dataToSend.length
+      });
+    }
+    
   } catch (error) {
-    console.error('Error sending messages:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Critical error in sendMessages:', error);
+    
+    // Emit error status
+    req.io.emit('sendingMessages', {
+      nMessages: 0,
+      totalMessages: dataToSend.length,
+      successCount,
+      errorCount,
+      status: 'failed',
+      error: error.message
+    });
+    
+    res.status(500).json({ 
+      message: 'Critical error occurred while sending messages',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: dataToSend.length
+    });
   }
 };
 
@@ -2302,38 +2617,98 @@ const sendCustomMessages = async (req, res) => {
     dataToSend,
   } = req.body;
 
-  let n = 0;
-  req.io.emit('sendingMessages', { nMessages: n });
+  let successCount = 0;
+  let errorCount = 0;
+  let errors = [];
+  let totalMessages = 0;
+  
+  // Calculate total messages to be sent
+  for (const row of dataToSend) {
+    const targets = [];
+    if (recipientType === 'parents' || recipientType === 'both') {
+      const parentPhone = parentPhoneColumnName ? row[parentPhoneColumnName] : undefined;
+      if (parentPhone) targets.push(parentPhone);
+    }
+    if (recipientType === 'students' || recipientType === 'both') {
+      const studentPhone = studentPhoneColumnName ? row[studentPhoneColumnName] : undefined;
+      if (studentPhone) targets.push(studentPhone);
+    }
+    totalMessages += targets.length;
+  }
+  
+  // Emit initial status
+  req.io.emit('sendingMessages', {
+    nMessages: 0,
+    totalMessages: totalMessages,
+    successCount: 0,
+    errorCount: 0,
+    status: 'starting'
+  });
 
   try {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    let messageIndex = 0;
 
     for (const row of dataToSend) {
-      const name = nameCloumnName ? row[nameCloumnName] : undefined;
-      // Use message as-is; optionally we could personalize later
+      const name = nameCloumnName ? row[nameCloumnName] : 'Unknown';
       const text = message;
 
       const targets = [];
       if (recipientType === 'parents' || recipientType === 'both') {
         const parentPhone = parentPhoneColumnName ? row[parentPhoneColumnName] : undefined;
-        if (parentPhone) targets.push(parentPhone);
+        if (parentPhone) targets.push({ phone: parentPhone, type: 'parent' });
       }
       if (recipientType === 'students' || recipientType === 'both') {
         const studentPhone = studentPhoneColumnName ? row[studentPhoneColumnName] : undefined;
-        if (studentPhone) targets.push(studentPhone);
+        if (studentPhone) targets.push({ phone: studentPhone, type: 'student' });
       }
 
-      for (const phone of targets) {
+      for (const target of targets) {
         try {
-          await sendWappiMessage(text, phone, req.userData.phone)
-            .then(() => {
-              req.io.emit('sendingMessages', { nMessages: ++n });
-            })
-            .catch((err) => {
-              console.error('Send error:', err);
-            });
+          await sendWappiMessage(text, target.phone, req.userData.phone);
+          successCount++;
+          messageIndex++;
+          
+          // Emit progress update
+          req.io.emit('sendingMessages', {
+            nMessages: messageIndex,
+            totalMessages: totalMessages,
+            successCount,
+            errorCount,
+            status: 'progress',
+            currentStudent: name,
+            lastResult: 'success',
+            targetType: target.type
+          });
+          
+          console.log(`✅ Success: Message sent to ${name} (${target.type})`);
+          
         } catch (err) {
-          console.error('Error sending message:', err);
+          errorCount++;
+          messageIndex++;
+          const errorInfo = {
+            student: name,
+            phone: target.phone,
+            type: target.type,
+            error: err.message,
+            timestamp: new Date().toISOString()
+          };
+          errors.push(errorInfo);
+          
+          // Emit progress update with error
+          req.io.emit('sendingMessages', {
+            nMessages: messageIndex,
+            totalMessages: totalMessages,
+            successCount,
+            errorCount,
+            status: 'progress',
+            currentStudent: name,
+            lastResult: 'error',
+            lastError: err.message,
+            targetType: target.type
+          });
+          
+          console.error(`❌ Error sending message to ${name} (${target.type}):`, err.message);
         }
 
         const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
@@ -2341,10 +2716,53 @@ const sendCustomMessages = async (req, res) => {
       }
     }
 
-    res.status(200).json({ message: 'Messages sent successfully' });
+    // Emit final status
+    req.io.emit('sendingMessages', {
+      nMessages: totalMessages,
+      totalMessages: totalMessages,
+      successCount,
+      errorCount,
+      status: 'completed',
+      errors: errors
+    });
+
+    if (errorCount > 0) {
+      res.status(207).json({ 
+        message: `Messages completed with ${errorCount} errors`,
+        successCount,
+        errorCount,
+        errors,
+        totalMessages: totalMessages
+      });
+    } else {
+      res.status(200).json({ 
+        message: 'All messages sent successfully',
+        successCount,
+        errorCount: 0,
+        totalMessages: totalMessages
+      });
+    }
+    
   } catch (error) {
-    console.error('Error sending custom messages:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Critical error in sendCustomMessages:', error);
+    
+    // Emit error status
+    req.io.emit('sendingMessages', {
+      nMessages: 0,
+      totalMessages: totalMessages,
+      successCount,
+      errorCount,
+      status: 'failed',
+      error: error.message
+    });
+    
+    res.status(500).json({ 
+      message: 'Critical error occurred while sending messages',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: totalMessages
+    });
   }
 };
 
@@ -2380,31 +2798,39 @@ const getDataStudentInWhatsApp = async (req, res) => {
 
 const submitData = async (req, res) => {
   const { data, option, quizName, maxGrade, instanceID } = req.body;
-  let n = 0;
+  let successCount = 0;
+  let errorCount = 0;
+  let errors = [];
+  
+  // Emit initial status
   req.io.emit('sendingMessages', {
-    nMessages: n,
+    nMessages: 0,
+    totalMessages: data.length,
+    successCount: 0,
+    errorCount: 0,
+    status: 'starting'
   });
 
   try {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    for (const student of data) {
-      console.log(student);
+    for (let i = 0; i < data.length; i++) {
+      const student = data[i];
       let theMessage = '';
-        if (option === 'HWStatus') {
-          let msg = '';
+      
+      if (option === 'HWStatus') {
+        let msg = '';
         if (student['hwStatus'] == 'no') {
           msg = `لم يقم الطالب ${student['studentName']} بحل واجب حصة اليوم`;
         } else {
           msg = `لقد قام الطالب ${student['studentName']} بحل واجب حصة اليوم`;
         }
-theMessage = `
+        theMessage = `
 السلام عليكم 
 مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
 ${msg}
 `;
-
-      }else if (option === 'gradeMsg') {
+      } else if (option === 'gradeMsg') {
         theMessage = `
 السلام عليكم
 مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher
@@ -2412,38 +2838,105 @@ ${msg}
 `;
       }
 
-
       try {
-        await sendWappiMessage(theMessage, student['parentPhone'], req.userData.phone)
-          .then(() => {
-            req.io.emit('sendingMessages', {
-              nMessages: ++n,
-            });
-            console.log(`Message sent successfully to ${student['studentName']}`);
-          })
-          .catch((error) => {
-            console.error(`Error sending message to ${student['studentName']}:`, error);
-          });
+        await sendWappiMessage(theMessage, student['parentPhone'], req.userData.phone);
+        successCount++;
+        
+        // Emit progress update
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: data.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: student['studentName'],
+          lastResult: 'success'
+        });
+        
+        console.log(`✅ Success: Message sent to ${student['studentName']}`);
+        
       } catch (err) {
-        console.error(`Error sending message to ${student['studentName']}:`, err);
+        errorCount++;
+        const errorInfo = {
+          student: student['studentName'],
+          phone: student['parentPhone'],
+          error: err.message,
+          timestamp: new Date().toISOString()
+        };
+        errors.push(errorInfo);
+        
+        // Emit progress update with error
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: data.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: student['studentName'],
+          lastResult: 'error',
+          lastError: err.message
+        });
+        
+        console.error(`❌ Error sending message to ${student['studentName']}:`, err.message);
       }
 
       // Introduce a random delay between 1 and 5 seconds
       const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
       console.log(
-        `Delaying for ${
-          randomDelay / 1000
-        } seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );
       await delay(randomDelay);
     }
 
-    res.status(200).json({ message: 'Messages sent successfully' });
+    // Emit final status
+    req.io.emit('sendingMessages', {
+      nMessages: data.length,
+      totalMessages: data.length,
+      successCount,
+      errorCount,
+      status: 'completed',
+      errors: errors
+    });
+
+    if (errorCount > 0) {
+      res.status(207).json({ 
+        message: `Messages completed with ${errorCount} errors`,
+        successCount,
+        errorCount,
+        errors,
+        totalMessages: data.length
+      });
+    } else {
+      res.status(200).json({ 
+        message: 'All messages sent successfully',
+        successCount,
+        errorCount: 0,
+        totalMessages: data.length
+      });
+    }
+    
   } catch (error) {
-    console.error('Error sending messages:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Critical error in submitData:', error);
+    
+    // Emit error status
+    req.io.emit('sendingMessages', {
+      nMessages: 0,
+      totalMessages: data.length,
+      successCount,
+      errorCount,
+      status: 'failed',
+      error: error.message
+    });
+    
+    res.status(500).json({ 
+      message: 'Critical error occurred while sending messages',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: data.length
+    });
   }
-}
+};
 
 
 // =================================================== END Whats app 2 =================================================== //
@@ -2938,6 +3431,69 @@ const logOut = async (req, res) => {
   res.redirect('../login');
 };
 
+const exportErrorDetailsToExcel = async (req, res) => {
+  const { errors } = req.body;
+  
+  if (!errors || !Array.isArray(errors) || errors.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'No error data provided for export' 
+    });
+  }
+
+  try {
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet('Error Details');
+
+    // Simple header row with only essential columns
+    const headerRow = worksheet.addRow([
+      'Student Name',
+      'Parent Phone Number',
+      'HW Status',
+      'Error Message'
+    ]);
+
+    // Add data rows
+    errors.forEach((error) => {
+      worksheet.addRow([
+        error.student || '',
+        error.phone || '',
+        error.hwStatus || '',
+        error.error || ''
+      ]);
+    });
+
+    // Set column widths
+    worksheet.columns = [
+      { key: 'studentName', width: 20 },
+      { key: 'phoneNumber', width: 15 },
+      { key: 'hwStatus', width: 15 },
+      { key: 'errorMessage', width: 40 }
+    ];
+
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="ErrorDetails_${new Date().toISOString().split('T')[0]}.xlsx"`
+    );
+
+    res.send(excelBuffer);
+
+  } catch (error) {
+    console.error('Error exporting error details to Excel:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to export error details to Excel',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   dash_get,
 
@@ -3008,4 +3564,5 @@ module.exports = {
   transferStudent,
 
   logOut,
+  exportErrorDetailsToExcel,
 };

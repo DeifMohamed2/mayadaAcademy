@@ -168,6 +168,12 @@ router.post('/whatsApp2/submitData', authMiddleware, teacherController.submitDat
 
 // ==================  END whatsApp 2  ================= //
 
+// ================== Export Error Details ====================== //
+
+router.post('/exportErrorDetailsToExcel', authMiddleware, teacherController.exportErrorDetailsToExcel);
+
+// ================== END Export Error Details ================= //
+
 // ==================  Convert Group  ================= //
 
 router.get('/convertGroup', authMiddleware, teacherController.convertGroup_get);
