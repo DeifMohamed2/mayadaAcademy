@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register</title>
+  <link rel="icon" href="images/d.png" type="image/x-icon">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/assest/bootstrap.min.css">
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v2.1.6/css/unicons.css">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/Register.css">
+</head>
+
+
+    <style>
+         /* Excel Upload Styles */
+         .upload-toggle {
+           text-align: center;
+           margin-bottom: 30px;
+         }
+
+         .toggle-btn {
+           background: linear-gradient(135deg, #e3b228, #ffd900);
+           border: none;
+           color: #000;
+           padding: 15px 30px;
+           border-radius: 50px;
+           font-size: 16px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.3s ease;
+           margin: 0 10px;
+           box-shadow: 0 4px 15px rgba(227, 178, 40, 0.3);
+         }
+
+         .toggle-btn:hover {
+           transform: translateY(-2px);
+           box-shadow: 0 6px 20px rgba(227, 178, 40, 0.4);
+         }
+
+         .toggle-btn.active {
+           background: linear-gradient(135deg, #ffd900, #e3b228);
+           box-shadow: 0 4px 15px rgba(255, 217, 0, 0.5);
+         }
+
+         .excel-upload-section {
+           background: rgba(255, 255, 255, 0.05);
+           border: 2px solid #e3b228;
+           border-radius: 15px;
+           padding: 30px;
+           margin-bottom: 30px;
+           backdrop-filter: blur(10px);
+         }
+
+         .excel-upload-section h3 {
+           color: #e3b228;
+           text-align: center;
+           margin-bottom: 25px;
+           font-size: 1.5rem;
+         }
+
+         .column-inputs {
+           display: grid;
+           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+           gap: 20px;
+           margin-bottom: 25px;
+         }
+
+         .column-input {
+           background: rgba(255, 255, 255, 0.1);
+           border: 1px solid #e3b228;
+           border-radius: 10px;
+           padding: 15px;
+           color: white;
+         }
+
+         .column-input label {
+           display: block;
+           margin-bottom: 8px;
+           color: #e3b228;
+           font-weight: 600;
+         }
+
+         .column-input input {
+           width: 100%;
+           background: rgba(255, 255, 255, 0.1);
+           border: 1px solid #e3b228;
+           border-radius: 8px;
+           padding: 10px;
+           color: white;
+           font-size: 14px;
+         }
+
+         .column-input input::placeholder {
+           color: rgba(255, 255, 255, 0.6);
+         }
+
+         .column-input input:focus {
+           outline: none;
+           border-color: #ffd900;
+           box-shadow: 0 0 0 2px rgba(255, 217, 0, 0.2);
+         }
+
+         .file-upload-area {
+           border: 2px dashed #e3b228;
+           border-radius: 15px;
+           padding: 40px;
+           text-align: center;
+           margin-bottom: 25px;
+           transition: all 0.3s ease;
+           cursor: pointer;
+         }
+
+         .file-upload-area:hover {
+           border-color: #ffd900;
+           background: rgba(227, 178, 40, 0.05);
+         }
+
+         .file-upload-area.dragover {
+           border-color: #ffd900;
+           background: rgba(227, 178, 40, 0.1);
+           transform: scale(1.02);
+         }
+
+         .file-upload-area i {
+           font-size: 48px;
+           color: #e3b228;
+           margin-bottom: 15px;
+         }
+
+         .file-upload-area p {
+           color: #e3b228;
+           font-size: 16px;
+           margin-bottom: 10px;
+         }
+
+         .file-upload-area small {
+           color: rgba(255, 255, 255, 0.6);
+           font-size: 14px;
+         }
+
+         .upload-progress {
+           background: rgba(255, 255, 255, 0.05);
+           border-radius: 10px;
+           padding: 20px;
+           margin-bottom: 20px;
+           display: none;
+         }
+
+         .progress-bar {
+           height: 8px;
+           background: rgba(255, 255, 255, 0.1);
+           border-radius: 4px;
+           overflow: hidden;
+           margin-bottom: 15px;
+         }
+
+         .progress-fill {
+           height: 100%;
+           background: linear-gradient(90deg, #e3b228, #ffd900);
+           width: 0%;
+           transition: width 0.3s ease;
+         }
+
+         .progress-stats {
+           display: grid;
+           grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+           gap: 15px;
+           margin-bottom: 20px;
+         }
+
+         .stat-item {
+           text-align: center;
+           padding: 15px;
+           border-radius: 8px;
+           color: white;
+           font-weight: 600;
+         }
+
+         .stat-item.success {
+           background: rgba(76, 175, 80, 0.2);
+           border: 1px solid #4CAF50;
+         }
+
+         .stat-item.error {
+           background: rgba(244, 67, 54, 0.2);
+           border: 1px solid #F44336;
+         }
+
+         .stat-item.info {
+           background: rgba(33, 150, 243, 0.2);
+           border: 1px solid #2196F3;
+         }
+
+         .stat-item.warning {
+           background: rgba(255, 152, 0, 0.2);
+           border: 1px solid #FF9800;
+         }
+
+         .error-details {
+           background: rgba(244, 67, 54, 0.1);
+           border: 1px solid #F44336;
+           border-radius: 10px;
+           padding: 20px;
+           margin-top: 20px;
+           display: none;
+         }
+
+         .error-item {
+           background: rgba(244, 67, 54, 0.1);
+           border: 1px solid rgba(244, 67, 54, 0.3);
+           border-radius: 8px;
+           padding: 15px;
+           margin-bottom: 15px;
+         }
+
+         .error-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 10px;
+           flex-wrap: wrap;
+           gap: 10px;
+         }
+
+         .student-name {
+           color: #F44336;
+           font-weight: 600;
+           font-size: 16px;
+         }
+
+         .error-message {
+           color: #ffcdd2;
+           font-size: 14px;
+           margin: 10px 0;
+           padding: 10px;
+           background: rgba(244, 67, 54, 0.1);
+           border-radius: 6px;
+           border-left: 3px solid #F44336;
+         }
+
+         .export-errors-btn {
+           background: linear-gradient(135deg, #FF9800, #F57C00);
+           border: none;
+           color: white;
+           padding: 12px 25px;
+           border-radius: 25px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.3s ease;
+           margin: 15px 0;
+         }
+
+         .export-errors-btn:hover {
+           transform: translateY(-2px);
+           box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+         }
+
+         .hidden {
+           display: none;
+         }
+
+         /* Group Info Display Styles */
+         .group-info-display {
+           background: rgba(227, 178, 40, 0.1);
+           border: 1px solid #e3b228;
+           border-radius: 10px;
+           padding: 20px;
+           margin-bottom: 25px;
+         }
+
+         .group-info-display h6 {
+           color: #e3b228;
+           margin-bottom: 15px;
+           font-size: 1.1rem;
+         }
+
+         .group-info-display .row {
+           margin-bottom: 10px;
+         }
+
+         .group-info-display .col-md-3,
+         .group-info-display .col-md-6 {
+           padding: 8px;
+         }
+
+         .group-info-display strong {
+           color: #e3b228;
+           font-weight: 600;
+         }
+
+         .group-info-display span {
+           color: white;
+           margin-right: 5px;
+         }
+
+         .group-info-display .alert-warning {
+           background: rgba(255, 193, 7, 0.1);
+           border-color: #ffc107;
+           color: #ffc107;
+         }
+
+         .group-info-display .alert-success {
+           background: rgba(76, 175, 80, 0.1);
+           border-color: #4CAF50;
+           color: #4CAF50;
+         }
+
+         /* Existing styles */
+         * {
+             box-sizing: border-box;
+             margin: 0;
+             padding: 0;
+             font-family: 'Arial', sans-serif;
+         }
+
+        .upload-container {
+            background-color: transparent;
+            border: 2px solid #e3b228;
+            border-radius: 10px;
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-size: 2rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .file-label {
+            display: block;
+            background-color: transparent;
+            border: 2px dashed #e3b228;
+            border-radius: 5px;
+            padding: 15px;
+            color: #e3b228;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .file-label:hover {
+            background-color: #e3b228;
+            color: rgb(0, 0, 0);
+        }
+
+        #file , #fileMSG {
+            display: none;
+        }
+
+        .upload-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            border: 2px solid #e3b228;
+            background-color: transparent;
+            color: #e3b228;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background-color: #e3b228;
+            color: rgb(0, 0, 0);
+            transform: scale(1.05);
+        }
+
+        .output {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+<style>
+  .verificationCode{
+  
+    width: 130px !important; 
+  }
+
+  .verificationBTN {
+    background-color: #ffd900;
+    border: none;
+    color: rgb(0, 0, 0);
+    padding: 10px 15px;
+    border-radius: 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    transition: all ease 0.3s  ;
+  }
+  .verificationBTN:hover {
+    background-color: #f1f1f1;
+  }
+  .verificationBTN:disabled
+  {
+    opacity: 0.4;
+    background-color: #f1f1f1;
+    cursor: not-allowed;
+  }
+
+</style>
+<body>
+
+  <%- include("./partials/nav.ejs") %>
+
+
+    <!-- Modal -->
+
+
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="success-animation ">
+              <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none" />
+                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+              </svg>
+            </div>
+          </div>
+          <div class="modal-body text-center " style="color: black;">
+            <h3>تم ارسال طلبك بنجاح!</h3>
+            <h4> هذا هوا الكود الخاص بك يرجي الاحتفاظ به جيداً</h4>
+            <span style="font-size: 2rem; "> <b>#</b><b id="student_id"></b> </span>
+          </div>
+          
+          <div class="modal-footer mx-auto">
+            <a href="login"><button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="copyCode"> حسنا
+              </button></a>
+          </div>
+          </div>
+     
+        </div>
+      </div>
+    </div>
+
+
+
+    <section class="contact">
+
+      <div class="container contact__container">
+
+        <button type="button" style="display: none;" id="modelbtn" class="btn btn-primary" data-bs-toggle="modal"
+          data-bs-target="#exampleModal">
+          Launch demo modal
+        </button>
+
+        <!-- Excel Upload Toggle -->
+        <div class="upload-toggle">
+          <button class="toggle-btn active" onclick="showManualForm()">
+            <i class="fas fa-edit me-2"></i>إدخال يدوي
+          </button>
+          <button class="toggle-btn" onclick="showExcelUpload()">
+            <i class="fas fa-file-excel me-2"></i>رفع ملف إكسل
+          </button>
+        </div>
+
+        <!-- Excel Upload Section -->
+        <div id="excelUploadSection" class="excel-upload-section hidden">
+          <h3><i class="fas fa-upload me-2"></i>رفع بيانات الطلاب من ملف إكسل</h3>
+          
+          <!-- Group Information Display -->
+          <div class="group-info-display">
+            <h6>
+              <i class="fas fa-info-circle me-2"></i>معلومات المجموعة المشتركة لجميع الطلاب:
+            </h6>
+            <div class="row">
+              <div class="col-md-3">
+                <strong>السنتر:</strong> <span id="displayCenterName">-</span>
+              </div>
+              <div class="col-md-3">
+                <strong>الصف:</strong> <span id="displayGrade">-</span>
+              </div>
+              <div class="col-md-3">
+                <strong>النوع:</strong> <span id="displayGradeType">-</span>
+              </div>
+              <div class="col-md-3">
+                <strong>وقت المجموعة:</strong> <span id="displayGroupTime">-</span>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3">
+                <strong>مستوى الصف:</strong> <span id="displayGradeLevel">-</span>
+              </div>
+              <div class="col-md-3">
+                <strong>نوع الحضور:</strong> <span id="displayAttendingType">-</span>
+              </div>
+              <div class="col-md-3">
+                <strong>الكتاب:</strong> <span id="displayBookTaken">-</span>
+              </div>
+              <div class="col-md-3">
+                <strong>المدرسة:</strong> <span id="displaySchoolName">-</span>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-6">
+                <strong>المبلغ:</strong> <span id="displayBalance">-</span>
+              </div>
+            </div>
+            <div class="alert alert-warning mt-3">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              <strong>تنبيه:</strong> يجب إكمال جميع الحقول أعلاه قبل رفع ملف الإكسل. هذه القيم ستطبق على جميع الطلاب.
+            </div>
+          </div>
+          
+          <div class="column-inputs">
+            <div class="column-input">
+              <label for="excelNameColumn">عمود اسم الطالب</label>
+              <input type="text" id="excelNameColumn" placeholder="مثال: Student Name">
+            </div>
+            <div class="column-input">
+              <label for="excelPhoneColumn">عمود رقم هاتف الطالب</label>
+              <input type="text" id="excelPhoneColumn" placeholder="مثال: Phone">
+            </div>
+            <div class="column-input">
+              <label for="excelParentPhoneColumn">عمود رقم هاتف ولي الأمر</label>
+              <input type="text" id="excelParentPhoneColumn" placeholder="مثال: Parent Phone">
+            </div>
+            <div class="column-input">
+              <label for="excelCodeColumn">عمود الكود</label>
+              <input type="text" id="excelCodeColumn" placeholder="مثال: Code">
+            </div>
+          </div>
+
+          <div class="file-upload-area" onclick="document.getElementById('excelFile').click()" 
+               ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelect(event)">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>انقر هنا لاختيار ملف أو اسحب الملف إلى هنا</p>
+            <small>يدعم ملفات Excel (.xlsx, .xls)</small>
+          </div>
+
+          <!-- Help Section -->
+          <div class="alert alert-info" style="margin-top: 20px;">
+            <h6><i class="fas fa-info-circle me-2"></i>كيفية استخدام ملف الإكسل:</h6>
+            <p style="margin: 10px 0;">
+              <strong>تنسيق الملف المطلوب:</strong> يجب أن يحتوي ملف الإكسل على الأعمدة التالية:
+            </p>
+            <ul style="margin: 10px 0; padding-right: 20px;">
+              <li><strong>عمود اسم الطالب:</strong> يحتوي على أسماء الطلاب</li>
+              <li><strong>عمود رقم هاتف الطالب:</strong> يحتوي على أرقام هواتف الطلاب</li>
+              <li><strong>عمود رقم هاتف ولي الأمر:</strong> يحتوي على أرقام هواتف أولياء الأمور</li>
+              <li><strong>عمود الكود:</strong> يحتوي على الأكواد الفريدة للطلاب</li>
+            </ul>
+            <p style="margin: 10px 0;">
+              <strong>ملاحظة:</strong> سيتم استخدام القيم المدخلة في النموذج أعلاه (مثل السنتر، الصف، إلخ) لجميع الطلاب.
+            </p>
+            <button class="upload-btn" style="background: #007bff; border-color: #007bff; margin-top: 10px;" onclick="downloadSampleTemplate()">
+              <i class="fas fa-download me-2"></i>تحميل نموذج إكسل
+            </button>
+          </div>
+
+          <button class="upload-btn" onclick="processExcelData()" id="processExcelBtn" disabled>
+            <i class="fas fa-paper-plane me-2"></i>ارسال طلب
+          </button>
+
+          <!-- Progress Section -->
+          <div id="uploadProgress" class="upload-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-stats">
+              <div class="stat-item success">
+                <i class="fas fa-check-circle"></i>
+                <div>نجح</div>
+                <span id="successCount">0</span>
+              </div>
+              <div class="stat-item error">
+                <i class="fas fa-times-circle"></i>
+                <div>فشل</div>
+                <span id="errorCount">0</span>
+              </div>
+              <div class="stat-item info">
+                <i class="fas fa-clock"></i>
+                <div>جاري</div>
+                <span id="currentStudent">-</span>
+              </div>
+              <div class="stat-item warning">
+                <i class="fas fa-percentage"></i>
+                <div>النسبة</div>
+                <span id="progressPercent">0%</span>
+              </div>
+            </div>
+            
+            <!-- Error Details -->
+            <div id="errorDetails" class="error-details">
+              <h6><i class="fas fa-exclamation-triangle me-2"></i>تفاصيل الأخطاء:</h6>
+              <button class="export-errors-btn" onclick="exportErrorsToExcel()">
+                <i class="fas fa-download me-2"></i>تصدير الأخطاء إلى Excel
+              </button>
+              <div id="errorList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual Form Section -->
+        <form action="/Register" method="post" class="contact__form" id="manualForm">
+          <% if (typeof errors !=='undefined' ) { %>
+            <ul class="errors">
+              <% for (const key in errors) { %>
+                <li class="erorr">
+                  <%= errors[key] %>
+                </li>
+                <% } %>
+
+
+            </ul>
+            <% } %>
+
+              <div class="row  justify-content-center align-items-center">
+
+                <div class="col-12 text-center ">
+                  <input type="text" name="Username" placeholder=" اسم الطالب بالكامل"
+                    value="<%= formData.Username || '' %>" required>
+                </div>
+                
+
+                <div class="col-12 text-center">
+                  <input type="number" name="phone" id="phone" placeholder="رقم هاتف الطالب" required>
+
+                  <!-- <button type="button" class="verificationBTN" id="verificationBTN" onclick="sendVerificationCode()">ارسال كود تأكيد</button>
+                   <input type="number" class="verificationCode"  name="verificationCode" id="verificationCode" placeholder="كود التفعيل" required>
+           -->
+                </div>
+
+                
+                <div class="col-12 text-center">
+                  <input type="number" name="parentPhone" id="parentPhone"
+                    placeholder=" رقم هاتف ولي الامر " value="<%= formData.parentPhone || '' %>" required>
+                </div>
+            
+              <div class="col-12 text-center">
+                          <select name="centerName" id="centerName" value="<%= formData.centerName || '' %>" required>
+                            <option value=""> اختر السنتر </option>
+                            <option value="ZHub">ZHub</option>
+                            <option value="tagmo3">Tagmo3</option>
+                            <option value="online">online</option>
+                          </select>
+                </div>
+
+                  <div class="col-12 text-center">
+                  <select name="Grade" id="Grade" class="regSel" value="<%= formData.Grade || '' %>" required>
+                    <option value=""> اختر الصف </option>
+                    <!-- <option value="EST">EST</option>
+                    <option value="EST1">EST1</option>
+                    <option value="EST2">EST2</option> -->
+                    <!-- <option value="ACT">ACT</option> -->
+                  </select>
+                  </div>
+
+
+                  <div class="col-12 text-center">
+                    <select name="gradeType" id="gradeType" value="<%= formData.centerName || '' %>" required>
+                      <option value=""> Type</option>
+                    </select>
+                  </div>
+
+                
+                 
+
+                  <div class="col-12 text-center">
+                    <select name="groupTime" id="groupTime" value="<%= formData.groupTime || '' %>" required>
+                      <option value=""> Group Time </option>
+                    </select>
+                  </div>
+
+
+
+                  <div class="col-12 text-center">
+                  <select name="GradeLevel" id="GradeLevel" class="regSel" value="<%= formData.GradeLevel || '' %>" required>
+                    <option value="">Grade Level</option>
+                    <option value="10">Grade 10</option>
+                    <option value="11">Grade 11</option>
+                    <option value="12">Grade 12</option>
+    
+                  </select>
+                  </div>
+
+                  <div class="col-12 text-center">
+                  <select name="attendingType" id="attendingType" class="regSel" value="<%= formData.attendingType || '' %>" required>
+                    <option value="">Attending Type</option>
+                    <option value="HomeSchooling">Home Schooling</option>
+                    <option value="Attending">Attending</option>
+                  </select>
+                  </div>
+
+                  <div class="col-12 text-center">
+                  <select name="bookTaken" id="bookTaken" class="regSel" value="<%= formData.bookTaken || '' %>" required>
+                    <option value="">Book Taken</option>
+                    <option value="true">YES</option>
+                    <option value="false">NO</option>
+                  </select>
+                  </div>
+
+                     <div class="col-12 text-center">
+                  <input type="text" name="schoolName" id="schoolName"
+                    placeholder=" School Name" value="<%= formData.schoolName || '' %>" required>
+                </div>
+            
+
+
+                  <div class="col-4 text-center">
+                  <input type="number" name="Code" id="Code"
+                    placeholder="Code" value="<%= formData.Code || '' %>" required>
+                </div>
+                  <div class="col-4 text-center">
+                  <input type="number" name="balance" id="balance"
+                    placeholder="Amount" value="<%= formData.balance || '' %>" required>
+                </div>
+
+             
+               
+                <div class="col-12 text-center">
+                  <button type="submit" class="btn btn-primary"> ارسال طلب</button><label><span>
+
+                </div>
+              </div>
+
+
+              
+
+ 
+        </form>
+
+
+      </div>
+    </section>
+
+    <%- include("./partials/footer.ejs") %>
+
+
+      <script src="/assest/bootstrap.min.js"></script>
+      <script src="/assest/bootstrap.bundle.min.js"></script>
+
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+
+
+      <%- include("./partials/group.ejs") %>
+
+    <script>
+      let excelData = null;
+      let currentFile = null;
+
+      // Socket.io for real-time updates
+      const socket = io();
+      
+      socket.on('registrationProgress', (data) => {
+        // Update progress
+        if (data.currentStudent) {
+          document.getElementById('currentStudent').textContent = data.currentStudent;
+        }
+        
+        if (data.progress) {
+          document.getElementById('progressFill').style.width = `${data.progress}%`;
+          document.getElementById('progressPercent').textContent = `${data.progress}%`;
+        }
+        
+        if (data.successCount !== undefined) {
+          document.getElementById('successCount').textContent = data.successCount;
+        }
+        
+        if (data.errorCount !== undefined) {
+          document.getElementById('errorCount').textContent = data.errorCount;
+        }
+      });
+
+      // Toggle between manual form and Excel upload
+      function showManualForm() {
+        document.getElementById('manualForm').classList.remove('hidden');
+        document.getElementById('excelUploadSection').classList.add('hidden');
+        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+      }
+
+      function showExcelUpload() {
+        document.getElementById('manualForm').classList.add('hidden');
+        document.getElementById('excelUploadSection').classList.remove('hidden');
+        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Update group information display
+        updateGroupInfoDisplay();
+      }
+
+      // Function to update group information display
+      function updateGroupInfoDisplay() {
+        const centerName = document.getElementById('centerName').value || '-';
+        const Grade = document.getElementById('Grade').value || '-';
+        const gradeType = document.getElementById('gradeType').value || '-';
+        const groupTime = document.getElementById('groupTime').value || '-';
+        const GradeLevel = document.getElementById('GradeLevel').value || '-';
+        const attendingType = document.getElementById('attendingType').value || '-';
+        const bookTaken = document.getElementById('bookTaken').value || '-';
+        const schoolName = document.getElementById('schoolName').value || '-';
+        const balance = document.getElementById('balance').value || '-';
+
+        document.getElementById('displayCenterName').textContent = centerName;
+        document.getElementById('displayGrade').textContent = Grade;
+        document.getElementById('displayGradeType').textContent = gradeType;
+        document.getElementById('displayGroupTime').textContent = groupTime;
+        document.getElementById('displayGradeLevel').textContent = GradeLevel;
+        document.getElementById('displayAttendingType').textContent = attendingType;
+        document.getElementById('displayBookTaken').textContent = bookTaken;
+        document.getElementById('displaySchoolName').textContent = schoolName;
+        document.getElementById('displayBalance').textContent = balance;
+
+        // Check if all required fields are filled and update visual indicators
+        checkRequiredFields();
+      }
+
+      // Function to check if all required fields are filled
+      function checkRequiredFields() {
+        const requiredFields = ['centerName', 'Grade', 'gradeType', 'groupTime', 'GradeLevel', 'attendingType', 'bookTaken', 'schoolName', 'balance'];
+        let allFilled = true;
+        
+        requiredFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          const displayElement = document.getElementById(`display${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`);
+          
+          if (field && displayElement) {
+            if (field.value) {
+              displayElement.style.color = '#4CAF50'; // Green for filled
+              displayElement.style.fontWeight = '600';
+            } else {
+              displayElement.style.color = '#F44336'; // Red for empty
+              displayElement.style.fontWeight = '400';
+              allFilled = false;
+            }
+          }
+        });
+
+        // Update the warning message
+        const warningAlert = document.querySelector('.group-info-display .alert-warning');
+        if (warningAlert) {
+          if (allFilled) {
+            warningAlert.className = 'alert alert-success mt-3';
+            warningAlert.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>تم!</strong> جميع الحقول مكتملة. يمكنك الآن رفع ملف الإكسل.';
+          } else {
+            warningAlert.className = 'alert alert-warning mt-3';
+            warningAlert.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><strong>تنبيه:</strong> يجب إكمال جميع الحقول أعلاه قبل رفع ملف الإكسل. هذه القيم ستطبق على جميع الطلاب.';
+          }
+        }
+      }
+
+      // Add event listeners to form fields to update display in real-time
+      function addFormFieldListeners() {
+        const formFields = ['centerName', 'Grade', 'gradeType', 'groupTime', 'GradeLevel', 'attendingType', 'bookTaken', 'schoolName', 'balance'];
+        
+        formFields.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('change', updateGroupInfoDisplay);
+            field.addEventListener('input', updateGroupInfoDisplay);
+          }
+        });
+      }
+
+      // File handling
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+          currentFile = file;
+          document.getElementById('processExcelBtn').disabled = false;
+          updateFileUploadArea(file.name);
+        }
+      }
+
+      function handleDrop(event) {
+        event.preventDefault();
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+          const file = files[0];
+          if (file.type.includes('spreadsheet') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            currentFile = file;
+            document.getElementById('excelFile').files = files;
+            document.getElementById('processExcelBtn').disabled = false;
+            updateFileUploadArea(file.name);
+          } else {
+            alert('يرجى اختيار ملف Excel صحيح');
+          }
+        }
+      }
+
+      function handleDragOver(event) {
+        event.preventDefault();
+        event.currentTarget.classList.add('dragover');
+      }
+
+      function handleDragLeave(event) {
+        event.preventDefault();
+        event.currentTarget.classList.remove('dragover');
+      }
+
+      function updateFileUploadArea(fileName) {
+        const uploadArea = document.querySelector('.file-upload-area');
+        uploadArea.innerHTML = `
+          <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
+          <p>تم اختيار الملف: ${fileName}</p>
+          <small>انقر على "ارسال طلب" للمتابعة</small>
+          <button class="btn btn-sm btn-outline-warning mt-2" onclick="clearFileSelection()">
+            <i class="fas fa-times me-1"></i>إلغاء الاختيار
+          </button>
+        `;
+      }
+
+      // Function to clear file selection
+      function clearFileSelection() {
+        currentFile = null;
+        document.getElementById('excelFile').value = '';
+        document.getElementById('processExcelBtn').disabled = true;
+        
+        const uploadArea = document.querySelector('.file-upload-area');
+        uploadArea.innerHTML = `
+          <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelect(event)">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p>انقر هنا لاختيار ملف أو اسحب الملف إلى هنا</p>
+          <small>يدعم ملفات Excel (.xlsx, .xls)</small>
+        `;
+      }
+
+      // Download sample template
+      function downloadSampleTemplate() {
+        // Create sample data
+        const sampleData = [
+          { 'Student Name': 'أحمد محمد', 'Phone': '01234567890', 'Parent Phone': '01234567891', 'Code': '1001' },
+          { 'Student Name': 'فاطمة علي', 'Phone': '01234567892', 'Parent Phone': '01234567893', 'Code': '1002' },
+          { 'Student Name': 'محمد أحمد', 'Phone': '01234567894', 'Parent Phone': '01234567895', 'Code': '1003' }
+        ];
+
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(sampleData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Students');
+
+        // Download the file
+        XLSX.writeFile(wb, 'StudentRegistrationTemplate.xlsx');
+      }
+
+      // Process Excel data
+      async function processExcelData() {
+        if (!currentFile) {
+          alert('يرجى اختيار ملف أولاً');
+          return;
+        }
+
+        const nameColumn = document.getElementById('excelNameColumn').value;
+        const phoneColumn = document.getElementById('excelPhoneColumn').value;
+        const parentPhoneColumn = document.getElementById('excelParentPhoneColumn').value;
+        const codeColumn = document.getElementById('excelCodeColumn').value;
+
+        if (!nameColumn || !phoneColumn || !parentPhoneColumn || !codeColumn) {
+          alert('يرجى إدخال جميع أسماء الأعمدة المطلوبة');
+          return;
+        }
+
+        // Get common values from the form - these will be applied to ALL students
+        const centerName = document.getElementById('centerName').value;
+        const Grade = document.getElementById('Grade').value;
+        const gradeType = document.getElementById('gradeType').value;
+        const groupTime = document.getElementById('groupTime').value;
+        const GradeLevel = document.getElementById('GradeLevel').value;
+        const attendingType = document.getElementById('attendingType').value;
+        const bookTaken = document.getElementById('bookTaken').value;
+        const schoolName = document.getElementById('schoolName').value;
+        const balance = document.getElementById('balance').value;
+
+        // Validate that all group fields are filled
+        if (!centerName || !Grade || !gradeType || !groupTime || !GradeLevel || !attendingType || !bookTaken || !schoolName || !balance) {
+          alert('يرجى إكمال جميع الحقول المشتركة أولاً قبل رفع ملف الإكسل. هذه القيم ستطبق على جميع الطلاب.');
+          return;
+        }
+
+        // Read Excel file
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+            if (jsonData.length === 0) {
+              alert('الملف فارغ أو لا يحتوي على بيانات');
+              return;
+            }
+
+            // Validate columns exist
+            const firstRow = jsonData[0];
+            if (!firstRow[nameColumn] || !firstRow[phoneColumn] || !firstRow[parentPhoneColumn] || !firstRow[codeColumn]) {
+              alert('أحد الأعمدة المحددة غير موجود في الملف');
+              return;
+            }
+
+            // Prepare data for sending
+            const studentsData = jsonData.map(row => ({
+              Username: row[nameColumn],
+              phone: row[phoneColumn],
+              parentPhone: row[parentPhoneColumn],
+              Code: row[codeColumn],
+              centerName,
+              Grade,
+              gradeType,
+              groupTime,
+              GradeLevel,
+              attendingType,
+              bookTaken,
+              schoolName,
+              balance: parseFloat(balance)
+            }));
+
+            // Send data to server
+            sendStudentsData(studentsData);
+
+          } catch (error) {
+            console.error('Error reading Excel file:', error);
+            alert('حدث خطأ في قراءة الملف');
+          }
+        };
+
+        reader.readAsArrayBuffer(currentFile);
+      }
+
+      // Send students data to server
+      async function sendStudentsData(studentsData) {
+        try {
+          // Show progress section
+          document.getElementById('uploadProgress').style.display = 'block';
+          
+          // Reset counters
+          document.getElementById('successCount').textContent = '0';
+          document.getElementById('errorCount').textContent = '0';
+          document.getElementById('currentStudent').textContent = '-';
+          document.getElementById('progressPercent').textContent = '0%';
+          document.getElementById('progressFill').style.width = '0%';
+          document.getElementById('errorDetails').style.display = 'none';
+          document.getElementById('errorList').innerHTML = '';
+
+          const response = await fetch('/Register/excel', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ students: studentsData })
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          
+          if (result.success) {
+            // Show success message
+            document.getElementById('currentStudent').textContent = 'مكتمل';
+            document.getElementById('progressPercent').textContent = '100%';
+            document.getElementById('progressFill').style.width = '100%';
+            
+            // Show results
+            document.getElementById('successCount').textContent = result.successCount || 0;
+            document.getElementById('errorCount').textContent = result.errorCount || 0;
+            
+            // Show errors if any
+            if (result.errors && result.errors.length > 0) {
+              document.getElementById('errorDetails').style.display = 'block';
+              displayErrors(result.errors);
+            }
+            
+            alert(`تم إرسال البيانات بنجاح!\nالنجح: ${result.successCount || 0}\nالفشل: ${result.errorCount || 0}`);
+          } else {
+            throw new Error(result.message || 'حدث خطأ غير معروف');
+          }
+
+        } catch (error) {
+          console.error('Error sending data:', error);
+          alert(`حدث خطأ في إرسال البيانات: ${error.message}`);
+        }
+      }
+
+      // Display errors
+      function displayErrors(errors) {
+        const errorList = document.getElementById('errorList');
+        errorList.innerHTML = '';
+
+        errors.forEach(error => {
+          const errorItem = document.createElement('div');
+          errorItem.className = 'error-item';
+          errorItem.innerHTML = `
+            <div class="error-header">
+              <span class="student-name">${error.student || 'غير محدد'}</span>
+              <span class="error-message">${error.error}</span>
+            </div>
+          `;
+          errorList.appendChild(errorItem);
+        });
+      }
+
+      // Export errors to Excel
+      async function exportErrorsToExcel() {
+        try {
+          const errorElements = document.querySelectorAll('#errorList .error-item');
+          const errors = [];
+
+          errorElements.forEach(errorElement => {
+            const studentName = errorElement.querySelector('.student-name')?.textContent || '';
+            const errorMessage = errorElement.querySelector('.error-message')?.textContent || '';
+            
+            errors.push({
+              student: studentName,
+              error: errorMessage
+            });
+          });
+
+          if (errors.length === 0) {
+            alert('لا توجد أخطاء للتصدير');
+            return;
+          }
+
+          const response = await fetch('/Register/exportErrors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ errors })
+          });
+
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `RegistrationErrors_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            alert('تم تصدير الأخطاء بنجاح');
+          } else {
+            const errorData = await response.json();
+            alert(`فشل في تصدير الأخطاء: ${errorData.message || 'خطأ غير معروف'}`);
+          }
+
+        } catch (error) {
+          console.error('Error exporting to Excel:', error);
+          alert('حدث خطأ أثناء التصدير: ' + error.message);
+        }
+      }
+
+      // Initialize form field listeners when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        addFormFieldListeners();
+        updateGroupInfoDisplay(); // Show initial values
+      });
+    </script>
+
+    <!-- 
+    <script>
+    // Function to handle file reading
+    function updateFileName() {
+        const input = document.getElementById('file');
+        const fileLabel = document.getElementById('fileLabel');
+        if (input.files.length > 0) {
+            fileLabel.innerHTML = `<i class="fas fa-file-alt"></i> ${input.files[0].name}`;
+        }
+    }
+
+// Function to handle file reading and show "Uploaded" status
+function handleFile() {
+    const input = document.getElementById('file');
+    const fileLabel = document.getElementById('fileLabel');
+
+    if (!input.files.length) {
+        alert('Please select a file!');
+        return;
+    }
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const sheetName = workbook.SheetNames[0];
+        console.log(sheetName);
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        console.log(json);
+
+        displayDataAndSend(json);
+
+        // Update label to indicate that the file is uploaded
+        fileLabel.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name} (Uploaded)`;
+        fileLabel.style.color = "green";
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+// Function to send the data
+async function displayDataAndSend(data) {
+    const output = document.getElementById('output');
+
+    output.innerHTML = 'data is being sent...';
+    const phoneCloumnName = document.getElementById('phoneCloumnName');
+    const studentPhoneCloumnName = document.getElementById('studentPhoneCloumnName');
+    const nameCloumnName = document.getElementById('nameCloumnName');
+    const emailCloumn = document.getElementById('emailCloumn');
+    const schoolCloumn = document.getElementById('schoolCloumn'); 
+    const CodeCloumn = document.getElementById('CodeCloumn');
+
+    const gradeInNumberCloumn = document.getElementById('gradeInNumberCloumn');
+    const centerName = document.getElementById('centerName');
+    const Grade = document.getElementById('Grade');
+    const gradeType = document.getElementById('gradeType');
+    const groupTime = document.getElementById('groupTime');
+    const schoolName = document.getElementById('schoolName');
+
+    // const emailCloumn = document.getElementById('emailCloumn');
+    // const schoolCloumn = document.getElementById('schoolCloumn');
+    // const gradeInNumberCloumn = document.getElementById('gradeInNumberCloumn');
+
+    if (!phoneCloumnName.value || !studentPhoneCloumnName.value || !nameCloumnName.value) {
+        alert('ادخل اسامي ال cloumn');
+        return;
+    }
+
+    const dataSend = {
+        phoneCloumnName: phoneCloumnName.value,
+        studentPhoneCloumnName: studentPhoneCloumnName.value,
+        nameCloumnName: nameCloumnName.value,
+        CodeCloumn: CodeCloumn.value,
+        // emailCloumn: emailCloumn.value,
+        // schoolCloumn: schoolCloumn.value,
+        // gradeInNumberCloumn: gradeInNumberCloumn.value,
+        centerName: centerName.value,
+        Grade: Grade.value,
+        gradeType: gradeType.value,
+        groupTime: groupTime.value,
+        schoolName: schoolName.value,
+        dataToSend: data
+    };
+
+    try {
+        const response = await fetch('/Register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dataSend)
+        });
+
+        const responseData = await response.json();
+
+        if (response.ok) {
+            output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
+            output.style.color = "green";
+        } else {
+            output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+            output.style.color = "red";
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
+        output.style.color = "red";
+    }
+}
+</script> -->
+
+
+
+</body>
+
+</html>

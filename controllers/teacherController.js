@@ -3494,6 +3494,8 @@ const exportErrorDetailsToExcel = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   dash_get,
 
@@ -3519,13 +3521,10 @@ module.exports = {
   removeAttendance,
   updateAmount,
 
-
-  
   handelAttendanceGet,
   getDates,
   getAttendees,
   convertAttendeesToExcel,
-
 
   // My Student Data
   getStudentData,
@@ -3565,4 +3564,6 @@ module.exports = {
 
   logOut,
   exportErrorDetailsToExcel,
+
+
 };

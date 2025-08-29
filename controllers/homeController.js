@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const qrcode = require('qrcode');
 const wasender = require('../utils/wasender');
+const Excel = require('exceljs');
 
 const jwtSecret = process.env.JWTSECRET;
 
@@ -557,6 +558,247 @@ const reset_password_post = async (req, res) => {
   }
 };
 
+// =================================================== Excel Registration =================================================== //
+
+const registerStudentsFromExcel = async (req, res) => {
+  const { students } = req.body;
+  
+  if (!students || !Array.isArray(students) || students.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No student data provided'
+    });
+  }
+
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+  const results = [];
+
+  try {
+    // Process each student
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
+      
+      try {
+        // Validate required fields
+        if (!student.Username || !student.phone || !student.parentPhone || !student.Code) {
+          errors.push({
+            student: student.Username || 'غير محدد',
+            error: 'بيانات ناقصة: يجب إدخال الاسم ورقم الهاتف ورقم هاتف ولي الأمر والكود'
+          });
+          errorCount++;
+          continue;
+        }
+
+        // Check if phone number already exists
+        const existingPhone = await User.findOne({ phone: student.phone });
+        if (existingPhone) {
+          errors.push({
+            student: student.Username,
+            error: `رقم الهاتف ${student.phone} مستخدم بالفعل`
+          });
+          errorCount++;
+          continue;
+        }
+
+        // Check if parent phone number already exists
+        const existingParentPhone = await User.findOne({ parentPhone: student.parentPhone });
+        if (existingParentPhone) {
+          errors.push({
+            student: student.Username,
+            error: `رقم هاتف ولي الأمر ${student.parentPhone} مستخدم بالفعل`
+          });
+          errorCount++;
+          continue;
+        }
+
+        // Check if code already exists
+        const existingCode = await User.findOne({ Code: student.Code });
+        if (existingCode) {
+          errors.push({
+            student: student.Username,
+            error: `الكود ${student.Code} مستخدم بالفعل`
+          });
+          errorCount++;
+          continue;
+        }
+
+        // Create new user
+        const newUser = new User({
+          Username: student.Username,
+          phone: student.phone,
+          parentPhone: student.parentPhone,
+          Code: student.Code,
+          centerName: student.centerName,
+          Grade: student.Grade,
+          gradeType: student.gradeType,
+          groupTime: student.groupTime,
+          GradeLevel: student.GradeLevel,
+          attendingType: student.attendingType,
+          bookTaken: student.bookTaken,
+          schoolName: student.schoolName,
+          balance: student.balance,
+          amountRemaining: student.balance, // Initially, amount remaining equals balance
+          absences: 0,
+          videosInfo: [],
+          quizesInfo: [],
+          AttendanceHistory: [],
+          subscribe: false
+        });
+
+        await newUser.save();
+        
+        // Add to group if group exists
+        if (student.centerName && student.Grade && student.gradeType && student.groupTime) {
+          let group = await Group.findOne({
+            CenterName: student.centerName,
+            Grade: student.Grade,
+            gradeType: student.gradeType,
+            GroupTime: student.groupTime
+          });
+
+          if (!group) {
+            // Create new group if it doesn't exist
+            group = new Group({
+              CenterName: student.centerName,
+              Grade: student.Grade,
+              gradeType: student.gradeType,
+              GroupTime: student.groupTime,
+              students: []
+            });
+          }
+
+          if (!group.students.includes(newUser._id)) {
+            group.students.push(newUser._id);
+            await group.save();
+          }
+        }
+
+        successCount++;
+        results.push({
+          student: student.Username,
+          code: student.Code,
+          status: 'success'
+        });
+
+      } catch (error) {
+        console.error(`Error processing student ${student.Username}:`, error);
+        errors.push({
+          student: student.Username || 'غير محدد',
+          error: `خطأ في النظام: ${error.message}`
+        });
+        errorCount++;
+      }
+    }
+
+    // Final response
+    const response = {
+      success: true,
+      message: `تم معالجة ${students.length} طالب`,
+      successCount,
+      errorCount,
+      totalProcessed: students.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Error in bulk registration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'خطأ في النظام أثناء معالجة البيانات',
+      error: error.message
+    });
+  }
+};
+
+const exportRegistrationErrors = async (req, res) => {
+  const { errors } = req.body;
+  
+  if (!errors || !Array.isArray(errors) || errors.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'No error data provided for export' 
+    });
+  }
+
+  try {
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet('Registration Errors');
+
+    // Add title
+    const titleRow = worksheet.addRow(['Registration Errors Report']);
+    titleRow.font = { size: 16, bold: true };
+    worksheet.mergeCells('A1:B1');
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Add timestamp
+    worksheet.addRow(['Generated at:', new Date().toLocaleString('ar-EG')]);
+    worksheet.addRow([]);
+
+    // Add headers
+    const headerRow = worksheet.addRow(['Student Name', 'Error Message']);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF00' }
+    };
+
+    // Add data
+    errors.forEach(error => {
+      worksheet.addRow([
+        error.student || 'غير محدد',
+        error.error || 'خطأ غير محدد'
+      ]);
+    });
+
+    // Set column widths
+    worksheet.columns = [
+      { key: 'studentName', width: 30 },
+      { key: 'errorMessage', width: 50 }
+    ];
+
+    // Add borders
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell, colNumber) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="RegistrationErrors_${new Date().toISOString().split('T')[0]}.xlsx"`
+    );
+
+    res.send(excelBuffer);
+
+  } catch (error) {
+    console.error('Error exporting registration errors to Excel:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to export errors to Excel',
+      error: error.message 
+    });
+  }
+};
+
+// =================================================== END Excel Registration =================================================== //
+
 module.exports = {
   home_page,
   public_login_get,
@@ -568,4 +810,8 @@ module.exports = {
   forgetPassword_post,
   reset_password_get,
   reset_password_post,
+  
+  // Excel Registration
+  registerStudentsFromExcel,
+  exportRegistrationErrors,
 };

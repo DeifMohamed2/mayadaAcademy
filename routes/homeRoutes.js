@@ -18,14 +18,9 @@ router.get("/reset-password/:id/:token", homeController.reset_password_get);
 router.post("/reset-password/:id/:token", homeController.reset_password_post);
 router.post("/Register", homeController.public_Register_post);
 
-
-
-
-
-
-
-
-        
+// Excel Upload Routes
+router.post("/Register/excel", homeController.registerStudentsFromExcel);
+router.post("/Register/exportErrors", homeController.exportRegistrationErrors);
 
 module.exports = router;
 
