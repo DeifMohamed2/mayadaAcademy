@@ -7,6 +7,43 @@ const wasender = require('../utils/wasender');
 const Excel = require('exceljs'); 
 const QRCode = require('qrcode');
 
+// Helper function to validate and format Egyptian phone numbers
+function validateAndFormatPhoneNumber(phone) {
+  if (!phone || typeof phone !== 'string') {
+    throw new Error('Phone number is required and must be a string');
+  }
+  
+  // Remove any non-numeric characters
+  let cleanPhone = phone.replace(/\D/g, '');
+  
+  // Check if we have any digits
+  if (cleanPhone.length === 0) {
+    throw new Error('Phone number contains no digits');
+  }
+  
+  // Check for invalid patterns (all zeros, all ones, etc.)
+  if (/^0+$/.test(cleanPhone) || /^1+$/.test(cleanPhone)) {
+    throw new Error('Phone number contains only repeated digits');
+  }
+  
+  // Handle different input formats
+  if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+    // Egyptian local format (0xxxxxxxxxx) -> convert to international (20xxxxxxxxxx)
+    return '20' + cleanPhone.substring(1);
+  } else if (cleanPhone.startsWith('20') && cleanPhone.length === 12) {
+    // Already in international format (20xxxxxxxxxx)
+    return cleanPhone;
+  } else if (cleanPhone.length === 10) {
+    // Local format without 0 (xxxxxxxxxx) -> convert to international (20xxxxxxxxxx)
+    return '20' + cleanPhone;
+  } else if (cleanPhone.length === 11 && !cleanPhone.startsWith('20')) {
+    // Local format with 0 (0xxxxxxxxxx) -> convert to international (20xxxxxxxxxx)
+    return '20' + cleanPhone.substring(1);
+  } else {
+    throw new Error(`Invalid phone number format: ${phone} (length: ${cleanPhone.length})`);
+  }
+}
+
 
   
 const dash_get = async(req, res) => {
@@ -589,50 +626,16 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     
     console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
     
-    // Validate phone number format
-    if (!phone || phone.trim() === '') {
-      throw new Error('Phone number is empty or invalid');
-    }
+    // Debug: Log the original phone number
+    console.log('Original phone number:', phone, 'Type:', typeof phone, 'Length:', phone ? phone.length : 'null/undefined');
     
-    // Check for common phone number format issues
-    if (phone.includes('+') && !phone.startsWith('+20')) {
-      throw new Error(`Invalid country code in phone number: ${phone}`);
-    }
-    
-    // Check for Egyptian phone number patterns
-    if (phone.startsWith('0') && phone.length !== 11) {
-      throw new Error(`Invalid Egyptian phone number length: ${phone} (should be 11 digits starting with 0)`);
-    }
-    
-    // Check if phone number contains only digits (after removing +)
-    const cleanPhone = phone.replace('+', '');
-    if (!/^\d+$/.test(cleanPhone)) {
-      throw new Error(`Phone number contains invalid characters: ${phone}`);
-    }
-    
-    // Format the phone number properly
-    let countryCodeWithout0 = countryCode.replace('0', ''); // Remove leading zeros
-    console.log('Country code:', countryCodeWithout0);
-    
-    // Format phone number for Wasender API
-    let phoneNumber = isExcel ? `${countryCode}${phone}` : `${countryCodeWithout0}${phone}`;
-    
-    // Remove any non-numeric characters
-    phoneNumber = phoneNumber.replace(/\D/g, '');
-    
-    // Validate phone number length
-    if (phoneNumber.length < 10 || phoneNumber.length > 15) {
-      throw new Error(`Invalid phone number format: ${phone} (length: ${phoneNumber.length})`);
-    }
-    
-    // Check if phone number contains only digits
-    if (!/^\d+$/.test(phoneNumber)) {
-      throw new Error(`Phone number contains invalid characters: ${phone}`);
-    }
-    
-    // Add country code if not present
-    if (!phoneNumber.startsWith('2')) {
-      phoneNumber = `2${phoneNumber}`;
+    // Validate and format phone number using helper function
+    let phoneNumber;
+    try {
+      phoneNumber = validateAndFormatPhoneNumber(phone);
+      console.log('Formatted phone number:', phoneNumber);
+    } catch (validationError) {
+      throw new Error(`Phone number validation failed: ${validationError.message}`);
     }
     
     // Format for WhatsApp (add @s.whatsapp.net suffix)
@@ -1008,8 +1011,20 @@ const markAttendance = async (req, res) => {
 *شكرًا لتعاونكم.*`;
 
       // Send the message via the waapi (already present)
-
-    await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
+      try {
+        // Check if parent phone exists
+        if (!student.parentPhone) {
+          console.log(`Warning: No parent phone for student ${student.Username} (ID: ${student._id})`);
+        } else {
+          console.log(`Sending WhatsApp message to parent phone: ${student.parentPhone} for student: ${student.Username}`);
+          await sendWappiMessage(messageWappi, student.parentPhone, req.userData.phone);
+          console.log('WhatsApp message sent successfully for late attendance');
+        }
+      } catch (whatsappError) {
+        console.error('WhatsApp message error for late attendance:', whatsappError.message);
+        // Continue with attendance marking even if WhatsApp fails
+        // The attendance is already saved, so we don't want to fail the entire operation
+      }
 
  
       return res.status(200).json({
@@ -1086,7 +1101,20 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 
 
       // Send the message via the waapi (already present)
-      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
+      try {
+        // Check if parent phone exists
+        if (!student.parentPhone) {
+          console.log(`Warning: No parent phone for student ${student.Username} (ID: ${student._id})`);
+        } else {
+          console.log(`Sending WhatsApp message to parent phone: ${student.parentPhone} for student: ${student.Username}`);
+          await sendWappiMessage(messageWappi, student.parentPhone, req.userData.phone);
+          console.log('WhatsApp message sent successfully');
+        }
+      } catch (whatsappError) {
+        console.error('WhatsApp message error:', whatsappError.message);
+        // Continue with attendance marking even if WhatsApp fails
+        // The attendance is already saved, so we don't want to fail the entire operation
+      }
 
       await student.save();
       return res.status(200).json({
