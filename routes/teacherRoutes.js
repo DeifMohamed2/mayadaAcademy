@@ -11,33 +11,37 @@ const jwtSecret = process.env.JWTSECRET
 
 // ================== authMiddleware====================== //
 
-const authMiddleware =async (req,res,next)=>{
-    const token = req.cookies.token ; 
+const authMiddleware = async (req, res, next) => {
+  const token = req.cookies.token;
   
-    if (!token) {
-      res.status(401).redirect('../login')
+  if (!token) {
+    return res.status(401).redirect('../login');
+  }
+  
+  try {
+    const decode = jwt.verify(token, jwtSecret);
+    req.userId = decode.userId;
+    
+    const result = await User.findOne({ '_id': decode.userId });
+    
+    if (!result) {
+      res.clearCookie('token');
+      return res.status(401).redirect('../login');
     }
-  
-    try {
-      const decode = jwt.verify(token,jwtSecret)
-      req.userId = decode.userId
- 
-      await User.findOne({'_id':decode.userId}).then((result)=>{
-        if (result.isTeacher) {
-          req.userData = result;  
-          next();
-        }else{
-          res.clearCookie('token');
-          res.status(301).redirect('../login')
-        }
-     
-      })
-
-    } catch (error) {
-      res.status(401).redirect('../login')
-  
+    
+    if (result.isTeacher) {
+      req.userData = result;
+      next();
+    } else {
+      res.clearCookie('token');
+      return res.status(301).redirect('../login');
     }
-}
+    
+  } catch (error) {
+    res.clearCookie('token');
+    return res.status(401).redirect('../login');
+  }
+};
 
 // ================== END authMiddleware====================== //
 

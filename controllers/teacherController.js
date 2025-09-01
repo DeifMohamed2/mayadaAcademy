@@ -323,12 +323,12 @@ const updateUserData = async (req, res) => {
     // }
 
     // Redirect or send a success response
-    res
+    return res
       .status(200)
       .json({ message: 'User data updated successfully.', updatedUser });
   } catch (error) {
     console.error('Error updating user data:', error);
-    res.status(500).json({ error: 'Internal server error.' });
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 };
 
@@ -370,13 +370,14 @@ const DeleteStudent = async (req, res) => {
       { $pull: { students: studentID } }
     ).then(async(result) => {
       await User.findByIdAndDelete(studentID).then((result) => {
-        res
+        return res
           .status(200)
           .json({ message: 'User deleted successfully.', result });
       });
   });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 };
 // =================================================== END Student Requests ================================================ //
@@ -666,8 +667,9 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
         
         if (errorStr.includes('not-authorized') || errorStr.includes('unauthorized')) {
           throw new Error('WhatsApp session expired - Please reconnect');
-        } else if (errorStr.includes('not-found') || errorStr.includes('notfound')) {
-          throw new Error('Phone number not found on WhatsApp');
+        } else if (errorStr.includes('not-found') || errorStr.includes('notfound') || errorStr.includes('does not exist on whatsapp')) {
+          console.log(`WhatsApp Error: Phone number ${phoneNumber} is not registered on WhatsApp`);
+          throw new Error('Phone number not registered on WhatsApp - Please check if the parent has WhatsApp installed');
         } else if (errorStr.includes('blocked') || errorStr.includes('block')) {
           throw new Error('Phone number blocked this WhatsApp account');
         } else if (errorStr.includes('invalid') || errorStr.includes('format')) {
@@ -1127,7 +1129,7 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
     }
   } catch (error) {
     console.error('Error marking attendance:', error);
-    res.status(500).json({ message: 'Server error. Please try again.' });
+    return res.status(500).json({ message: 'Server error. Please try again.' });
   }
 };
 
@@ -1708,10 +1710,10 @@ const getDates = async (req, res) => {
     }
 
     const dates = attendanceRecords.map((record) => record.date);
-    res.status(200).json({ Dates: dates });
+    return res.status(200).json({ Dates: dates });
   } catch (error) {
     console.error('Error fetching dates:', error);
-    res.status(500).json({ message: 'Server error. Please try again.' });
+    return res.status(500).json({ message: 'Server error. Please try again.' });
   }
 
 }
@@ -1737,10 +1739,10 @@ const getAttendees = async (req, res) => {
         return res.status(404).json({ message: 'No attendance record found for this session.' });
       }
 
-      res.status(200).json({ attendance , message: 'Attendance record found successfully' });
+      return res.status(200).json({ attendance , message: 'Attendance record found successfully' });
     } catch (error) {
       console.error('Error fetching attendees:', error);
-      res.status(500).json({ message: 'Server error. Please try again.' });
+      return res.status(500).json({ message: 'Server error. Please try again.' });
 
 }
 
@@ -2199,10 +2201,10 @@ const getStudentData = async (req, res) => {
     };
     console.log(studentData);
     // Return the student data in the response
-    res.status(200).json(studentData);
+    return res.status(200).json(studentData);
   } catch (error) {
     console.error('Error fetching student data:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -2815,11 +2817,11 @@ const getDataStudentInWhatsApp = async (req, res) => {
       return res.status(404).json({ message: 'Group not found' });
     }
     const students = group.students;
-    res.status(200).json({ students });
+    return res.status(200).json({ students });
   }
   catch (error) {
     console.error('Error fetching attendees:', error);
-    res.status(500).json({ message: 'Server error. Please try again.' });
+    return res.status(500).json({ message: 'Server error. Please try again.' });
   }
 
 }
@@ -2994,11 +2996,11 @@ const getDataToTransferring = async (req, res) => {
       return res.status(404).json({ message: 'No groups found for this student' });
     }
 
-    res.status(200).json(  student  );
+    return res.status(200).json(  student  );
   }
   catch (error) {
     console.error('Error fetching groups:', error);
-    res.status(500).json({ message: 'Server error. Please try again.' });
+    return res.status(500).json({ message: 'Server error. Please try again.' });
   }
 }
 
@@ -3049,10 +3051,10 @@ const transferStudent = async (req, res) => {
     group.students.push(student._id);
     await group.save();
 
-    res.status(200).json({ message: 'Student transferred successfully' });
+    return res.status(200).json({ message: 'Student transferred successfully' });
   } catch (error) {
     console.error('Error transferring student:', error);
-    res.status(500).json({ message: 'Server error. Please try again.' });
+    return res.status(500).json({ message: 'Server error. Please try again.' });
   }
 };
 
