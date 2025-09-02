@@ -2397,6 +2397,9 @@ const sendGradeMessages = async (req, res) => {
     dataToSend,
     quizName,
     maxGrade,
+    examEntryCloumnName,
+    courseName,
+    isOnlineQuiz,
   } = req.body;
 
   let successCount = 0;
@@ -2415,19 +2418,65 @@ const sendGradeMessages = async (req, res) => {
   try {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    for (let i = 0; i < dataToSend.length; i++) {
+        for (let i = 0; i < dataToSend.length; i++) {
       const student = dataToSend[i];
       const grade = student[gradeCloumnName] ?? 0;
       const phone = student[phoneCloumnName];
       const name = student[nameCloumnName];
+      
+      // Check if student entered the exam (default to 1 if not specified)
+      const examEntry = examEntryCloumnName ? (student[examEntryCloumnName] ?? 1) : 1;
 
       console.log(`Processing ${i + 1}/${dataToSend.length}: ${name} (${phone})`);
 
-      let message = `
+      let message = '';
+      
+      if (isOnlineQuiz) {
+        // Online Quiz format
+        if (examEntry === 0) {
+          // Student did not enter the exam
+          message = `
+السلام عليكم 🙏🏻
+مع حضرتك Assistant Miss Mayada 
+
+لقد قام الطالب
+*${name}*
+${courseName || ''}
+بعدم حل امتحان اليوم❌
+*${quizName}*
+          `;
+        } else {
+          // Student entered the exam (default case)
+          message = `
+السلام عليكم 🙏🏻
+مع حضرتك Assistant Miss Mayada 
+
+لقد قام الطالب
+*${name}*
+${courseName || ''}
+بحل امتحان حصة اليوم✅
+*${quizName}*
+وحصل على درجه ${grade}/${maxGrade}
+          `;
+        }
+      } else {
+        // Regular exam format
+        if (examEntry === 0) {
+          // Student did not enter the exam
+          message = `
 السلام عليكم 
 مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
-برجاء العلم ان تم حصول الطالب ${name} على درجة (${grade}) من (${maxGrade}) في (${quizName}) 
-      `;
+برجاء العلم ان الطالب *${name}* ${courseName ? `(${courseName})` : ''} لم يدخل الامتحان (*${quizName}*)
+          `;
+        } else {
+          // Student entered the exam (default case)
+          message = `
+السلام عليكم 
+مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
+برجاء العلم ان تم حصول الطالب *${name}* ${courseName ? `(${courseName})` : ''} على درجة (*${grade}*) من (*${maxGrade}*) في (*${quizName}*) 
+          `;
+        }
+      }
 
       try {
         const result = await sendWappiMessage(message, phone, req.userData.phone);

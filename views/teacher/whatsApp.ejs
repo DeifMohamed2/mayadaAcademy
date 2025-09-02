@@ -663,6 +663,11 @@
                                         <input type="text" id="quizName" class="form-control" placeholder="مثال: امتحان منتصف الفصل">
                                     </div>
                                     <div class="col-md-4 mb-4">
+                                        <label for="courseName">اسم الكورس (اختياري)</label>
+                                        <input type="text" id="courseName" class="form-control" placeholder="مثال: Basics Course">
+                                        <!-- <small class="text-muted">سيتم إضافته لجميع الطلاب</small> -->
+                                    </div>
+                                    <div class="col-md-4 mb-4">
                                         <label for="phoneCloumnName">عمود أرقام أولياء الأمور</label>
                                         <input type="text" id="phoneCloumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
                                     </div>
@@ -677,6 +682,29 @@
                                     <div class="col-md-4 mb-4">
                                         <label for="maxGrade">الدرجة النهائية</label>
                                         <input type="text" id="maxGrade" class="form-control" placeholder="مثال: 100">
+                                    </div>
+                                    <div class="col-md-4 mb-4">
+                                        <label for="examEntryCloumnName">عمود دخول الامتحان (اختياري)</label>
+                                        <input type="text" id="examEntryCloumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
+                                        <small class="text-muted">اتركه فارغاً إذا لم يكن موجوداً في الملف</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-3 mb-4">
+                                        <div class="card" id="onlineQuizCard" style="background-color: #262626; border: 2px solid #666; border-radius: 15px; overflow: hidden; cursor: pointer; transition: all 0.3s ease; min-height: 120px;" onclick="toggleOnlineQuiz()">
+                                            <div class="card-body" style="padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">
+                                                <div class="form-check" style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                                                    <input class="form-check-input" type="checkbox" id="onlineQuizCheckbox" style="background-color: #666; border-color: #666; width: 18px; height: 18px; cursor: pointer; margin: 0;" onclick="event.stopPropagation()">
+                                                    <label class="form-check-label" for="onlineQuizCheckbox" style="color: #ffffff; font-weight: 600; font-size: 16px; cursor: pointer; margin: 0;">
+                                                        <i class="fas fa-laptop me-2" style="color: #666;"></i> Online Quiz
+                                                    </label>
+                                                </div>
+                                                <!-- <small class="text-muted mt-2" style="color: #aaaaaa; font-size: 12px; line-height: 1.4;">
+                                                    رسالة بتنسيق إلكتروني
+                                                </small> -->
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -911,6 +939,30 @@
             }
         });
 
+        // Card toggle functions
+        function toggleOnlineQuiz() {
+            const onlineQuizCard = document.getElementById('onlineQuizCard');
+            const onlineQuizCheckbox = document.getElementById('onlineQuizCheckbox');
+            
+            // Toggle checkbox
+            onlineQuizCheckbox.checked = !onlineQuizCheckbox.checked;
+            
+            // Update card styles
+            if (onlineQuizCheckbox.checked) {
+                onlineQuizCard.style.borderColor = '#25D366';
+                onlineQuizCard.style.boxShadow = '0 0 20px rgba(37, 211, 102, 0.3)';
+                onlineQuizCheckbox.style.backgroundColor = '#25D366';
+                onlineQuizCheckbox.style.borderColor = '#25D366';
+                onlineQuizCard.querySelector('i').style.color = '#25D366';
+            } else {
+                onlineQuizCard.style.borderColor = '#666';
+                onlineQuizCard.style.boxShadow = 'none';
+                onlineQuizCheckbox.style.backgroundColor = '#666';
+                onlineQuizCheckbox.style.borderColor = '#666';
+                onlineQuizCard.querySelector('i').style.color = '#666';
+            }
+        }
+
         // Function to handle file reading
         function updateFileName() {
             const input = document.getElementById('file');
@@ -963,6 +1015,9 @@
             const nameCloumnName = document.getElementById('nameCloumnName');
             const quizName = document.getElementById('quizName');
             const maxGrade = document.getElementById('maxGrade');
+            const examEntryCloumnName = document.getElementById('examEntryCloumnName');
+            const courseName = document.getElementById('courseName');
+            const onlineQuizCheckbox = document.getElementById('onlineQuizCheckbox');
 
             if (!phoneCloumnName.value || !gradeCloumnName.value || !nameCloumnName.value || !quizName.value || !maxGrade.value ) {
                 output.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> الرجاء إدخال جميع أسماء الأعمدة المطلوبة</div>';
@@ -975,6 +1030,9 @@
                 nameCloumnName: nameCloumnName.value,
                 quizName: quizName.value,
                 maxGrade: maxGrade.value,
+                examEntryCloumnName: examEntryCloumnName.value || null,
+                courseName: courseName.value || null,
+                isOnlineQuiz: onlineQuizCheckbox.checked,
                 dataToSend: data
             };
 
