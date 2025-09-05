@@ -949,6 +949,11 @@
                                         <small class="text-muted">اتركه فارغاً إذا لم يكن موجوداً في الملف</small>
                                     </div>
                                     <div class="col-md-4 mb-4">
+                                        <label for="cameraColumnName">عمود فتح الكاميرا (اختياري)</label>
+                                        <input type="text" id="cameraColumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
+                                        <small class="text-muted">1 لفتح الكاميرا، 0 لعدم فتحها</small>
+                                    </div>
+                                    <div class="col-md-4 mb-4">
                                         <label for="totalSessionTime">مدة الحصة الكاملة (بالدقائق)</label>
                                         <input type="number" id="totalSessionTime" class="form-control" placeholder="مثال: 120">
                                     </div>
@@ -1439,6 +1444,7 @@
             const attendanceNameColumnName = document.getElementById('attendanceNameColumnName').value;
             const attendanceValueColumnName = document.getElementById('attendanceValueColumnName').value;
             const attendanceTimeColumnName = document.getElementById('attendanceTimeColumnName').value;
+            const cameraColumnName = document.getElementById('cameraColumnName').value;
             const totalSessionTime = document.getElementById('totalSessionTime').value;
 
             if (!attendanceCourseName || !attendancePhoneColumnName || !attendanceNameColumnName || !attendanceValueColumnName || !totalSessionTime) {
@@ -1452,6 +1458,7 @@
                 nameColumnName: attendanceNameColumnName,
                 attendanceValueColumnName: attendanceValueColumnName,
                 attendanceTimeColumnName: attendanceTimeColumnName || null,
+                cameraColumnName: cameraColumnName || null,
                 totalSessionTime: parseInt(totalSessionTime),
                 dataToSend: data
             };

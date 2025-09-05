@@ -3056,6 +3056,7 @@ const sendAttendanceMessages = async (req, res) => {
     nameColumnName, 
     attendanceValueColumnName, 
     attendanceTimeColumnName, 
+    cameraColumnName,
     totalSessionTime, 
     dataToSend 
   } = req.body;
@@ -3082,12 +3083,20 @@ const sendAttendanceMessages = async (req, res) => {
       const phoneNumber = student[phoneColumnName];
       const attendanceValue = student[attendanceValueColumnName];
       const attendanceTime = attendanceTimeColumnName ? student[attendanceTimeColumnName] : null;
+      const cameraStatus = cameraColumnName ? student[cameraColumnName] : null;
       
       let message = '';
       
       // Determine message based on attendance value
       if (attendanceValue == 1) {
         // Student attended
+        let cameraText = '';
+        if (cameraStatus == 1) {
+          cameraText = '\n\nمع العلم أن الطالب قام بفتح الكاميرا خلال الحصة.';
+        } else if (cameraStatus == 0) {
+          cameraText = '\n\nمع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.';
+        }
+        
         if (attendanceTime && attendanceTime > 0 && attendanceTime < totalSessionTime) {
           // Partial attendance
           message = `السلام عليكم 🙏🏻
@@ -3098,7 +3107,7 @@ ${studentName}
 ${courseName}
 بحضور حصة اليوم✅
 
-مع العلم أن الطالب حضر فقط ${attendanceTime} دقيقة من أصل ${totalSessionTime} دقيقة مدة الحصة.`;
+مع العلم أن الطالب حضر فقط ${attendanceTime} دقيقة من أصل ${totalSessionTime} دقيقة مدة الحصة.${cameraText}`;
         } else {
           // Full attendance
           message = `السلام عليكم 🙏🏻
@@ -3107,7 +3116,7 @@ ${courseName}
 لقد قام الطالب
 ${studentName}
 ${courseName}
-بحضور حصة اليوم✅`;
+بحضور حصة اليوم✅${cameraText}`;
         }
       } else {
         // Student absent
