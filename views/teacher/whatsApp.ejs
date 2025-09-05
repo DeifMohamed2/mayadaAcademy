@@ -468,7 +468,7 @@
 
                     <!-- Features Overview -->
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="feature-card">
                                 <div class="feature-icon">
                                     <i class="fas fa-tasks"></i>
@@ -479,7 +479,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="feature-card">
                                 <div class="feature-icon">
                                     <i class="fas fa-chart-bar"></i>
@@ -490,14 +490,25 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="feature-card">
                                 <div class="feature-icon">
-                                    <i class="fas fa-users"></i>
+                                    <i class="fas fa-user-check"></i>
                                 </div>
-                                <div class="feature-title">إدارة المجموعات</div>
+                                <div class="feature-title">إرسال الحضور</div>
                                 <div class="feature-description">
-                                    إنشاء وإدارة مجموعات واتساب للفصول الدراسية المختلفة
+                                    إرسال تقارير الحضور والغياب مع تفاصيل وقت الحضور
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="feature-title">رسائل عامة</div>
+                                <div class="feature-description">
+                                    إرسال رسائل مخصصة لأولياء الأمور أو الطلاب
                                 </div>
                             </div>
                         </div>
@@ -518,6 +529,7 @@
                                         <option value="msgWithoutPhoto">إرسال حالة الواجب</option>
                                         <option value="gradeMsg">إرسال درجات الامتحان</option>
                                         <option value="sendMsg">ارسال رساله عامة</option>
+                                        <option value="attendanceMsg">ارسل الحضور</option>
                                     </select>
                                 </div>
                             </div>
@@ -901,6 +913,121 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Section for "ارسل الحضور" -->
+                    <div id="attendanceMsgSection" class="hidden">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-user-check me-2"></i> ارسل الحضور
+                            </div>
+                            <div class="card-body">
+                                <div class="alert">
+                                    <i class="fas fa-info-circle"></i>
+                                    قم برفع ملف إكسل يحتوي على بيانات الطلاب وحالة الحضور
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-4">
+                                        <label for="attendanceCourseName">اسم الكورس</label>
+                                        <input type="text" id="attendanceCourseName" class="form-control" placeholder="مثال: Basics Course">
+                                    </div>
+                                    <div class="col-md-4 mb-4">
+                                        <label for="attendancePhoneColumnName">عمود أرقام أولياء الأمور</label>
+                                        <input type="text" id="attendancePhoneColumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
+                                    </div>
+                                    <div class="col-md-4 mb-4">
+                                        <label for="attendanceNameColumnName">عمود أسماء الطلاب</label>
+                                        <input type="text" id="attendanceNameColumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
+                                    </div>
+                                    <div class="col-md-4 mb-4">
+                                        <label for="attendanceValueColumnName">عمود قيمة الحضور</label>
+                                        <input type="text" id="attendanceValueColumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل (1 للحضور، 0 للغياب)">
+                                    </div>
+                                    <div class="col-md-4 mb-4">
+                                        <label for="attendanceTimeColumnName">عمود وقت الحضور (اختياري)</label>
+                                        <input type="text" id="attendanceTimeColumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
+                                        <small class="text-muted">اتركه فارغاً إذا لم يكن موجوداً في الملف</small>
+                                    </div>
+                                    <div class="col-md-4 mb-4">
+                                        <label for="totalSessionTime">مدة الحصة الكاملة (بالدقائق)</label>
+                                        <input type="number" id="totalSessionTime" class="form-control" placeholder="مثال: 120">
+                                    </div>
+                                </div>
+
+                                <div class="upload-container">
+                                    <h1>رفع ملف الإكسل</h1>
+                                    <div class="file-input-wrapper">
+                                        <label for="fileATT" class="file-label" id="fileLabelATT">
+                                            <i class="fas fa-file-excel me-2"></i> اختر ملف الإكسل
+                                        </label>
+                                        <input type="file" id="fileATT" name="fileATT" accept=".xlsx, .xls" required onchange="updateFileNameATT()">
+                                    </div>
+                                    <button class="upload-btn" onclick="handleFileATT()">
+                                        <i class="fas fa-paper-plane me-2"></i> إرسال الرسائل
+                                    </button>
+
+                                    <div id="progressContainerATT" class="mt-3 d-none">
+                                        <div class="progress">
+                                            <div id="progressBarATT" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <p class="text-center mt-2" id="progressTextATT">جاري الإرسال...</p>
+                                    </div>
+
+                                    <div class="output" id="outputATT"></div>
+                                    <div class="message-counter d-none" id="numberOfSendATT">
+                                        <i class="fas fa-check-circle"></i> تم إرسال <span id="msgCountATT">0</span> رسالة
+                                    </div>
+                                    <div class="progress-details d-none" id="progressDetailsATT">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="stat-card success">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    <span id="successCountATT">0</span> نجح
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card error">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    <span id="errorCountATT">0</span> فشل
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card info">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span id="currentStudentATT">-</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card warning">
+                                                    <i class="fas fa-percentage"></i>
+                                                    <span id="progressPercentATT">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="error-log d-none" id="errorLogATT">
+                                            <h6><i class="fas fa-exclamation-triangle"></i> تفاصيل الأخطاء:</h6>
+                                            
+                                            <!-- Export Button -->
+                                            <div class="mb-3 text-center">
+                                              <button id="exportErrorsBtnATT" class="upload-btn" style="background-color: #FF9500; border-color: #FF9500; color: white; margin: 0;">
+                                                <i class="fas fa-download me-2"></i> تصدير الأخطاء إلى Excel
+                                              </button>
+                                            </div>
+                                            
+                                            <div class="error-summary mb-3">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    إجمالي الرسائل الفاشلة: <span id="totalErrorsATT">0</span>
+                                                    <br><small>يمكنك رؤية التفاصيل أدناه مع أرقام الهواتف</small>
+                                                </div>
+                                            </div>
+                                            <div id="errorDetailsATT"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         </div>
@@ -916,6 +1043,7 @@
         const msgWithPhotoSection = document.getElementById('msgWithPhotoSection');
         const gradeMsgSection = document.getElementById('gradeMsgSection');
         const sendMsgSection = document.getElementById('sendMsgSection');
+        const attendanceMsgSection = document.getElementById('attendanceMsgSection');
 
         // Event listener to show/hide sections based on selection
         optionSelect.addEventListener('change', function () {
@@ -926,6 +1054,7 @@
             msgWithPhotoSection.classList.add('hidden');
             gradeMsgSection.classList.add('hidden');
             sendMsgSection.classList.add('hidden');
+            attendanceMsgSection.classList.add('hidden');
 
             // Show corresponding section
             if (selectedValue === 'msgWithoutPhoto') {
@@ -936,6 +1065,8 @@
                 gradeMsgSection.classList.remove('hidden');
             } else if (selectedValue === 'sendMsg') {
                 sendMsgSection.classList.remove('hidden');
+            } else if (selectedValue === 'attendanceMsg') {
+                attendanceMsgSection.classList.remove('hidden');
             }
         });
 
@@ -1260,13 +1391,109 @@
         }
     </script>
 
+    <script>
+        // Attendance message upload and send
+        function updateFileNameATT() {
+            const input = document.getElementById('fileATT');
+            const fileLabel = document.getElementById('fileLabelATT');
+            if (input.files.length > 0) {
+                fileLabel.innerHTML = `<i class="fas fa-file-alt"></i> ${input.files[0].name}`;
+            }
+        }
 
+        function handleFileATT() {
+            const input = document.getElementById('fileATT');
+            const fileLabel = document.getElementById('fileLabelATT');
+
+            if (!input.files.length) {
+                alert('Please select a file!');
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet);
+
+                displayDataAndSendATT(json);
+
+                fileLabel.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name} (Uploaded)`;
+                fileLabel.style.color = "green";
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function displayDataAndSendATT(data) {
+            const output = document.getElementById('outputATT');
+            output.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جاري إرسال الرسائل...</div>';
+
+            const attendanceCourseName = document.getElementById('attendanceCourseName').value;
+            const attendancePhoneColumnName = document.getElementById('attendancePhoneColumnName').value;
+            const attendanceNameColumnName = document.getElementById('attendanceNameColumnName').value;
+            const attendanceValueColumnName = document.getElementById('attendanceValueColumnName').value;
+            const attendanceTimeColumnName = document.getElementById('attendanceTimeColumnName').value;
+            const totalSessionTime = document.getElementById('totalSessionTime').value;
+
+            if (!attendanceCourseName || !attendancePhoneColumnName || !attendanceNameColumnName || !attendanceValueColumnName || !totalSessionTime) {
+                output.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> الرجاء إدخال جميع الحقول المطلوبة</div>';
+                return;
+            }
+
+            const dataSend = {
+                courseName: attendanceCourseName,
+                phoneColumnName: attendancePhoneColumnName,
+                nameColumnName: attendanceNameColumnName,
+                attendanceValueColumnName: attendanceValueColumnName,
+                attendanceTimeColumnName: attendanceTimeColumnName || null,
+                totalSessionTime: parseInt(totalSessionTime),
+                dataToSend: data
+            };
+
+            try {
+                const response = await fetch('/teacher/sendAttendanceMessages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dataSend)
+                });
+
+                const responseData = await response.json();
+
+                if (response.ok) {
+                    output.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> تم إرسال جميع الرسائل بنجاح</div>`;
+                } else if (response.status === 207) {
+                    // Partial success
+                    output.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            تم إرسال الرسائل مع وجود ${responseData.errorCount} أخطاء
+                            <br><small>الرسائل الناجحة: ${responseData.successCount} | الرسائل الفاشلة: ${responseData.errorCount}</small>
+                        </div>
+                    `;
+                } else {
+                    output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ أثناء الإرسال: ${responseData.message || 'خطأ غير معروف'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ في الاتصال: ${error.message}</div>`;
+            }
+        }
+    </script>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const numberOfSend = document.getElementById('numberOfSend');
         const numberOfSendMSG = document.getElementById('numberOfSendMSG');
         const numberOfSendGEN = document.getElementById('numberOfSendGEN');
+        const numberOfSendATT = document.getElementById('numberOfSendATT');
         
         // Progress details for grade messages
         const progressDetails = document.getElementById('progressDetails');
@@ -1298,6 +1525,16 @@
         const errorDetailsGEN = document.getElementById('errorDetailsGEN');
         const totalErrorsGEN = document.getElementById('totalErrorsGEN');
         
+        // Progress details for attendance messages
+        const progressDetailsATT = document.getElementById('progressDetailsATT');
+        const successCountATT = document.getElementById('successCountATT');
+        const errorCountATT = document.getElementById('errorCountATT');
+        const currentStudentATT = document.getElementById('currentStudentATT');
+        const progressPercentATT = document.getElementById('progressPercentATT');
+        const errorLogATT = document.getElementById('errorLogATT');
+        const errorDetailsATT = document.getElementById('errorDetailsATT');
+        const totalErrorsATT = document.getElementById('totalErrorsATT');
+        
         const socket = io();
 
         socket.on('sendingMessages', (data) => {
@@ -1311,6 +1548,8 @@
                 activeSection = 'homework';
             } else if (!sendMsgSection.classList.contains('hidden')) {
                 activeSection = 'general';
+            } else if (!attendanceMsgSection.classList.contains('hidden')) {
+                activeSection = 'attendance';
             }
             
             // Update the appropriate progress details section
@@ -1320,6 +1559,8 @@
                 updateProgressSection(progressDetailsMSG, successCountMSG, errorCountMSG, currentStudentMSG, progressPercentMSG, errorLogMSG, errorDetailsMSG, numberOfSendMSG, data, totalErrorsMSG);
             } else if (activeSection === 'general') {
                 updateProgressSection(progressDetailsGEN, successCountGEN, errorCountGEN, currentStudentGEN, progressPercentGEN, errorLogGEN, errorDetailsGEN, numberOfSendGEN, data, totalErrorsGEN);
+            } else if (activeSection === 'attendance') {
+                updateProgressSection(progressDetailsATT, successCountATT, errorCountATT, currentStudentATT, progressPercentATT, errorLogATT, errorDetailsATT, numberOfSendATT, data, totalErrorsATT);
             }
         });
         
@@ -1634,6 +1875,68 @@
             }, 3000);
         }
 
+        // Export function for Attendance Messages (errorLogATT)
+        async function exportErrorsToExcelATT() {
+            const exportBtn = document.getElementById('exportErrorsBtnATT');
+            const originalText = exportBtn.innerHTML;
+            
+            try {
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري التصدير...';
+                
+                const errorElements = document.querySelectorAll('#errorDetailsATT .error-item');
+                const errors = [];
+                
+                errorElements.forEach((errorElement) => {
+                    const studentName = errorElement.querySelector('.student-name')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    const phoneNumber = errorElement.querySelector('.phone-number')?.textContent?.replace(/^[^0-9\s]+/, '').trim() || '';
+                    const errorMessage = errorElement.querySelector('.error-message')?.textContent?.replace(/^[^a-zA-Z\u0600-\u06FF\s]+/, '').trim() || '';
+                    
+                    errors.push({
+                        student: studentName,
+                        phone: phoneNumber,
+                        attendanceStatus: 'Failed',
+                        error: errorMessage
+                    });
+                });
+                
+                if (errors.length === 0) {
+                    alert('لا توجد أخطاء للتصدير');
+                    return;
+                }
+                
+                const response = await fetch('/teacher/exportErrorDetailsToExcel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ errors })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ErrorDetails_Attendance_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showSuccessMessage('تم تصدير الأخطاء بنجاح');
+                } else {
+                    const errorData = await response.json();
+                    alert(`فشل في تصدير الأخطاء: ${errorData.message || 'خطأ غير معروف'}`);
+                }
+                
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('حدث خطأ أثناء التصدير: ' + error.message);
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalText;
+            }
+        }
+
         // Add event listeners when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             // Attach export functions to buttons
@@ -1650,6 +1953,11 @@
             const exportBtnGEN = document.getElementById('exportErrorsBtnGEN');
             if (exportBtnGEN) {
                 exportBtnGEN.addEventListener('click', exportErrorsToExcelGEN);
+            }
+            
+            const exportBtnATT = document.getElementById('exportErrorsBtnATT');
+            if (exportBtnATT) {
+                exportBtnATT.addEventListener('click', exportErrorsToExcelATT);
             }
         });
     </script>

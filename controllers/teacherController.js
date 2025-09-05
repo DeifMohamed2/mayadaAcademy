@@ -3049,6 +3049,176 @@ ${msg}
 };
 
 
+const sendAttendanceMessages = async (req, res) => {
+  const { 
+    courseName, 
+    phoneColumnName, 
+    nameColumnName, 
+    attendanceValueColumnName, 
+    attendanceTimeColumnName, 
+    totalSessionTime, 
+    dataToSend 
+  } = req.body;
+
+  let successCount = 0;
+  let errorCount = 0;
+  let errors = [];
+  
+  // Emit initial status
+  req.io.emit('sendingMessages', {
+    nMessages: 0,
+    totalMessages: dataToSend.length,
+    successCount: 0,
+    errorCount: 0,
+    status: 'starting'
+  });
+
+  try {
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    for (let i = 0; i < dataToSend.length; i++) {
+      const student = dataToSend[i];
+      const studentName = student[nameColumnName];
+      const phoneNumber = student[phoneColumnName];
+      const attendanceValue = student[attendanceValueColumnName];
+      const attendanceTime = attendanceTimeColumnName ? student[attendanceTimeColumnName] : null;
+      
+      let message = '';
+      
+      // Determine message based on attendance value
+      if (attendanceValue == 1) {
+        // Student attended
+        if (attendanceTime && attendanceTime > 0 && attendanceTime < totalSessionTime) {
+          // Partial attendance
+          message = `السلام عليكم 🙏🏻
+مع حضرتك Assistant Miss Mayada 
+
+لقد قام الطالب
+${studentName}
+${courseName}
+بحضور حصة اليوم✅
+
+مع العلم أن الطالب حضر فقط ${attendanceTime} دقيقة من أصل ${totalSessionTime} دقيقة مدة الحصة.`;
+        } else {
+          // Full attendance
+          message = `السلام عليكم 🙏🏻
+مع حضرتك Assistant Miss Mayada 
+
+لقد قام الطالب
+${studentName}
+${courseName}
+بحضور حصة اليوم✅`;
+        }
+      } else {
+        // Student absent
+        message = `السلام عليكم 🙏🏻
+مع حضرتك Assistant Miss Mayada 
+
+لقد قام الطالب
+${studentName}
+${courseName}
+بعدم حضور حصة اليوم❌`;
+      }
+
+      try {
+        await sendWasenderMessage(message, phoneNumber, req.userData.phone);
+        successCount++;
+        
+        // Emit progress update
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: dataToSend.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: studentName,
+          lastResult: 'success'
+        });
+        
+        console.log(`✅ Success: Attendance message sent to ${studentName}`);
+        
+      } catch (err) {
+        errorCount++;
+        const errorInfo = {
+          student: studentName,
+          phone: phoneNumber,
+          error: err.message,
+          timestamp: new Date().toISOString()
+        };
+        errors.push(errorInfo);
+        
+        // Emit progress update with error
+        req.io.emit('sendingMessages', {
+          nMessages: i + 1,
+          totalMessages: dataToSend.length,
+          successCount,
+          errorCount,
+          status: 'progress',
+          currentStudent: studentName,
+          lastResult: 'error',
+          lastError: err.message
+        });
+        
+        console.error(`❌ Error sending attendance message to ${studentName}:`, err.message);
+      }
+
+      // Introduce a random delay between 1 and 5 seconds
+      const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+      console.log(
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
+      );
+      await delay(randomDelay);
+    }
+
+    // Emit final status
+    req.io.emit('sendingMessages', {
+      nMessages: dataToSend.length,
+      totalMessages: dataToSend.length,
+      successCount,
+      errorCount,
+      status: 'completed',
+      errors: errors
+    });
+
+    if (errorCount > 0) {
+      res.status(207).json({
+        message: `Messages sent with ${errorCount} errors`,
+        successCount,
+        errorCount,
+        totalMessages: dataToSend.length,
+        errors: errors
+      });
+    } else {
+      res.json({
+        message: 'All attendance messages sent successfully',
+        successCount,
+        errorCount: 0,
+        totalMessages: dataToSend.length
+      });
+    }
+
+  } catch (error) {
+    console.error('Critical error in sendAttendanceMessages:', error);
+    
+    // Emit error status
+    req.io.emit('sendingMessages', {
+      status: 'failed',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: dataToSend.length
+    });
+    
+    res.status(500).json({ 
+      message: 'Critical error occurred while sending attendance messages',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: dataToSend.length
+    });
+  }
+};
+
 // =================================================== END Whats app 2 =================================================== //
 
 // =================================================== Convert Group =================================================== //
@@ -3653,6 +3823,7 @@ module.exports = {
   sendGradeMessages,
   sendMessages,
   sendCustomMessages,
+  sendAttendanceMessages,
   
   // WhatsApp custom
   
