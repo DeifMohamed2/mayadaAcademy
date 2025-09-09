@@ -7,7 +7,7 @@ const wasender = require('../utils/wasender');
 const Excel = require('exceljs'); 
 const QRCode = require('qrcode');
 
-// Helper function to validate and format Egyptian phone numbers
+// Helper function to validate and format phone numbers
 function validateAndFormatPhoneNumber(phone) {
   if (!phone || typeof phone !== 'string') {
     throw new Error('Phone number is required and must be a string');
@@ -26,21 +26,20 @@ function validateAndFormatPhoneNumber(phone) {
     throw new Error('Phone number contains only repeated digits');
   }
   
-  // Handle different input formats
-  if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
-    // Egyptian local format (0xxxxxxxxxx) -> convert to international (20xxxxxxxxxx)
+  // Handle different input formats for Egyptian numbers
+  if (cleanPhone.length === 11 && cleanPhone.startsWith('0') && cleanPhone.charAt(1) === '1') {
+    // Egyptian mobile format (01xxxxxxxxx) -> convert to international (20xxxxxxxxxx)
     return '20' + cleanPhone.substring(1);
-  } else if (cleanPhone.startsWith('20') && cleanPhone.length === 12) {
-    // Already in international format (20xxxxxxxxxx)
+  } else if (cleanPhone.startsWith('20') && cleanPhone.length === 12 && cleanPhone.charAt(2) === '1') {
+    // Already in Egyptian international format (20xxxxxxxxxx)
     return cleanPhone;
-  } else if (cleanPhone.length === 10) {
-    // Local format without 0 (xxxxxxxxxx) -> convert to international (20xxxxxxxxxx)
+  } else if (cleanPhone.length === 10 && cleanPhone.startsWith('1')) {
+    // Egyptian local format without 0 (1xxxxxxxxx) -> convert to international (201xxxxxxxxx)
     return '20' + cleanPhone;
-  } else if (cleanPhone.length === 11 && !cleanPhone.startsWith('20')) {
-    // Local format with 0 (0xxxxxxxxxx) -> convert to international (20xxxxxxxxxx)
-    return '20' + cleanPhone.substring(1);
   } else {
-    throw new Error(`Invalid phone number format: ${phone} (length: ${cleanPhone.length})`);
+    // For non-Egyptian numbers or other formats, return as is without modification
+    console.log(`Non-Egyptian number detected: ${cleanPhone} - using without country code modification`);
+    return cleanPhone;
   }
 }
 
@@ -634,7 +633,7 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
     let phoneNumber;
     try {
       phoneNumber = validateAndFormatPhoneNumber(phone);
-      console.log('Formatted phone number:', phoneNumber);
+      console.log('Formatted phone number:', phoneNumber, 'Original:', phone);
     } catch (validationError) {
       throw new Error(`Phone number validation failed: ${validationError.message}`);
     }
@@ -2520,8 +2519,8 @@ ${courseName || ''}
         console.error(`❌ Error sending message to ${name}:`, err.message);
       }
 
-      // Introduce a random delay between 1 and 5 seconds
-      const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+      // Introduce a random delay between 5 and 8 seconds
+      const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
         `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );
@@ -2580,7 +2579,7 @@ ${courseName || ''}
 
 
 const sendMessages = async (req, res) => {
-  const { phoneCloumnName, nameCloumnName, dataToSend, HWCloumnName  } =
+  const { phoneCloumnName, nameCloumnName, dataToSend, HWCloumnName, courseName } =
     req.body;
 
   let successCount = 0;
@@ -2602,18 +2601,21 @@ const sendMessages = async (req, res) => {
     for (let i = 0; i < dataToSend.length; i++) {
       const student = dataToSend[i];
       let msg = '';
+      const courseNameText = courseName || 'Basics Course';
       
       if (!student[HWCloumnName]) {
-        msg = `لم يقم الطالب ${student[nameCloumnName]} بحل واجب حصة اليوم`;
+        msg = `بعدم حل واجب حصة اليوم❌`;
       } else {
-        msg = `لقد قام الطالب ${student[nameCloumnName]} بحل واجب حصة اليوم`;
+        msg = `بحل واجب حصة اليوم✅`;
       }
 
-      let theMessage = `
-السلام عليكم 
-مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher 
-${msg}
-      `;
+      let theMessage = `السلام عليكم 🙏🏻
+مع حضرتك Assistant Miss Mayada 
+
+لقد قام الطالب
+${student[nameCloumnName]}
+${courseNameText}
+${msg}`;
 
       try {
         const result = await sendWappiMessage(theMessage, student[phoneCloumnName], req.userData.phone);
@@ -2657,8 +2659,8 @@ ${msg}
         console.error(`❌ Error sending message to ${student[nameCloumnName]}:`, err.message);
       }
 
-      // Introduce a random delay between 1 and 5 seconds
-      const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+      // Introduce a random delay between 5 and 8 seconds
+      const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
         `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );
@@ -2990,8 +2992,8 @@ ${msg}
         console.error(`❌ Error sending message to ${student['studentName']}:`, err.message);
       }
 
-      // Introduce a random delay between 1 and 5 seconds
-      const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+      // Introduce a random delay between 5 and 8 seconds
+      const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
         `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );
@@ -3171,8 +3173,8 @@ ${courseName}
         console.error(`❌ Error sending attendance message to ${studentName}:`, err.message);
       }
 
-      // Introduce a random delay between 1 and 5 seconds
-      const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
+      // Introduce a random delay between 5 and 8 seconds
+      const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
         `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
       );

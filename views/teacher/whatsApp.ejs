@@ -549,17 +549,21 @@
                                 </div>
                                 
                                 <div class="row">
-                                    <div class="col-md-4 mb-4">
+                                    <div class="col-md-3 mb-4">
                                         <label for="phoneCloumnNameMSG">عمود أرقام أولياء الأمور</label>
                                         <input type="text" id="phoneCloumnNameMSG" class="form-control" placeholder="اسم العمود في ملف الإكسل">
                                     </div>
-                                    <div class="col-md-4 mb-4">
+                                    <div class="col-md-3 mb-4">
                                         <label for="nameCloumnNameMSG">عمود أسماء الطلاب</label>
                                         <input type="text" id="nameCloumnNameMSG" class="form-control" placeholder="اسم العمود في ملف الإكسل">
                                     </div>
-                                    <div class="col-md-4 mb-4">
+                                    <div class="col-md-3 mb-4">
                                         <label for="HWCloumnName">عمود حالة الواجب</label>
                                         <input type="text" id="HWCloumnName" class="form-control" placeholder="اسم العمود في ملف الإكسل">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="courseNameMSG">اسم الكورس</label>
+                                        <input type="text" id="courseNameMSG" class="form-control" value="Basics Course" placeholder="مثال: Basics Course">
                                     </div>
                                 </div>
 
@@ -1255,20 +1259,22 @@
         async function displayDataAndSendMSG(data) {
             const output = document.getElementById('outputMSG');
 
-            output.innerHTML = 'data is being sent...';
+            output.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جاري إرسال الرسائل...</div>';
             const phoneCloumnName = document.getElementById('phoneCloumnNameMSG');
             const nameCloumnNameMSG = document.getElementById('nameCloumnNameMSG');
             const HWCloumnName = document.getElementById('HWCloumnName');
+            const courseNameMSG = document.getElementById('courseNameMSG');
 
             if (!phoneCloumnName.value  || !nameCloumnNameMSG.value || !HWCloumnName.value ) {
-                alert('ادخل اسامي ال cloumn');
+                output.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> الرجاء إدخال جميع أسماء الأعمدة المطلوبة</div>';
                 return;
             }
 
             const dataSend = {
                 phoneCloumnName: phoneCloumnName.value,
                 nameCloumnName: nameCloumnNameMSG.value,
-                HWCloumnName : HWCloumnName.value ,
+                HWCloumnName: HWCloumnName.value,
+                courseName: courseNameMSG.value || 'Basics Course',
                 dataToSend: data
             };
 
@@ -1284,16 +1290,22 @@
                 const responseData = await response.json();
 
                 if (response.ok) {
-                    output.innerHTML = `<h2>تم الارسال بنجاح</h2>`;
-                    output.style.color = "green";
+                    output.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> تم إرسال جميع الرسائل بنجاح</div>`;
+                } else if (response.status === 207) {
+                    // Partial success
+                    output.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            تم إرسال الرسائل مع وجود ${responseData.errorCount} أخطاء
+                            <br><small>الرسائل الناجحة: ${responseData.successCount} | الرسائل الفاشلة: ${responseData.errorCount}</small>
+                        </div>
+                    `;
                 } else {
-                    output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                    output.style.color = "red";
+                    output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ أثناء الإرسال: ${responseData.message || 'خطأ غير معروف'}</div>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                output.innerHTML = `<h2>حدث خطأ أثناء الارسال</h2>`;
-                output.style.color = "red";
+                output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ في الاتصال: ${error.message}</div>`;
             }
         }
     
