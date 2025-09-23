@@ -530,6 +530,7 @@
                                         <option value="gradeMsg">إرسال درجات الامتحان</option>
                                         <option value="sendMsg">ارسال رساله عامة</option>
                                         <option value="attendanceMsg">ارسل الحضور</option>
+                                        <option value="collectionMsg">رسالة مجمعة (حضور/واجب/امتحان متعدد التواريخ)</option>
                                     </select>
                                 </div>
                             </div>
@@ -1037,6 +1038,155 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Section for "رسالة مجمعة" -->
+                    <div id="collectionMsgSection" class="hidden">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-layer-group me-2"></i> رسالة مجمعة (حضور/واجب/امتحان) متعددة التواريخ
+                            </div>
+                            <div class="card-body">
+                                <div class="alert">
+                                    <i class="fas fa-info-circle"></i>
+                                    ارفع ملف إكسل يحتوي على الأعمدة: اسم الطالب، رقم ولي الأمر، ومجموعات متكررة بحسب البادئات التالية (تُضاف أرقام 1،2،3... تلقائيًا):
+                                    Date, AttendanceValue, AttendanceTime, Camera, HWStatus, ExamEntry, QuizName, Grade, MaxGrade
+                                    <br>
+                                    مثال: Date, AttendanceValue, ... ثم Date2, AttendanceValue2, ... ثم Date3, AttendanceValue3, ...
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4 mb-4">
+                                        <label for="collectionTitle">عنوان التقرير (اختياري)</label>
+                                        <input type="text" id="collectionTitle" class="form-control" placeholder="تقرير الطالب">
+                                    </div>
+                                    <div class="col-md-8 mb-4">
+                                        <label for="collectionHeaderIntro">مقدمة أعلى الرسالة (اختياري)</label>
+                                        <input type="text" id="collectionHeaderIntro" class="form-control" placeholder="Basics Course">
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-3 mb-4">
+                                        <label for="studentNameColumn">عمود أسماء الطلاب</label>
+                                        <input type="text" id="studentNameColumn" class="form-control" placeholder="مثال: studentName" value="studentName">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="parentPhoneColumn">عمود أرقام أولياء الأمور</label>
+                                        <input type="text" id="parentPhoneColumn" class="form-control" placeholder="مثال: parentPhone" value="parentPhone">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="datePrefix">بادئة التاريخ</label>
+                                        <input type="text" id="datePrefix" class="form-control" placeholder="مثال: Date" value="Date">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="attendanceValuePrefix">بادئة قيمة الحضور (1/0)</label>
+                                        <input type="text" id="attendanceValuePrefix" class="form-control" placeholder="مثال: AttendanceValue" value="AttendanceValue">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="attendanceTimePrefix">بادئة وقت الحضور (دقائق)</label>
+                                        <input type="text" id="attendanceTimePrefix" class="form-control" placeholder="مثال: AttendanceTime" value="AttendanceTime">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="cameraPrefix">بادئة الكاميرا (1/0)</label>
+                                        <input type="text" id="cameraPrefix" class="form-control" placeholder="مثال: Camera" value="Camera">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="hwStatusPrefix">بادئة حالة الواجب (1/0)</label>
+                                        <input type="text" id="hwStatusPrefix" class="form-control" placeholder="مثال: HWStatus" value="HWStatus">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="examEntryPrefix">بادئة دخول الامتحان (1/0)</label>
+                                        <input type="text" id="examEntryPrefix" class="form-control" placeholder="مثال: ExamEntry" value="ExamEntry">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="quizNamePrefix">بادئة اسم الامتحان</label>
+                                        <input type="text" id="quizNamePrefix" class="form-control" placeholder="مثال: QuizName" value="QuizName">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="gradePrefix">بادئة الدرجة</label>
+                                        <input type="text" id="gradePrefix" class="form-control" placeholder="مثال: Grade" value="Grade">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="maxGradePrefix">بادئة الدرجة النهائية</label>
+                                        <input type="text" id="maxGradePrefix" class="form-control" placeholder="مثال: MaxGrade" value="MaxGrade">
+                                    </div>
+                                    <div class="col-md-3 mb-4">
+                                        <label for="totalSessionTime">مدة الحصة (بالدقائق) لقياس الحضور الجزئي</label>
+                                        <input type="number" id="totalSessionTime" class="form-control" placeholder="مثال: 120" value="120">
+                                    </div>
+                                </div>
+
+                                <div class="upload-container">
+                                    <h1>رفع ملف الإكسل</h1>
+                                    <div class="file-input-wrapper">
+                                        <label for="fileCOL" class="file-label" id="fileLabelCOL">
+                                            <i class="fas fa-file-excel me-2"></i> اختر ملف الإكسل
+                                        </label>
+                                        <input type="file" id="fileCOL" name="fileCOL" accept=".xlsx, .xls" required onchange="updateFileNameCOL()">
+                                    </div>
+                                    <button class="upload-btn" onclick="handleFileCOL()">
+                                        <i class="fas fa-paper-plane me-2"></i> إرسال الرسائل
+                                    </button>
+                                    <a href="/teacher/collectionSampleExcel" class="upload-btn" style="display:inline-block; margin-left:10px; text-decoration:none;">
+                                        <i class="fas fa-download me-2"></i> تنزيل نموذج Excel
+                                    </a>
+                                    <button type="button" class="upload-btn" style="display:inline-block; margin-left:10px; background:#007AFF; border-color:#007AFF;" onclick="explainCollectionTemplate()">
+                                        <i class="fas fa-info-circle me-2"></i> اضغط للتوضيح
+                                    </button>
+
+                                    <div id="progressContainerCOL" class="mt-3 d-none">
+                                        <div class="progress">
+                                            <div id="progressBarCOL" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <p class="text-center mt-2" id="progressTextCOL">جاري الإرسال...</p>
+                                    </div>
+
+                                    <div class="output" id="outputCOL"></div>
+                                    <div class="message-counter d-none" id="numberOfSendCOL">
+                                        <i class="fas fa-check-circle"></i> تم إرسال <span id="msgCountCOL">0</span> رسالة
+                                    </div>
+                                    <div class="progress-details d-none" id="progressDetailsCOL">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="stat-card success">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    <span id="successCountCOL">0</span> نجح
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card error">
+                                                    <i class="fas fa-times-circle"></i>
+                                                    <span id="errorCountCOL">0</span> فشل
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card info">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span id="currentStudentCOL">-</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="stat-card warning">
+                                                    <i class="fas fa-percentage"></i>
+                                                    <span id="progressPercentCOL">0%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="error-log d-none" id="errorLogCOL">
+                                            <h6><i class="fas fa-exclamation-triangle"></i> تفاصيل الأخطاء:</h6>
+                                            <div class="error-summary mb-3">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    إجمالي الرسائل الفاشلة: <span id="totalErrorsCOL">0</span>
+                                                </div>
+                                            </div>
+                                            <div id="errorDetailsCOL"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         </div>
@@ -1053,6 +1203,7 @@
         const gradeMsgSection = document.getElementById('gradeMsgSection');
         const sendMsgSection = document.getElementById('sendMsgSection');
         const attendanceMsgSection = document.getElementById('attendanceMsgSection');
+        const collectionMsgSection = document.getElementById('collectionMsgSection');
 
         // Event listener to show/hide sections based on selection
         optionSelect.addEventListener('change', function () {
@@ -1064,6 +1215,7 @@
             gradeMsgSection.classList.add('hidden');
             sendMsgSection.classList.add('hidden');
             attendanceMsgSection.classList.add('hidden');
+            collectionMsgSection.classList.add('hidden');
 
             // Show corresponding section
             if (selectedValue === 'msgWithoutPhoto') {
@@ -1076,6 +1228,8 @@
                 sendMsgSection.classList.remove('hidden');
             } else if (selectedValue === 'attendanceMsg') {
                 attendanceMsgSection.classList.remove('hidden');
+            } else if (selectedValue === 'collectionMsg') {
+                collectionMsgSection.classList.remove('hidden');
             }
         });
 
@@ -1507,6 +1661,125 @@
         }
     </script>
 
+    <script>
+        // Collection message upload and send
+        function updateFileNameCOL() {
+            const input = document.getElementById('fileCOL');
+            const fileLabel = document.getElementById('fileLabelCOL');
+            if (input.files.length > 0) {
+                fileLabel.innerHTML = `<i class="fas fa-file-alt"></i> ${input.files[0].name}`;
+            }
+        }
+
+        function handleFileCOL() {
+            const input = document.getElementById('fileCOL');
+            const fileLabel = document.getElementById('fileLabelCOL');
+
+            if (!input.files.length) {
+                alert('Please select a file!');
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(sheet);
+
+                displayDataAndSendCOL(json);
+
+                fileLabel.innerHTML = `<i class="fas fa-check-circle"></i> ${file.name} (Uploaded)`;
+                fileLabel.style.color = "green";
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function displayDataAndSendCOL(data) {
+            const output = document.getElementById('outputCOL');
+            output.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> جاري إرسال الرسائل...</div>';
+
+            const studentNameColumn = document.getElementById('studentNameColumn').value;
+            const parentPhoneColumn = document.getElementById('parentPhoneColumn').value;
+            const datePrefix = document.getElementById('datePrefix').value;
+            const attendanceValuePrefix = document.getElementById('attendanceValuePrefix').value;
+            const attendanceTimePrefix = document.getElementById('attendanceTimePrefix').value;
+            const cameraPrefix = document.getElementById('cameraPrefix').value;
+            const hwStatusPrefix = document.getElementById('hwStatusPrefix').value;
+            const examEntryPrefix = document.getElementById('examEntryPrefix').value;
+            const quizNamePrefix = document.getElementById('quizNamePrefix').value;
+            const gradePrefix = document.getElementById('gradePrefix').value;
+            const maxGradePrefix = document.getElementById('maxGradePrefix').value;
+            const totalSessionTime = document.getElementById('totalSessionTime').value;
+            const headerIntro = document.getElementById('collectionHeaderIntro').value;
+            const title = document.getElementById('collectionTitle').value;
+
+            if (!studentNameColumn || !parentPhoneColumn || !datePrefix) {
+                output.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> الرجاء إدخال أعمدة الاسم ورقم ولي الأمر وبادئة التاريخ</div>';
+                return;
+            }
+
+            const payload = {
+                studentNameColumn,
+                parentPhoneColumn,
+                datePrefix,
+                datePrefixStructured: datePrefix,
+                attendanceValuePrefix,
+                attendanceTimePrefix,
+                cameraPrefix,
+                hwStatusPrefix,
+                examEntryPrefix,
+                quizNamePrefix,
+                gradePrefix,
+                maxGradePrefix,
+                totalSessionTime: Number(totalSessionTime) || undefined,
+                headerIntro,
+                title,
+                dataToSend: data
+            };
+
+            try {
+                const response = await fetch('/teacher/sendCollectionMessages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseData = await response.json();
+                if (response.ok) {
+                    output.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> تم إرسال جميع الرسائل بنجاح</div>`;
+                } else if (response.status === 207) {
+                    output.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            تم إرسال الرسائل مع وجود ${responseData.errorCount} أخطاء
+                            <br><small>الرسائل الناجحة: ${responseData.successCount} | الرسائل الفاشلة: ${responseData.errorCount}</small>
+                        </div>
+                    `;
+                } else {
+                    output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ أثناء الإرسال: ${responseData.message || 'خطأ غير معروف'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                output.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> حدث خطأ في الاتصال: ${error.message}</div>`;
+            }
+        }
+        
+        function explainCollectionTemplate() {
+            const msg = `صيغة النموذج:\n\n` +
+`أعمدة ثابتة: studentName, parentPhone\n` +
+`مجموعة متكررة لكل تاريخ (يمكن تكرارها بإضافة 2,3,...):\n` +
+`- Date, AttendanceValue (1/0), AttendanceTime (بالدقائق), Camera (1/0),\n` +
+`- HWStatus (1/0), ExamEntry (1/0), QuizName, Grade, MaxGrade\n\n` +
+`مثال للأعمدة: Date, AttendanceValue, AttendanceTime, Camera, HWStatus, ExamEntry, QuizName, Grade, MaxGrade, Date2, AttendanceValue2, ...`;
+            alert(msg);
+        }
+    </script>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const numberOfSend = document.getElementById('numberOfSend');
@@ -1554,6 +1827,17 @@
         const errorDetailsATT = document.getElementById('errorDetailsATT');
         const totalErrorsATT = document.getElementById('totalErrorsATT');
         
+        // Progress details for collection messages
+        const numberOfSendCOL = document.getElementById('numberOfSendCOL');
+        const progressDetailsCOL = document.getElementById('progressDetailsCOL');
+        const successCountCOL = document.getElementById('successCountCOL');
+        const errorCountCOL = document.getElementById('errorCountCOL');
+        const currentStudentCOL = document.getElementById('currentStudentCOL');
+        const progressPercentCOL = document.getElementById('progressPercentCOL');
+        const errorLogCOL = document.getElementById('errorLogCOL');
+        const errorDetailsCOL = document.getElementById('errorDetailsCOL');
+        const totalErrorsCOL = document.getElementById('totalErrorsCOL');
+        
         const socket = io();
 
         socket.on('sendingMessages', (data) => {
@@ -1569,6 +1853,8 @@
                 activeSection = 'general';
             } else if (!attendanceMsgSection.classList.contains('hidden')) {
                 activeSection = 'attendance';
+            } else if (!collectionMsgSection.classList.contains('hidden')) {
+                activeSection = 'collection';
             }
             
             // Update the appropriate progress details section
@@ -1580,6 +1866,8 @@
                 updateProgressSection(progressDetailsGEN, successCountGEN, errorCountGEN, currentStudentGEN, progressPercentGEN, errorLogGEN, errorDetailsGEN, numberOfSendGEN, data, totalErrorsGEN);
             } else if (activeSection === 'attendance') {
                 updateProgressSection(progressDetailsATT, successCountATT, errorCountATT, currentStudentATT, progressPercentATT, errorLogATT, errorDetailsATT, numberOfSendATT, data, totalErrorsATT);
+            } else if (activeSection === 'collection') {
+                updateProgressSection(progressDetailsCOL, successCountCOL, errorCountCOL, currentStudentCOL, progressPercentCOL, errorLogCOL, errorDetailsCOL, numberOfSendCOL, data, totalErrorsCOL);
             }
         });
         

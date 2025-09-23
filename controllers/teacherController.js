@@ -3230,6 +3230,470 @@ ${courseName}
   }
 };
 
+// Collection messages (dynamic multi-date attendance/HW/quiz report)
+const sendCollectionMessages = async (req, res) => {
+  const {
+    studentNameColumn,
+    parentPhoneColumn,
+    // Generic simple prefixes (legacy fallback)
+    datePrefix,
+    attendancePrefix,
+    hwPrefix,
+    quizPrefix,
+    // Structured prefixes (recommended, like other parts)
+    datePrefixStructured,            // e.g., 'Date'
+    attendanceValuePrefix,           // e.g., 'AttendanceValue' -> 1/0
+    attendanceTimePrefix,            // e.g., 'AttendanceTime' -> minutes attended
+    cameraPrefix,                    // e.g., 'Camera' -> 1/0
+    hwStatusPrefix,                  // e.g., 'HWStatus' -> yes/no/1/0
+    quizNamePrefix,                  // e.g., 'QuizName'
+    gradePrefix,                     // e.g., 'Grade'
+    maxGradePrefix,                  // e.g., 'MaxGrade'
+    examEntryPrefix,                 // e.g., 'ExamEntry' -> 1/0
+    totalSessionTime,                // number (minutes) to compare partial attendance
+    headerIntro,
+    title,
+    dataToSend
+  } = req.body;
+
+  let successCount = 0;
+  let errorCount = 0;
+  let errors = [];
+
+  // Emit initial status
+  if (req.io) {
+    req.io.emit('sendingMessages', {
+      nMessages: 0,
+      totalMessages: Array.isArray(dataToSend) ? dataToSend.length : 0,
+      successCount: 0,
+      errorCount: 0,
+      status: 'starting'
+    });
+  }
+
+  try {
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    // Helper: build segments for a row based on prefixes and numeric suffixes
+    const buildSegments = (row) => {
+      const keys = Object.keys(row || {});
+      const indexSet = new Set();
+
+      const collectIndex = (prefix) => {
+        if (!prefix) return;
+        keys.forEach((k) => {
+          if (k.startsWith(prefix)) {
+            const suffix = k.slice(prefix.length);
+            const idx = suffix && /^\d+$/.test(suffix) ? parseInt(suffix, 10) : 1;
+            indexSet.add(idx);
+          }
+        });
+      };
+
+      // legacy simple prefixes
+      collectIndex(datePrefix);
+      collectIndex(attendancePrefix);
+      collectIndex(hwPrefix);
+      collectIndex(quizPrefix);
+      // structured prefixes
+      collectIndex(datePrefixStructured);
+      collectIndex(attendanceValuePrefix);
+      collectIndex(attendanceTimePrefix);
+      collectIndex(cameraPrefix);
+      collectIndex(hwStatusPrefix);
+      collectIndex(quizNamePrefix);
+      collectIndex(gradePrefix);
+      collectIndex(maxGradePrefix);
+      collectIndex(examEntryPrefix);
+
+      let indices = Array.from(indexSet);
+      indices.sort((a, b) => a - b);
+      if (indices.length === 0) indices = [1];
+
+      const getVal = (prefix, idx) => {
+        if (!prefix) return undefined;
+        const keyWithIndex = `${prefix}${idx}`;
+        if (Object.prototype.hasOwnProperty.call(row, keyWithIndex)) return row[keyWithIndex];
+        // fallback to plain prefix (no index) for first segment
+        if (idx === 1 && Object.prototype.hasOwnProperty.call(row, prefix)) return row[prefix];
+        return undefined;
+      };
+
+      return indices.map((i) => ({
+        // legacy simple
+        date: getVal(datePrefix, i) ?? getVal(datePrefixStructured, i),
+        attendance: getVal(attendancePrefix, i),
+        hw: getVal(hwPrefix, i),
+        quiz: getVal(quizPrefix, i),
+        // structured
+        attendanceValue: getVal(attendanceValuePrefix, i),
+        attendanceTime: getVal(attendanceTimePrefix, i),
+        camera: getVal(cameraPrefix, i),
+        hwStatus: getVal(hwStatusPrefix, i),
+        quizName: getVal(quizNamePrefix, i),
+        grade: getVal(gradePrefix, i),
+        maxGrade: getVal(maxGradePrefix, i),
+        examEntry: getVal(examEntryPrefix, i)
+      }));
+    };
+
+    for (let i = 0; i < dataToSend.length; i++) {
+      const row = dataToSend[i];
+      const studentName = row[studentNameColumn] || 'Unknown';
+      const parentPhone = row[parentPhoneColumn];
+
+      // Compose message
+      const segments = buildSegments(row);
+
+      let message = '';
+      message += 'السلام عليكم 🙏🏻\n';
+      message += 'مع حضرتك Assistant Miss Mayada\n\n';
+      message += `${title || 'تقرير الطالب'}\n`;
+      message += `${studentName}\n`;
+      if (headerIntro) message += `${headerIntro}\n`;
+      message += '\n';
+
+      segments.forEach((seg) => {
+        // If using structured fields, format like the other parts; otherwise, fallback to legacy simple text
+        const usingStructured =
+          seg.attendanceValue !== undefined ||
+          seg.attendanceTime !== undefined ||
+          seg.camera !== undefined ||
+          seg.hwStatus !== undefined ||
+          seg.quizName !== undefined ||
+          seg.grade !== undefined ||
+          seg.maxGrade !== undefined ||
+          seg.examEntry !== undefined;
+
+        if (!seg.date && !usingStructured && !seg.attendance && !seg.hw && !seg.quiz) return;
+        if (seg.date) message += `التاريخ ${seg.date}\n`;
+
+        if (usingStructured) {
+          // Attendance
+          if (seg.attendanceValue == 1) {
+            message += `الحضور: تم الحضور✅\n`;
+            
+            // Always add time info if provided
+            if (seg.attendanceTime && Number(seg.attendanceTime) > 0) {
+            
+                message += `مع العلم أن الطالب حضر ${seg.attendanceTime} دقيقة من أصل 120 دقيقة مدة الحصة.\n`;
+     
+        
+            }
+            // Camera info on a separate line if provided
+            if (seg.camera == 1) {
+              message += `مع العلم أن الطالب قام بفتح الكاميرا خلال الحصة.\n`;
+            } else if (seg.camera == 0) {
+              message += `مع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.\n`;
+            }
+          } else if (seg.attendanceValue == 0) {
+            message += `الحضور: لم يتم الحضور❌\n`;
+          }
+
+          // Homework (prefer numeric 1/0; still compatible with old values)
+          if (seg.hwStatus !== undefined && seg.hwStatus !== '') {
+            const asString = String(seg.hwStatus).trim().toLowerCase();
+            if (asString === '1' || asString === 'yes' || asString === 'تم' || asString === 'نعم' || asString === 'true') {
+              message += `الواجب: تم حل الواجب✅\n`;
+            } else if (asString === '0' || asString === 'no' || asString === 'لم' || asString === 'لا' || asString === 'false') {
+              message += `الواجب: لم يتم حل الواجب❌\n`;
+            } else {
+              message += `الواجب: ${seg.hwStatus}\n`;
+            }
+          }
+
+          // Quiz
+          if (seg.examEntry == 0) {
+            message += `الامتحان: لم يدخل الامتحان❌\n`;
+          } else if (seg.quizName || seg.grade || seg.maxGrade) {
+            let quizLine = 'الامتحان: ';
+            if (seg.quizName) quizLine += `${seg.quizName}`;
+            if (seg.grade !== undefined && seg.maxGrade !== undefined) {
+              quizLine += (seg.quizName ? ' | ' : '') + `الدرجة: ${seg.grade}/${seg.maxGrade}`;
+            }
+            message += quizLine + '\n';
+          }
+        } else {
+          // Legacy fallback formatting
+          if (seg.attendance !== undefined && seg.attendance !== null && seg.attendance !== '') {
+            // If legacy sheet also provides attendanceTime, include partial attendance phrasing
+            if (
+              seg.attendanceTime &&
+              totalSessionTime &&
+              Number(seg.attendanceTime) > 0 &&
+              Number(seg.attendanceTime) < Number(totalSessionTime)
+            ) {
+              message += `الحضور: ${seg.attendance}\nمع العلم أن الطالب حضر فقط ${seg.attendanceTime} دقيقة من أصل ${totalSessionTime} دقيقة مدة الحصة.\n`;
+            } else {
+              message += `الحضور: ${seg.attendance}\n`;
+            }
+          }
+          if (seg.hw !== undefined && seg.hw !== null && seg.hw !== '') {
+            message += `الواجب: ${seg.hw}\n`;
+          }
+          if (seg.quiz !== undefined && seg.quiz !== null && seg.quiz !== '') {
+            message += `الامتحان: ${seg.quiz}\n`;
+          }
+        }
+
+        message += '\n';
+      });
+
+      try {
+        await sendWappiMessage(message, parentPhone, req.userData.phone);
+        successCount++;
+        if (req.io) {
+          req.io.emit('sendingMessages', {
+            nMessages: i + 1,
+            totalMessages: dataToSend.length,
+            successCount,
+            errorCount,
+            status: 'progress',
+            currentStudent: studentName,
+            lastResult: 'success'
+          });
+        }
+      } catch (err) {
+        errorCount++;
+        const errorInfo = {
+          student: studentName,
+          phone: parentPhone,
+          error: err.message,
+          timestamp: new Date().toISOString()
+        };
+        errors.push(errorInfo);
+        if (req.io) {
+          req.io.emit('sendingMessages', {
+            nMessages: i + 1,
+            totalMessages: dataToSend.length,
+            successCount,
+            errorCount,
+            status: 'progress',
+            currentStudent: studentName,
+            lastResult: 'error',
+            lastError: err.message
+          });
+        }
+      }
+
+      const randomDelay = Math.floor(Math.random() * (5 - 2 + 1) + 2) * 1000;
+      await delay(randomDelay);
+    }
+
+    if (req.io) {
+      req.io.emit('sendingMessages', {
+        nMessages: dataToSend.length,
+        totalMessages: dataToSend.length,
+        successCount,
+        errorCount,
+        status: 'completed',
+        errors: errors
+      });
+    }
+
+    if (errorCount > 0) {
+      return res.status(207).json({
+        message: `Messages completed with ${errorCount} errors`,
+        successCount,
+        errorCount,
+        errors,
+        totalMessages: dataToSend.length
+      });
+    }
+
+    return res.status(200).json({
+      message: 'All collection messages sent successfully',
+      successCount,
+      errorCount: 0,
+      totalMessages: dataToSend.length
+    });
+  } catch (error) {
+    console.error('Critical error in sendCollectionMessages:', error);
+    if (req.io) {
+      req.io.emit('sendingMessages', {
+        nMessages: 0,
+        totalMessages: Array.isArray(dataToSend) ? dataToSend.length : 0,
+        successCount,
+        errorCount,
+        status: 'failed',
+        error: error.message
+      });
+    }
+    return res.status(500).json({
+      message: 'Critical error occurred while sending collection messages',
+      error: error.message,
+      successCount,
+      errorCount,
+      totalMessages: Array.isArray(dataToSend) ? dataToSend.length : 0
+    });
+  }
+};
+
+// Generate sample Excel for collection messages
+const collectionSampleExcel = async (req, res) => {
+  try {
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet('Collection Sample');
+
+    // Headers
+    const headers = [
+      'studentName',
+      'parentPhone',
+      // First segment (structured prefixes without suffix for segment 1)
+      'Date',
+      'AttendanceValue',
+      'AttendanceTime',
+      'Camera',
+      'HWStatus',
+      'ExamEntry',
+      'QuizName',
+      'Grade',
+      'MaxGrade',
+      // Second segment
+      'Date2',
+      'AttendanceValue2',
+      'AttendanceTime2',
+      'Camera2',
+      'HWStatus2',
+      'ExamEntry2',
+      'QuizName2',
+      'Grade2',
+      'MaxGrade2',
+      // Third segment
+      'Date3',
+      'AttendanceValue3',
+      'AttendanceTime3',
+      'Camera3',
+      'HWStatus3',
+      'ExamEntry3',
+      'QuizName3',
+      'Grade3',
+      'MaxGrade3'
+    ];
+    worksheet.addRow(headers);
+
+    // Sample rows covering multiple cases (consistent with structured prefixes)
+    // 1) Present with partial time; no exam. Then absent+HW+quiz with score. Then present, no HW, no exam.
+    worksheet.addRow([
+      'Lamis Yasser Mohamed',
+      '01200000000',
+      // seg1
+      '17/9',        // Date
+      1,             // AttendanceValue: present
+      70,            // AttendanceTime (minutes)
+      0,             // Camera: not opened
+      1,             // HWStatus (1 yes / 0 no)
+      0,             // ExamEntry: did not enter exam
+      '',            // QuizName
+      '',            // Grade
+      '',            // MaxGrade
+      // seg2
+      '20/9',        // Date2
+      0,             // AttendanceValue2: absent
+      '',            // AttendanceTime2
+      '',            // Camera2
+      1,             // HWStatus2
+      1,             // ExamEntry2: entered
+      'Vocab Quiz 19/9', // QuizName2
+      5,             // Grade2
+      10,            // MaxGrade2
+      // seg3
+      '25/9',        // Date3
+      1,             // AttendanceValue3: present
+      '',            // AttendanceTime3
+      '',            // Camera3
+      0,             // HWStatus3
+      0,             // ExamEntry3: no exam
+      '',            // QuizName3
+      '',            // Grade3
+      ''             // MaxGrade3
+    ]);
+
+    // 2) Present from other group scenario can be expressed as AttendanceValue=1 without time and with Camera=1; first has quiz with score, second just present+HW.
+    worksheet.addRow([
+      'Omar Ali',
+      '01211111111',
+      // seg1
+      '10/9',
+      1,      // present
+      '',
+      1,      // camera opened
+      0,      // HWStatus
+      1,      // ExamEntry
+      'Quiz Unit 1',
+      9,
+      10,
+      // seg2
+      '12/9',
+      1,      // present
+      '',
+      0,      // camera not opened
+      1,      // HWStatus
+      0,      // no exam
+      '',
+      '',
+      '',
+      // seg3 empty
+      '15/9',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      ''
+    ]);
+
+    // 3) Only dates with mixed absent/present and a quiz later
+    worksheet.addRow([
+      'Sara Mohamed',
+      '01222222222',
+      // seg1
+      '01/10',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      // seg2
+      '05/10',
+      0,   // absent
+      '',
+      '',
+      '',
+      0,   // no exam
+      '',
+      '',
+      '',
+      // seg3
+      '08/10',
+      1,   // present
+      '',
+      '',
+      '',
+      1,   // entered exam
+      'Quiz Unit 2',
+      7,
+      10
+    ]);
+
+    // Column widths for readability
+    worksheet.columns = headers.map(() => ({ width: 22 }));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=Collection_Message_Sample.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error generating sample Excel:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate sample Excel', error: error.message });
+  }
+};
+
 // =================================================== END Whats app 2 =================================================== //
 
 // =================================================== Convert Group =================================================== //
@@ -3835,6 +4299,12 @@ module.exports = {
   sendMessages,
   sendCustomMessages,
   sendAttendanceMessages,
+  sendCollectionMessages,
+  collectionSampleExcel,
+  sendCollectionMessages,
+  
+  // WhatsApp Collection Messages
+  
   
   // WhatsApp custom
   

@@ -143,6 +143,8 @@ router.post('/sendGradeMessages', authMiddleware, teacherController.sendGradeMes
 router.post('/sendMessages', authMiddleware, teacherController.sendMessages);
 router.post('/sendCustomMessages', authMiddleware, teacherController.sendCustomMessages);
 router.post('/sendAttendanceMessages', authMiddleware, teacherController.sendAttendanceMessages);
+router.post('/sendCollectionMessages', authMiddleware, teacherController.sendCollectionMessages);
+router.get('/collectionSampleExcel', authMiddleware, teacherController.collectionSampleExcel);
 
 // ================== END Whats App ====================== //
 
