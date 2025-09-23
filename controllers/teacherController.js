@@ -3484,8 +3484,9 @@ const sendCollectionMessages = async (req, res) => {
         }
       }
 
-      const randomDelay = Math.floor(Math.random() * (5 - 2 + 1) + 2) * 1000;
-      await delay(randomDelay);
+      // Changed delay to be between 6-8 seconds
+      const messageDelay = Math.floor(Math.random() * (8000 - 6000 + 1) + 6000);
+      await delay(messageDelay);
     }
 
     if (req.io) {
