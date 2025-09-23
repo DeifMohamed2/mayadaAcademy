@@ -3380,11 +3380,13 @@ const sendCollectionMessages = async (req, res) => {
      
         
             }
-            // Camera info on a separate line if provided
-            if (seg.camera == 1) {
-              message += `مع العلم أن الطالب قام بفتح الكاميرا خلال الحصة.\n`;
-            } else if (seg.camera == 0) {
-              message += `مع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.\n`;
+            // Camera info on a separate line if provided (only if camera value is explicitly set)
+            if (seg.camera !== undefined && seg.camera !== '') {
+              if (seg.camera == 1) {
+                message += `مع العلم أن الطالب قام بفتح الكاميرا خلال الحصة.\n`;
+              } else if (seg.camera == 0) {
+                message += `مع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.\n`;
+              }
             }
           } else if (seg.attendanceValue == 0) {
             message += `الحضور: لم يتم الحضور❌\n`;
@@ -3400,10 +3402,13 @@ const sendCollectionMessages = async (req, res) => {
             } else {
               message += `الواجب: ${seg.hwStatus}\n`;
             }
+          } else {
+            // If HWStatus is empty, show "no homework"
+            message += `الواجب: لم يكن هناك واجب\n`;
           }
 
           // Quiz
-          if (seg.examEntry == 0) {
+          if (seg.examEntry !== undefined && seg.examEntry !== '' && seg.examEntry == 0) {
             message += `الامتحان: لم يدخل الامتحان❌\n`;
           } else if (seg.quizName || seg.grade || seg.maxGrade) {
             let quizLine = 'الامتحان: ';
@@ -3412,6 +3417,9 @@ const sendCollectionMessages = async (req, res) => {
               quizLine += (seg.quizName ? ' | ' : '') + `الدرجة: ${seg.grade}/${seg.maxGrade}`;
             }
             message += quizLine + '\n';
+          } else {
+            // If no quiz data provided, show "no quiz"
+            message += `الامتحان: لم يكن هناك امتحان\n`;
           }
         } else {
           // Legacy fallback formatting
@@ -3572,8 +3580,7 @@ const collectionSampleExcel = async (req, res) => {
     ];
     worksheet.addRow(headers);
 
-    // Sample rows covering multiple cases (consistent with structured prefixes)
-    // 1) Present with partial time; no exam. Then absent+HW+quiz with score. Then present, no HW, no exam.
+    // Case 1: Present with partial time, camera off, HW done, no exam
     worksheet.addRow([
       'Lamis Yasser Mohamed',
       '01200000000',
@@ -3582,8 +3589,8 @@ const collectionSampleExcel = async (req, res) => {
       1,             // AttendanceValue: present
       70,            // AttendanceTime (minutes)
       0,             // Camera: not opened
-      1,             // HWStatus (1 yes / 0 no)
-      0,             // ExamEntry: did not enter exam
+      1,             // HWStatus: done
+      '',            // ExamEntry: empty (no exam)
       '',            // QuizName
       '',            // Grade
       '',            // MaxGrade
@@ -3592,7 +3599,7 @@ const collectionSampleExcel = async (req, res) => {
       0,             // AttendanceValue2: absent
       '',            // AttendanceTime2
       '',            // Camera2
-      1,             // HWStatus2
+      1,             // HWStatus2: done
       1,             // ExamEntry2: entered
       'Vocab Quiz 19/9', // QuizName2
       5,             // Grade2
@@ -3602,14 +3609,14 @@ const collectionSampleExcel = async (req, res) => {
       1,             // AttendanceValue3: present
       '',            // AttendanceTime3
       '',            // Camera3
-      0,             // HWStatus3
-      0,             // ExamEntry3: no exam
+      0,             // HWStatus3: not done
+      '',            // ExamEntry3: empty (no exam)
       '',            // QuizName3
       '',            // Grade3
       ''             // MaxGrade3
     ]);
 
-    // 2) Present from other group scenario can be expressed as AttendanceValue=1 without time and with Camera=1; first has quiz with score, second just present+HW.
+    // Case 2: Present with camera, no HW, quiz with score; then present with HW, no exam; then empty
     worksheet.addRow([
       'Omar Ali',
       '01211111111',
@@ -3618,7 +3625,7 @@ const collectionSampleExcel = async (req, res) => {
       1,      // present
       '',
       1,      // camera opened
-      0,      // HWStatus
+      '',     // HWStatus: empty (no homework)
       1,      // ExamEntry
       'Quiz Unit 1',
       9,
@@ -3627,9 +3634,9 @@ const collectionSampleExcel = async (req, res) => {
       '12/9',
       1,      // present
       '',
-      0,      // camera not opened
-      1,      // HWStatus
-      0,      // no exam
+      '',     // camera: empty (not required)
+      1,      // HWStatus: done
+      '',     // ExamEntry: empty (no exam)
       '',
       '',
       '',
@@ -3645,7 +3652,7 @@ const collectionSampleExcel = async (req, res) => {
       ''
     ]);
 
-    // 3) Only dates with mixed absent/present and a quiz later
+    // Case 3: Date only, then absent with no exam, then present with quiz
     worksheet.addRow([
       'Sara Mohamed',
       '01222222222',
@@ -3679,6 +3686,42 @@ const collectionSampleExcel = async (req, res) => {
       'Quiz Unit 2',
       7,
       10
+    ]);
+
+    // Case 4: Present with full time, camera on, no HW, no exam
+    worksheet.addRow([
+      'Ahmed Hassan',
+      '01233333333',
+      // seg1
+      '03/10',
+      1,   // present
+      120, // full time
+      1,   // camera opened
+      '',  // HWStatus: empty (no homework)
+      '',  // ExamEntry: empty (no exam)
+      '',
+      '',
+      '',
+      // seg2
+      '05/10',
+      1,   // present
+      90,  // partial time
+      '',  // camera: empty (not required)
+      0,   // HWStatus: not done
+      1,   // ExamEntry: entered
+      'Math Quiz',
+      8,
+      10,
+      // seg3
+      '07/10',
+      0,   // absent
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      ''
     ]);
 
     // Column widths for readability
