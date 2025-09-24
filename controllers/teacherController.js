@@ -591,8 +591,8 @@ async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, 
       targetSession = sessions.find(s => s.phone_number === '+201200077825' || s.phone_number === '01200077825');
     } else if (adminPhone == '01200077823') {
       targetSession = sessions.find(s => s.phone_number === '+201200077823' || s.phone_number === '01200077823');
-    } else if (adminPhone == '01200077829') {
-      targetSession = sessions.find(s => s.phone_number === '+201200077829' || s.phone_number === '01200077829');
+    } else if (adminPhone == '01015783223') {
+      targetSession = sessions.find(s => s.phone_number === '+201015783223' || s.phone_number === '01015783223');
     }
     
     // If no specific match, try to find any connected session
