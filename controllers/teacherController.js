@@ -2763,7 +2763,7 @@ const sendCustomMessages = async (req, res) => {
 
     for (const row of dataToSend) {
       const name = nameCloumnName ? row[nameCloumnName] : 'Unknown';
-      const text = message;
+      const baseMessage = message || '';
 
       const targets = [];
       if (recipientType === 'parents' || recipientType === 'both') {
@@ -2777,7 +2777,13 @@ const sendCustomMessages = async (req, res) => {
 
       for (const target of targets) {
         try {
-          await sendWappiMessage(text, target.phone, req.userData.phone);
+          // Personalize header based on recipient type
+          const header = target.type === 'parent'
+            ? `هذه الرساله موجه لولي امر الطالب ${name}`
+            : `عزيزي الطالب ${name}`;
+          const personalizedText = `${header}\n\n${baseMessage}`;
+
+          await sendWappiMessage(personalizedText, target.phone, req.userData.phone);
           successCount++;
           messageIndex++;
           
