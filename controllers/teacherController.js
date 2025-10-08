@@ -1014,7 +1014,6 @@ const markAttendance = async (req, res) => {
 عدد مرات الغياب: *${student.absences}*.\n\n
 *يرجى الانتباه لمواعيد الحضور مستقبلًا*.\n\n
 التاريخ: ${today}
-الوقت: ${new Date().toLocaleTimeString()}
 *شكرًا لتعاونكم.*`;
 
       // Send the message via the waapi (already present)
@@ -1103,7 +1102,6 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
 عدد مرات الغياب: *${student.absences}*.\n
 التاريخ: ${today}
-الوقت: ${new Date().toLocaleTimeString()}
 *شكرًا لتعاونكم.*`;
 
 

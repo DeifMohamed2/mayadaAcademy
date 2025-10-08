@@ -2,7 +2,6 @@
 
 const centerNames = {
     ZHub : [
-    { value: 'EST', text: 'EST' },
     { value: 'SAT', text: 'SAT' },
     { value: 'Basics', text: 'Basics' },
     ],
@@ -14,7 +13,6 @@ const centerNames = {
     online :[
     { value: 'EST', text: 'EST' },
     { value: 'SAT', text: 'SAT' },
-    { value: 'ACT', text: 'ACT' },
     { value: 'Basics', text: 'Basics' },
     ]
   }
@@ -27,9 +25,6 @@ const gradeTypeOptions = {
   SAT: [
     { value: 'adv', text: 'Advanced' }
   ],
-  ACT: [
-    { value: 'adv', text: 'Advanced' }
-  ],
   Basics: [
     { value: 'normal', text: 'Normal' }
   ]
@@ -38,58 +33,48 @@ const gradeTypeOptions = {
 // Group times for each center
 const groupTimes = {
   ZHub: {
-    EST: {
-      adv: [
-        { value: 'group1', text: 'Sunday 6 pm & Wednesday 6 pm' },
-      ],
-    },
     SAT: {
       adv: [
-        { value: 'group1', text: 'Sunday at 8 pm & Wednesday at 8 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
     Basics: {
       normal: [
-        { value: 'group1', text: 'Sunday at 4 pm & Wednesday at 4 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
   },
   tagmo3: {
     EST: {
       adv: [
-        { value: 'group1', text: 'Saturday at 6 pm & Tuesday at 6 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
     SAT: {
       adv: [
-        { value: 'group1', text: 'Saturday at 4 pm & Monday at 8 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
     Basics: {
       normal: [
-        { value: 'group1', text: 'Saturday at 8 pm & Tuesday at 8 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
   },
   online: {
     EST: {
       adv: [
-        { value: 'group1', text: 'Tuesday at 4 pm & Friday at 2 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
     SAT: {
       adv: [
-        { value: 'group1', text: 'Monday at 6 pm & Friday at 6 pm' },
-      ],
-    },
-    ACT: {
-      adv: [
-        { value: 'group1', text: 'Monday at 6 pm & Friday at 6 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
     Basics: {
       normal: [
-        { value: 'group1', text: 'Monday at 4 pm & Friday at 4 pm' },
+        { value: 'group1', text: 'Group' },
       ],
     },
   }
