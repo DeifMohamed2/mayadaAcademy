@@ -275,7 +275,7 @@ const updateUserData = async (req, res) => {
       updateFields.amountRemaining = amountRemaining;
     if (GradeLevel) updateFields.GradeLevel = GradeLevel;
     if (attendingType) updateFields.attendingType = attendingType;
-    if (bookTaken) updateFields.bookTaken = bookTaken;
+    if (bookTaken !== undefined) updateFields.bookTaken = bookTaken === 'true';
     if (schoolName) updateFields.schoolName = schoolName;
     if (absences) updateFields.absences = absences
 
@@ -285,12 +285,44 @@ const updateUserData = async (req, res) => {
     // if (gradeType) updateFields.gradeType = gradeType;
     // if (groupTime) updateFields.groupTime = groupTime;
 
+    // Get the current user data to compare changes
+    const currentUser = await User.findById(studentID);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
     // Update the student document
     const updatedUser = await User.findByIdAndUpdate(studentID, updateFields, {
       new: true,
     });
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found.' });
+
+    // Check if bookTaken status was changed and send WhatsApp message
+    const newBookTakenValue = bookTaken === 'true';
+    if (bookTaken !== undefined && newBookTakenValue !== currentUser.bookTaken) {
+      try {
+        console.log(`Book taken status changed for ${updatedUser.Username} from ${currentUser.bookTaken} to ${newBookTakenValue}`);
+        
+        const bookStatusMessage = `📚 تحديث حالة الكتاب\n\nالطالب: ${updatedUser.Username}\nالكود: ${updatedUser.Code}\n\nحالة الكتاب: ${newBookTakenValue ? 'تم استلام الكتاب ✅' : 'لم يتم استلام الكتاب ❌'}\n\nتاريخ التحديث: ${new Date().toLocaleDateString('ar-EG')}`;
+        
+        // Send message to student's phone
+        const studentPhone = updatedUser.phone;
+        const adminPhone = updatedUser.centerName === 'ZHub' ? '01200077825' : 
+                          updatedUser.centerName === 'tagmo3' ? '01200077823' : 
+                          updatedUser.centerName === 'online' ? '01015783223' : '01200077825';
+        
+        await sendWasenderMessage(bookStatusMessage, studentPhone, adminPhone);
+        console.log(`Book status message sent successfully to ${updatedUser.Username}`);
+        
+        // Also send to parent's phone if different from student's phone
+        if (updatedUser.parentPhone && updatedUser.parentPhone !== studentPhone) {
+          const parentMessage = `📚 تحديث حالة الكتاب لطفلك\n\nالطالب: ${updatedUser.Username}\nالكود: ${updatedUser.Code}\n\nحالة الكتاب: ${newBookTakenValue ? 'تم استلام الكتاب ✅' : 'لم يتم استلام الكتاب ❌'}\n\nتاريخ التحديث: ${new Date().toLocaleDateString('ar-EG')}`;
+          await sendWasenderMessage(parentMessage, updatedUser.parentPhone, adminPhone);
+          console.log(`Book status message sent to parent of ${updatedUser.Username}`);
+        }
+      } catch (whatsappError) {
+        console.error('Failed to send book status WhatsApp message:', whatsappError.message);
+        // Don't fail the update if WhatsApp message fails
+      }
     }
 
     // Handle group update only if centerName is provided
