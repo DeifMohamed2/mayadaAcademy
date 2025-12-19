@@ -2,18 +2,14 @@
 
 const centerNames = {
     ZHub : [
-    { value: 'SAT', text: 'SAT' },
     { value: 'Basics', text: 'Basics' },
+    { value: 'SAT', text: 'SAT Advanced' },
+    { value: 'EST', text: 'EST Advanced' },
     ],
     tagmo3 :[
-    { value: 'EST', text: 'EST' },
-    { value: 'SAT', text: 'SAT' },
     { value: 'Basics', text: 'Basics' },
-    ],
-    online :[
-    { value: 'EST', text: 'EST' },
-    { value: 'SAT', text: 'SAT' },
-    { value: 'Basics', text: 'Basics' },
+    { value: 'SAT', text: 'SAT Advanced' },
+    { value: 'EST', text: 'EST Advanced' },
     ]
   }
 
@@ -33,49 +29,36 @@ const gradeTypeOptions = {
 // Group times for each center
 const groupTimes = {
   ZHub: {
-    SAT: {
-      adv: [
-        { value: 'group1', text: 'Group' },
-      ],
-    },
     Basics: {
       normal: [
-        { value: 'group1', text: 'Group' },
+        { value: 'group', text: 'Group' },
+      ],
+    },
+    SAT: {
+      adv: [
+        { value: 'group', text: 'Group' },
+      ],
+    },
+    EST: {
+      adv: [
+        { value: 'group', text: 'Group' },
       ],
     },
   },
   tagmo3: {
-    EST: {
-      adv: [
-        { value: 'group1', text: 'Group' },
+    Basics: {
+      normal: [
+        { value: 'group', text: 'Group' },
       ],
     },
     SAT: {
       adv: [
-        { value: 'group1', text: 'Group' },
+        { value: 'group', text: 'Group' },
       ],
     },
-    Basics: {
-      normal: [
-        { value: 'group1', text: 'Group' },
-        { value: 'group2', text: 'Group 2' },
-      ],
-    },
-  },
-  online: {
     EST: {
       adv: [
-        { value: 'group1', text: 'Group' },
-      ],
-    },
-    SAT: {
-      adv: [
-        { value: 'group1', text: 'Group' },
-      ],
-    },
-    Basics: {
-      normal: [
-        { value: 'group1', text: 'Group' },
+        { value: 'group', text: 'Group' },
       ],
     },
   }
