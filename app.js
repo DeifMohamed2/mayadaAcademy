@@ -12,6 +12,8 @@ const cors = require('cors')
 
 const homeRoutes = require('./routes/homeRoutes')
 const teacherRoutes = require('./routes/teacherRoutes')
+const parentRoute = require('./routes/parentRoute')
+
 // express app
 const app = express();
 app.use(express.json());
@@ -71,6 +73,7 @@ app.use(session({
 
 app.use('/', homeRoutes)
 app.use('/teacher', teacherRoutes)
+app.use('/api/parent', parentRoute);
 
 
 

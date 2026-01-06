@@ -94,6 +94,10 @@ const userSchema = new Schema(
       default: null,
     },
 
+    fcmToken: {
+      type: String,
+      default: null,
+    },
     AttendanceHistory: {
       type: Array,
       required: false,
