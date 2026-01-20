@@ -13,22 +13,22 @@ const jwtSecret = process.env.JWTSECRET
 
 const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
-  
+
   if (!token) {
     return res.status(401).redirect('../login');
   }
-  
+
   try {
     const decode = jwt.verify(token, jwtSecret);
     req.userId = decode.userId;
-    
+
     const result = await User.findOne({ '_id': decode.userId });
-    
+
     if (!result) {
       res.clearCookie('token');
       return res.status(401).redirect('../login');
     }
-    
+
     if (result.isTeacher) {
       req.userData = result;
       next();
@@ -36,7 +36,7 @@ const authMiddleware = async (req, res, next) => {
       res.clearCookie('token');
       return res.status(301).redirect('../login');
     }
-    
+
   } catch (error) {
     res.clearCookie('token');
     return res.status(401).redirect('../login');
@@ -51,12 +51,12 @@ const authMiddleware = async (req, res, next) => {
 
 router.get('/dash', authMiddleware, teacherController.addCardGet);
 
-router.get("/myStudent", authMiddleware,teacherController.myStudent_get);
+router.get("/myStudent", authMiddleware, teacherController.myStudent_get);
 
 
-router.get("/studentsRequests", authMiddleware,teacherController.studentsRequests_get);
+router.get("/studentsRequests", authMiddleware, teacherController.studentsRequests_get);
 
-router.get("/logOut", authMiddleware,teacherController.logOut);
+router.get("/logOut", authMiddleware, teacherController.logOut);
 
 
 // ================== END All get Pages Route  ====================== //
@@ -67,15 +67,15 @@ router.get("/logOut", authMiddleware,teacherController.logOut);
 
 
 
-router.get("/studentsRequests/:studentID", authMiddleware,teacherController.getSingleUserAllData);
+router.get("/studentsRequests/:studentID", authMiddleware, teacherController.getSingleUserAllData);
 
-router.delete("/studentsRequests/delete/:studentID", authMiddleware,teacherController.DeleteStudent);
+router.delete("/studentsRequests/delete/:studentID", authMiddleware, teacherController.DeleteStudent);
 
-router.post("/converStudentRequestsToExcel", authMiddleware,teacherController.converStudentRequestsToExcel);
+router.post("/converStudentRequestsToExcel", authMiddleware, teacherController.converStudentRequestsToExcel);
 
-router.post("/searchForUser", authMiddleware,teacherController.searchForUser);
+router.post("/searchForUser", authMiddleware, teacherController.searchForUser);
 
-router.put("/updateUserData/:studentID", authMiddleware,teacherController.updateUserData);
+router.put("/updateUserData/:studentID", authMiddleware, teacherController.updateUserData);
 
 
 // ==================  END Student Requests  ================= //
@@ -83,12 +83,12 @@ router.put("/updateUserData/:studentID", authMiddleware,teacherController.update
 // ==================   myStudent  ================= //
 
 
-router.get("/myStudent/getStudentData/:studentCode", authMiddleware,teacherController.getStudentData);
+router.get("/myStudent/getStudentData/:studentCode", authMiddleware, teacherController.getStudentData);
 
-router.get("/myStudent/convertToExcel/:studentCode", authMiddleware,teacherController.convertAttendaceToExcel);
+router.get("/myStudent/convertToExcel/:studentCode", authMiddleware, teacherController.convertAttendaceToExcel);
 
 
-router.post("/myStudent/convertToExcelAllUserData/:studetCode", authMiddleware,teacherController.convertToExcelAllUserData);
+router.post("/myStudent/convertToExcelAllUserData/:studetCode", authMiddleware, teacherController.convertToExcelAllUserData);
 
 // router.post("/myStudent/convertToPDFAllUserData/:studetCode", authMiddleware,teacherController.convertToPDFAllUserData);
 
@@ -103,14 +103,14 @@ router.post('/addCard', authMiddleware, teacherController.addCardToStudent);
 
 router.post('/addCard/getAttendedUsers', authMiddleware, teacherController.getAttendedUsers);
 
-router.post('/addCard/markAttendance',authMiddleware,teacherController.markAttendance);
+router.post('/addCard/markAttendance', authMiddleware, teacherController.markAttendance);
 
 
-router.delete('/addCard/removeAttendance/:studentId',authMiddleware,teacherController.removeAttendance);
+router.delete('/addCard/removeAttendance/:studentId', authMiddleware, teacherController.removeAttendance);
 
-router.post('/addCard/updateAmount/:studentId',authMiddleware,teacherController.updateAmount);
+router.post('/addCard/updateAmount/:studentId', authMiddleware, teacherController.updateAmount);
 
-router.post('/addCard/finalizeAttendance',authMiddleware,teacherController.finalizeAttendance);
+router.post('/addCard/finalizeAttendance', authMiddleware, teacherController.finalizeAttendance);
 
 
 
@@ -135,9 +135,28 @@ router.post('/handelAttendance/getAttendees', authMiddleware, teacherController.
 router.post('/handelAttendance/convertAttendeesToExcel', authMiddleware, teacherController.convertAttendeesToExcel);
 
 
-// ================== Whats App ====================== //
 
-router.get('/whatsApp', authMiddleware, teacherController.whatsApp_get);
+// ================== Notifications ====================== //
+
+// New FCM Notifications Pages
+router.get('/allNotifications', authMiddleware, teacherController.allNotifications_get);
+router.get('/sendNotifications', authMiddleware, teacherController.sendNotifications_get);
+
+// New FCM Notifications APIs - routes matching frontend fetch calls
+// allNotifications page APIs
+router.get('/allNotifications/getNotifications', authMiddleware, teacherController.getAllNotifications);
+router.get('/allNotifications/getStats', authMiddleware, teacherController.getNotificationsStats);
+
+// sendNotifications page APIs
+router.get('/sendNotifications/searchStudents', authMiddleware, teacherController.searchStudentsForNotifications);
+router.post('/sendNotifications/toStudents', authMiddleware, teacherController.sendNotificationsToStudents);
+router.post('/sendNotifications/custom', authMiddleware, teacherController.sendCustomNotification);
+router.post('/sendNotifications/toAllParents', authMiddleware, teacherController.sendNotificationToAllParents);
+router.get('/sendNotifications/getGroupStudents', authMiddleware, teacherController.getGroupStudentsForNotifications);
+router.post('/sendNotifications/toGroup', authMiddleware, teacherController.sendNotificationsToGroup);
+router.post('/sendNotifications/fromExcelJson', authMiddleware, teacherController.sendNotificationFromExcelJson);
+
+
 
 router.post('/sendGradeMessages', authMiddleware, teacherController.sendGradeMessages);
 router.post('/sendMessages', authMiddleware, teacherController.sendMessages);
@@ -146,34 +165,17 @@ router.post('/sendAttendanceMessages', authMiddleware, teacherController.sendAtt
 router.post('/sendCollectionMessages', authMiddleware, teacherController.sendCollectionMessages);
 router.get('/collectionSampleExcel', authMiddleware, teacherController.collectionSampleExcel);
 
-// ================== END Whats App ====================== //
 
-// ================== Connect WhatsApp ====================== //
+// ================== END Notifications ====================== //
 
-router.get('/connectWhatsapp', authMiddleware, teacherController.connectWhatsapp_get);
-router.post('/createInstance', authMiddleware, teacherController.createInstance);
-router.get('/getInstances', authMiddleware, teacherController.getInstances);
-router.get('/generateQrCode/:instanceId', authMiddleware, teacherController.generateQrCode);
-router.delete('/deleteInstance/:instanceId', authMiddleware, teacherController.deleteInstance);
-router.get('/checkRealInstanceStatus/:instanceId', authMiddleware, teacherController.checkRealInstanceStatus);
-router.post('/setWebhook/:instanceId', authMiddleware, teacherController.setWebhook);
-router.post('/rebootInstance/:instanceId', authMiddleware, teacherController.rebootInstance);
-router.post('/regenerateQrCode/:instanceId', authMiddleware, teacherController.regenerateQrCode);
+// ==================  Student Data  ================= //
 
-// ================== END Whats App ====================== //
+router.get('/getDataStudentInWhatsApp', authMiddleware, teacherController.getDataStudentInWhatsApp);
+
+router.post('/submitData', authMiddleware, teacherController.submitData);
 
 
-
-// ==================  whatsApp 2  ================= //
-
-router.get('/whatsApp2', authMiddleware, teacherController.whatsApp2_get);
-
-router.get('/whatsApp2/getDataStudentInWhatsApp', authMiddleware, teacherController.getDataStudentInWhatsApp);
-
-router.post('/whatsApp2/submitData', authMiddleware, teacherController.submitData);
-
-
-// ==================  END whatsApp 2  ================= //
+// ==================  END Student Data  ================= //
 
 // ================== Export Error Details ====================== //
 
@@ -188,6 +190,5 @@ router.get('/convertGroup', authMiddleware, teacherController.convertGroup_get);
 router.get('/getDataToTransferring/:Code', authMiddleware, teacherController.getDataToTransferring);
 
 router.put('/transferStudent/:Code', authMiddleware, teacherController.transferStudent);
-
 
 module.exports = router;

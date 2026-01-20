@@ -3,83 +3,40 @@ const Group = require('../models/Group');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const qrcode = require('qrcode');
-const wasender = require('../utils/wasender');
+const { sendNotificationMessage } = require('../utils/notificationSender');
 const Excel = require('exceljs');
 
 const jwtSecret = process.env.JWTSECRET;
 
-async function findWasenderSession(centerName) {
-  try {
-    // Get all sessions to find the one with matching phone number
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      throw new Error(`Failed to get sessions: ${sessionsResponse.message}`);
-    }
-    
-    const sessions = sessionsResponse.data;
-    let targetSession = null;
-    
-    // Find session by center name mapping to admin phone numbers
-    if (centerName === 'ZHub') {
-      targetSession = sessions.find(s => s.phone_number === '+201200077825' || s.phone_number === '01200077825');
-    } else if (centerName === 'tagmo3') {
-      targetSession = sessions.find(s => s.phone_number === '+201200077823' || s.phone_number === '01200077823');
-    } else if (centerName === 'online') {
-      targetSession = sessions.find(s => s.phone_number === '+201015783223' || s.phone_number === '01015783223');
-    }
-    
-    // If no specific match, try to find any connected session
-    if (!targetSession) {
-      targetSession = sessions.find(s => s.status === 'connected');
-    }
-    
-    if (!targetSession) {
-      throw new Error('No connected WhatsApp session found');
-    }
-    
-    if (!targetSession.api_key) {
-      throw new Error('Session API key not available');
-    }
-    
-    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number}) for center: ${centerName}`);
-    return targetSession;
-  } catch (err) {
-    console.error('Error finding Wasender session:', err.message);
-    throw err;
-  }
-}
-
-
 async function sendQRCode(chatId, message, studentCode, centerName) {
   try {
-    console.log('Sending QR code for center:', centerName);
-
-    // Find the appropriate session for this center
-    const targetSession = await findWasenderSession(centerName);
+    console.log('Sending QR code notification for center:', centerName);
     
-    // Format phone number for Wasender API (remove @c.us suffix and add @s.whatsapp.net)
-    const phoneNumber = chatId.replace('@c.us', '') + '@s.whatsapp.net';
+    // Format phone number (remove @c.us suffix)
+    const phoneNumber = chatId.replace('@c.us', '');
     console.log('Sending to phone number:', phoneNumber);
     
-    // Create a publicly accessible URL for the QR code
+    // Create a QR code image URL
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(studentCode)}`;
     
-    // Send the QR code as an image message
-    const mediaResponse = await wasender.sendImageMessage(
-      targetSession.api_key,
-      phoneNumber,
-      qrCodeUrl,
-      message
-    );
+    // Add QR code URL to the message
+    const fullMessage = `${message}\n\nQR Code: ${qrCodeUrl}`;
+    
+    // Send notification with QR code information
+    const result = await sendNotificationMessage(phoneNumber, fullMessage, {
+      studentCode: studentCode,
+      qrCodeUrl: qrCodeUrl,
+      type: 'registration_qr'
+    });
 
-    if (!mediaResponse.success) {
-      throw new Error(`Failed to send QR code: ${mediaResponse.message}`);
+    if (!result.success) {
+      throw new Error(`Failed to send QR code notification: ${result.message}`);
     }
 
-    console.log('QR code sent successfully:', mediaResponse.data);
+    console.log('QR code notification sent successfully');
     return { success: true };
   } catch (error) {
-    console.error('Error sending QR code:', error);
+    console.error('Error sending QR code notification:', error);
     return { success: false, error: error.message };
   }
 }

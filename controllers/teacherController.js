@@ -1,10 +1,10 @@
 const User = require('../models/User');
-const Group  = require('../models/Group');
+const Group = require('../models/Group');
 const Card = require('../models/Card');
-const Attendance = require('../models/Attendance'); 
+const Attendance = require('../models/Attendance');
 
-const wasender = require('../utils/wasender');
-const Excel = require('exceljs'); 
+const { sendNotificationMessage } = require('../utils/notificationSender');
+const Excel = require('exceljs');
 const QRCode = require('qrcode');
 
 // Helper function to validate and format phone numbers
@@ -12,20 +12,20 @@ function validateAndFormatPhoneNumber(phone) {
   if (!phone || typeof phone !== 'string') {
     throw new Error('Phone number is required and must be a string');
   }
-  
+
   // Remove any non-numeric characters
   let cleanPhone = phone.replace(/\D/g, '');
-  
+
   // Check if we have any digits
   if (cleanPhone.length === 0) {
     throw new Error('Phone number contains no digits');
   }
-  
+
   // Check for invalid patterns (all zeros, all ones, etc.)
   if (/^0+$/.test(cleanPhone) || /^1+$/.test(cleanPhone)) {
     throw new Error('Phone number contains only repeated digits');
   }
-  
+
   // Handle different input formats for Egyptian numbers
   if (cleanPhone.length === 11 && cleanPhone.startsWith('0') && cleanPhone.charAt(1) === '1') {
     // Egyptian mobile format (01xxxxxxxxx) -> convert to international (20xxxxxxxxxx)
@@ -44,8 +44,8 @@ function validateAndFormatPhoneNumber(phone) {
 }
 
 
-  
-const dash_get = async(req, res) => {
+
+const dash_get = async (req, res) => {
 
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
@@ -134,8 +134,8 @@ const searchForUser = async (req, res) => {
         createdAt: 1,
         updatedAt: 1,
         subscribe: 1,
-        balance :1,
-        amountRemaining :1,
+        balance: 1,
+        amountRemaining: 1,
       }
     ).then((result) => {
       res.render('teacher/studentsRequests', {
@@ -151,7 +151,7 @@ const searchForUser = async (req, res) => {
         previousPage: null, // Calculate previous page
       });
     });
-  } catch (error) {}
+  } catch (error) { }
 };
 
 const converStudentRequestsToExcel = async (req, res) => {
@@ -177,10 +177,10 @@ const converStudentRequestsToExcel = async (req, res) => {
       'Phone Number',
       'Parent Phone Number',
     ]);
-    
+
     // Style headers - bold text only, no colors
     headerRow.font = { bold: true, size: 12 };
-    
+
     // Set column widths for better spacing
     worksheet.columns = [
       { key: 'Username', width: 25 },
@@ -199,7 +199,7 @@ const converStudentRequestsToExcel = async (req, res) => {
         user.phone || '',
         user.parentPhone || '',
       ]);
-      
+
       // Simple formatting - no colors, just clean data
       row.font = { size: 11 };
     });
@@ -230,7 +230,7 @@ const getSingleUserAllData = async (req, res) => {
     console.log(studentID);
     await User.findOne(
       { _id: studentID },
-     
+
     ).then((result) => {
 
       res.status(200).send(result);
@@ -239,7 +239,7 @@ const getSingleUserAllData = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    
+
   }
 };
 
@@ -250,7 +250,7 @@ const updateUserData = async (req, res) => {
       phone,
       parentPhone,
       balance,
- 
+
       absences,
       amountRemaining,
       GradeLevel,
@@ -296,32 +296,36 @@ const updateUserData = async (req, res) => {
       new: true,
     });
 
-    // Check if bookTaken status was changed and send WhatsApp message
+    // Check if bookTaken status was changed and send notification
     const newBookTakenValue = bookTaken === 'true';
     if (bookTaken !== undefined && newBookTakenValue !== currentUser.bookTaken) {
       try {
         console.log(`Book taken status changed for ${updatedUser.Username} from ${currentUser.bookTaken} to ${newBookTakenValue}`);
-        
+
         const bookStatusMessage = `📚 تحديث حالة الكتاب\n\nالطالب: ${updatedUser.Username}\nالكود: ${updatedUser.Code}\n\nحالة الكتاب: ${newBookTakenValue ? 'تم استلام الكتاب ✅' : 'لم يتم استلام الكتاب ❌'}\n\nتاريخ التحديث: ${new Date().toLocaleDateString('ar-EG')}`;
-        
-        // Send message to student's phone
+
+        // Send notification to student's phone
         const studentPhone = updatedUser.phone;
-        const adminPhone = updatedUser.centerName === 'ZHub' ? '01200077825' : 
-                          updatedUser.centerName === 'tagmo3' ? '01200077823' : 
-                          updatedUser.centerName === 'online' ? '01015783223' : '01200077825';
-        
-        await sendWasenderMessage(bookStatusMessage, studentPhone, adminPhone);
-        console.log(`Book status message sent successfully to ${updatedUser.Username}`);
-        
+        await sendNotificationMessage(studentPhone, bookStatusMessage, {
+          studentName: updatedUser.Username,
+          studentCode: updatedUser.Code,
+          type: 'book_status'
+        });
+        console.log(`Book status notification sent successfully to ${updatedUser.Username}`);
+
         // Also send to parent's phone if different from student's phone
         if (updatedUser.parentPhone && updatedUser.parentPhone !== studentPhone) {
           const parentMessage = `📚 تحديث حالة الكتاب لطفلك\n\nالطالب: ${updatedUser.Username}\nالكود: ${updatedUser.Code}\n\nحالة الكتاب: ${newBookTakenValue ? 'تم استلام الكتاب ✅' : 'لم يتم استلام الكتاب ❌'}\n\nتاريخ التحديث: ${new Date().toLocaleDateString('ar-EG')}`;
-          await sendWasenderMessage(parentMessage, updatedUser.parentPhone, adminPhone);
-          console.log(`Book status message sent to parent of ${updatedUser.Username}`);
+          await sendNotificationMessage(updatedUser.parentPhone, parentMessage, {
+            studentName: updatedUser.Username,
+            studentCode: updatedUser.Code,
+            type: 'book_status'
+          });
+          console.log(`Book status notification sent to parent of ${updatedUser.Username}`);
         }
-      } catch (whatsappError) {
-        console.error('Failed to send book status WhatsApp message:', whatsappError.message);
-        // Don't fail the update if WhatsApp message fails
+      } catch (notificationError) {
+        console.error('Failed to send book status notification:', notificationError.message);
+        // Don't fail the update if notification fails
       }
     }
 
@@ -399,13 +403,13 @@ const DeleteStudent = async (req, res) => {
     await Group.updateMany(
       { students: studentID },
       { $pull: { students: studentID } }
-    ).then(async(result) => {
+    ).then(async (result) => {
       await User.findByIdAndDelete(studentID).then((result) => {
         return res
           .status(200)
           .json({ message: 'User deleted successfully.', result });
       });
-  });
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -419,19 +423,19 @@ const searchToGetOneUserAllData = async (req, res) => {
   const { searchBy, searchInput } = req.query;
 
   try {
-     const result = await User.findOne({ [`${searchBy}`]: searchInput })
+    const result = await User.findOne({ [`${searchBy}`]: searchInput })
 
-     const attendance = await Card.findOne({ userId : result._id })
+    const attendance = await Card.findOne({ userId: result._id })
 
 
-      res.render('teacher/myStudent', {
-        title: 'Mystudent',
-        path: req.path,
-        userData: result,
-        attendance: attendance.cardHistory,
-      });
-   
-  } catch (error) {}
+    res.render('teacher/myStudent', {
+      title: 'Mystudent',
+      path: req.path,
+      userData: result,
+      attendance: attendance.cardHistory,
+    });
+
+  } catch (error) { }
 };
 
 const convertToExcelAllUserData = async (req, res) => {
@@ -602,223 +606,10 @@ const convertToExcelAllUserData = async (req, res) => {
 
 // =================================================== END MyStudent ================================================ //
 
-async function sendWasenderMessage(message, phone, adminPhone, isExcel = false, countryCode = '20') {
-  try {
-    // Get all sessions to find the one with matching phone number
-    const sessionsResponse = await wasender.getAllSessions();
-    if (!sessionsResponse.success) {
-      throw new Error(`WhatsApp sessions unavailable: ${sessionsResponse.message}`);
-    }
-    
-    const sessions = sessionsResponse.data;
-    
-    if (!sessions || sessions.length === 0) {
-      throw new Error('No WhatsApp sessions found - Please check WhatsApp connection');
-    }
-    
-    let targetSession = null;
-    
-    // Find session by admin phone number
-    if (adminPhone == '01200077825') {
-      targetSession = sessions.find(s => s.phone_number === '+201200077825' || s.phone_number === '01200077825');
-    } else if (adminPhone == '01200077823') {
-      targetSession = sessions.find(s => s.phone_number === '+201200077823' || s.phone_number === '01200077823');
-    } else if (adminPhone == '01015783223') {
-      targetSession = sessions.find(s => s.phone_number === '+201015783223' || s.phone_number === '01015783223');
-    }
-    
-    // If no specific match, try to find any connected session
-    if (!targetSession) {
-      targetSession = sessions.find(s => s.status === 'connected');
-    }
-    
-    if (!targetSession) {
-      // Check if there are sessions but none are connected
-      const disconnectedSessions = sessions.filter(s => s.status !== 'connected');
-      if (disconnectedSessions.length > 0) {
-        const statuses = disconnectedSessions.map(s => `${s.name}: ${s.status}`).join(', ');
-        throw new Error(`WhatsApp sessions exist but none are connected. Statuses: ${statuses}`);
-      } else {
-        throw new Error('WhatsApp not connected - No active session found');
-      }
-    }
-    
-    if (!targetSession.api_key) {
-      throw new Error('WhatsApp session expired - API key not available');
-    }
-    
-    // Check session status more thoroughly
-    if (targetSession.status === 'disconnected') {
-      throw new Error('WhatsApp session disconnected - Please reconnect');
-    } else if (targetSession.status === 'connecting') {
-      throw new Error('WhatsApp session still connecting - Please wait and try again');
-    } else if (targetSession.status === 'failed') {
-      throw new Error('WhatsApp session failed - Please check connection and try again');
-    }
-    
-    console.log(`Using session: ${targetSession.name} (${targetSession.phone_number})`);
-    
-    // Debug: Log the original phone number
-    console.log('Original phone number:', phone, 'Type:', typeof phone, 'Length:', phone ? phone.length : 'null/undefined');
-    
-    // Validate and format phone number using helper function
-    let phoneNumber;
-    try {
-      phoneNumber = validateAndFormatPhoneNumber(phone);
-      console.log('Formatted phone number:', phoneNumber, 'Original:', phone);
-    } catch (validationError) {
-      throw new Error(`Phone number validation failed: ${validationError.message}`);
-    }
-    
-    // Format for WhatsApp (add @s.whatsapp.net suffix)
-    const formattedPhone = `${phoneNumber}@s.whatsapp.net`;
-    
-    console.log('Sending message to:', formattedPhone);
-    
-    // Use the session-specific API key to send the message
-    const response = await wasender.sendTextMessage(targetSession.api_key, formattedPhone, message);
-    
-    // Debug: Log the full response for troubleshooting
-    console.log('Full WhatsApp API Response:', JSON.stringify(response, null, 2));
-    
-    if (!response.success) {
-      // Debug: Log the response structure
-      console.log('WhatsApp API Response:', {
-        success: response.success,
-        message: response.message,
-        error: response.error,
-        errorType: typeof response.error,
-        errorKeys: response.error && typeof response.error === 'object' ? Object.keys(response.error) : 'N/A'
-      });
-      
-      // Check for specific API errors
-      if (response.error) {
-        // Convert error to string and check for specific patterns
-        const errorStr = String(response.error).toLowerCase();
-        
-        if (errorStr.includes('not-authorized') || errorStr.includes('unauthorized')) {
-          throw new Error('WhatsApp session expired - Please reconnect');
-        } else if (errorStr.includes('not-found') || errorStr.includes('notfound') || errorStr.includes('does not exist on whatsapp')) {
-          console.log(`WhatsApp Error: Phone number ${phoneNumber} is not registered on WhatsApp`);
-          throw new Error('Phone number not registered on WhatsApp - Please check if the parent has WhatsApp installed');
-        } else if (errorStr.includes('blocked') || errorStr.includes('block')) {
-          throw new Error('Phone number blocked this WhatsApp account');
-        } else if (errorStr.includes('invalid') || errorStr.includes('format')) {
-          throw new Error('Invalid phone number format');
-        } else if (errorStr.includes('rate-limit') || errorStr.includes('rate limit') || errorStr.includes('too many')) {
-          throw new Error('Rate limit exceeded - Please wait before sending more messages');
-        } else if (errorStr.includes('timeout')) {
-          throw new Error('Request timeout - WhatsApp service slow');
-        } else if (errorStr.includes('connection') || errorStr.includes('network')) {
-          throw new Error('Network connection issue - Please check internet');
-        } else {
-          // Try to extract more specific error information
-          if (response.details && response.details.error) {
-            throw new Error(`WhatsApp API error: ${response.details.error}`);
-          } else if (response.status) {
-            // Handle specific HTTP status codes
-            let errorMessage = 'Unknown error';
-            
-            if (response.status === 422) {
-              // 422 typically means validation error
-              if (response.error && typeof response.error === 'object') {
-                if (response.error.message) {
-                  errorMessage = response.error.message;
-                } else if (response.error.error) {
-                  errorMessage = response.error.error;
-                } else if (response.error.detail) {
-                  errorMessage = response.error.detail;
-                } else if (response.error.description) {
-                  errorMessage = response.error.description;
-                } else if (response.error.validation) {
-                  errorMessage = `Validation error: ${response.error.validation}`;
-                } else if (response.error.constraints) {
-                  errorMessage = `Validation failed: ${response.error.constraints}`;
-                } else {
-                  // Try to find any string value in the object
-                  const errorValues = Object.values(response.error).filter(val => typeof val === 'string');
-                  if (errorValues.length > 0) {
-                    errorMessage = errorValues[0];
-                  } else {
-                    errorMessage = 'Phone number validation failed';
-                  }
-                }
-              } else if (typeof response.error === 'string') {
-                errorMessage = response.error;
-              } else {
-                errorMessage = 'Phone number validation failed - Check format';
-              }
-            } else {
-              // Handle other status codes
-              if (response.error && typeof response.error === 'object') {
-                if (response.error.message) {
-                  errorMessage = response.error.message;
-                } else if (response.error.error) {
-                  errorMessage = response.error.error;
-                } else if (response.error.detail) {
-                  errorMessage = response.error.detail;
-                } else if (response.error.description) {
-                  errorMessage = response.error.description;
-                } else {
-                  // Try to find any string value in the object
-                  const errorValues = Object.values(response.error).filter(val => typeof val === 'string');
-                  if (errorValues.length > 0) {
-                    errorMessage = errorValues[0];
-                  } else {
-                    errorMessage = JSON.stringify(response.error);
-                  }
-                }
-              } else if (typeof response.error === 'string') {
-                errorMessage = response.error;
-              }
-            }
-            
-            throw new Error(`WhatsApp API error (Status: ${response.status}): ${errorMessage}`);
-          } else {
-            throw new Error(`WhatsApp API error: ${response.error}`);
-          }
-        }
-      } else {
-        // Check if we have additional error details
-        if (response.details && response.details.message) {
-          throw new Error(`Message sending failed: ${response.details.message}`);
-        } else if (response.status) {
-          throw new Error(`Message sending failed (Status: ${response.status}): ${response.message}`);
-        } else {
-          throw new Error(`Message sending failed: ${response.message}`);
-        }
-      }
-    }
-    
-    return response.data;
-  } catch (err) {
-    console.error('Error sending WhatsApp message:', err.message);
-    
-    // Provide more specific error messages based on error type
-    if (err.message.includes('fetch')) {
-      throw new Error('Network error - Check internet connection');
-    } else if (err.message.includes('timeout')) {
-      throw new Error('Request timeout - WhatsApp service may be slow');
-    } else if (err.message.includes('ECONNREFUSED')) {
-      throw new Error('WhatsApp service unavailable - Please try again later');
-    } else if (err.message.includes('ENOTFOUND')) {
-      throw new Error('WhatsApp service not found - Check configuration');
-    } else {
-      throw err; // Re-throw the original error if it's already specific
-    }
-  }
-}
-
-
-
-async function sendWappiMessage(message, phone, adminPhone, isExcel = false) {
-  return sendWasenderMessage(message, phone, adminPhone, isExcel);
-}
-
 
 
 const addCardGet = async (req, res) => {
-  
+
   res.render('teacher/addCard', { title: 'addCard', path: req.path });
 }
 
@@ -829,41 +620,41 @@ const addCardToStudent = async (req, res) => {
   if (!studentCode || !assignedCard) {
     return res
       .status(400)
-      .json({ message: 'studentCode and assignedCard are required' , Username  : null});
+      .json({ message: 'studentCode and assignedCard are required', Username: null });
   }
 
   try {
-    const userByCode = await User.findOne({ Code: studentCode }, { cardId :1 , Username : 1 , Code : 1 });
+    const userByCode = await User.findOne({ Code: studentCode }, { cardId: 1, Username: 1, Code: 1 });
     const userHasCard = await User.findOne({ cardId: assignedCard });
     if (!userByCode) {
-      return res.status(400).json({ message: 'This student does not exist, please verify the code' ,Username   : ''});
+      return res.status(400).json({ message: 'This student does not exist, please verify the code', Username: '' });
     }
 
-    if(userByCode.cardId){
-      return res.status(400).json({ message: 'This student already has a card.' ,Username   : userByCode.Username});
+    if (userByCode.cardId) {
+      return res.status(400).json({ message: 'This student already has a card.', Username: userByCode.Username });
     }
 
     if (userHasCard) {
-      return res.status(400).json({ message: "This card has already been used." ,Username   : `Used by ${userHasCard.Username}`});
+      return res.status(400).json({ message: "This card has already been used.", Username: `Used by ${userHasCard.Username}` });
     }
 
-    
 
-      await User.updateOne(
-        { Code: studentCode },
-        {
-          cardId: assignedCard,
-        }
-      ).then((result) => {
-        return res.status(200).json({ message: 'تم اضافه الكارت للطالب بنجاح' ,Username   : userByCode.Username});
-      }).catch((err) => {
-        console.error(err);
-        return res.status(500).json({ message: 'يبدو ان هناك خطأ ما ' ,Username   : null});
-      });
+
+    await User.updateOne(
+      { Code: studentCode },
+      {
+        cardId: assignedCard,
+      }
+    ).then((result) => {
+      return res.status(200).json({ message: 'تم اضافه الكارت للطالب بنجاح', Username: userByCode.Username });
+    }).catch((err) => {
+      console.error(err);
+      return res.status(500).json({ message: 'يبدو ان هناك خطأ ما ', Username: null });
+    });
 
   } catch (error) {
     console.error('Error adding card:', error);
-    return res.status(500).json({ message:'يبدو ان هناك خطأ ما ' ,Username   : null});
+    return res.status(500).json({ message: 'يبدو ان هناك خطأ ما ', Username: null });
   }
 };
 
@@ -884,7 +675,7 @@ const markAttendance = async (req, res) => {
   } = req.body;
 
   try {
-    
+
     const student = await User.findOne({
       $or: [{ cardId: attendId }, { Code: +attendId }],
     });
@@ -893,68 +684,68 @@ const markAttendance = async (req, res) => {
       return res.status(404).json({ message: 'Student Not found' });
     }
 
-    let HWmessage ='';
-// if(attendWithOutHW){
-//   HWmessage = '*تم تسجيل حضور الطالب بدون واجب*';
-// }else if(HWwithOutSteps){
-//   HWmessage = '*لقد قام الطالب بحل الواجب لكن بدون خطوات*';
-// }else{
-//   HWmessage = '*لقد قام الطالب بحل الواجب بالخطوات*';
-// }
+    let HWmessage = '';
+    // if(attendWithOutHW){
+    //   HWmessage = '*تم تسجيل حضور الطالب بدون واجب*';
+    // }else if(HWwithOutSteps){
+    //   HWmessage = '*لقد قام الطالب بحل الواجب لكن بدون خطوات*';
+    // }else{
+    //   HWmessage = '*لقد قام الطالب بحل الواجب بالخطوات*';
+    // }
 
 
-      console.log(student._id);
+    console.log(student._id);
     // Check if student is in the group
-    let group =null;
-        if (!attendOtherGroup) {
-          group = await Group.findOne({
-            CenterName: centerName,
-            Grade: Grade,
-            GroupTime: GroupTime,
-            gradeType: gradeType,
-            students: student._id,
-          });
-        }else{
-          group = await Group.findOne({
-            CenterName: centerName,
-            Grade: Grade,
-            GroupTime: GroupTime,
-            gradeType: gradeType,
-          });
-        }
+    let group = null;
+    if (!attendOtherGroup) {
+      group = await Group.findOne({
+        CenterName: centerName,
+        Grade: Grade,
+        GroupTime: GroupTime,
+        gradeType: gradeType,
+        students: student._id,
+      });
+    } else {
+      group = await Group.findOne({
+        CenterName: centerName,
+        Grade: Grade,
+        GroupTime: GroupTime,
+        gradeType: gradeType,
+      });
+    }
 
-     if (!group) {
-            return res
-              .status(404)
-              .json({ message: 'Student Not Found in This Group' });
-     }
-    
+    if (!group) {
+      return res
+        .status(404)
+        .json({ message: 'Student Not Found in This Group' });
+    }
 
 
-   let message = '';
+
+    let message = '';
     if (student.absences >= 3) {
 
-      if (attendAbsencet){
+      if (attendAbsencet) {
         student.absences -= 1;
-       
-      }else{
+
+      } else {
         return res.status(400).json({
           message: 'Student has already been marked absent 3 times',
         });
       }
-      
+
     }
 
 
-    
+
     // Mark student as present in today's attendance
     const today = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Africa/Cairo', // Egypt's time zone
+      timeZone: 'Africa/Cairo', // Egypt's time zone
     }).format(new Date());
 
     let attendance = await Attendance.findOne({
-        date: today,
-        groupId: group._id,
+      date: today,
+      groupId: group._id,
     });
 
     if (!attendance) {
@@ -968,7 +759,7 @@ const markAttendance = async (req, res) => {
       });
     }
 
-  
+
     // Check if student is already marked as present
     if (attendance.studentsPresent.includes(student._id)) {
       return res
@@ -1025,8 +816,8 @@ const markAttendance = async (req, res) => {
           date: today,
           atTime: new Date().toLocaleTimeString(),
           status: 'Late',
-          amountPaid : student.balance || 0,
-          amountRemaining : student.amountRemaining || 0,
+          amountPaid: student.balance || 0,
+          amountRemaining: student.amountRemaining || 0,
         });
       }
 
@@ -1052,23 +843,26 @@ const markAttendance = async (req, res) => {
 التاريخ: ${today}
 *شكرًا لتعاونكم.*`;
 
-      // Send the message via the waapi (already present)
+      // Send notification to parent
       try {
         // Check if parent phone exists
         if (!student.parentPhone) {
           console.log(`Warning: No parent phone for student ${student.Username} (ID: ${student._id})`);
         } else {
-          console.log(`Sending WhatsApp message to parent phone: ${student.parentPhone} for student: ${student.Username}`);
-          await sendWappiMessage(messageWappi, student.parentPhone, req.userData.phone);
-          console.log('WhatsApp message sent successfully for late attendance');
+          console.log(`Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`);
+          await sendNotificationMessage(student.parentPhone, messageWappi, {
+            studentName: student.Username,
+            type: 'attendance_late'
+          });
+          console.log('Notification sent successfully for late attendance');
         }
-      } catch (whatsappError) {
-        console.error('WhatsApp message error for late attendance:', whatsappError.message);
-        // Continue with attendance marking even if WhatsApp fails
+      } catch (notificationError) {
+        console.error('Notification error for late attendance:', notificationError.message);
+        // Continue with attendance marking even if notification fails
         // The attendance is already saved, so we don't want to fail the entire operation
       }
 
- 
+
       return res.status(200).json({
         message: 'The Student Marked As Late \n' + message,
         studentsPresent: attendance.studentsPresent,
@@ -1077,28 +871,28 @@ const markAttendance = async (req, res) => {
       });
     } else {
 
-          let message = '';
-          if (student.absences == 2) {
-            message = 'The student has 2 absences and 1 remaining';
-          }
-          // // Check if student is already marked absent 3 times
-          // if (student.absences >= 3) {
-          //   return res
-          //     .status(400)
-          //     .json({
-          //       message: 'Student has already been marked absent 3 times',
-          //     });
-          // }
-          let statusMessage =''
-          if(attendOtherGroup){
-            attendance.studentsExcused.push(student._id);
-            statusMessage = 'Present From Other Group'
-          }else{
+      let message = '';
+      if (student.absences == 2) {
+        message = 'The student has 2 absences and 1 remaining';
+      }
+      // // Check if student is already marked absent 3 times
+      // if (student.absences >= 3) {
+      //   return res
+      //     .status(400)
+      //     .json({
+      //       message: 'Student has already been marked absent 3 times',
+      //     });
+      // }
+      let statusMessage = ''
+      if (attendOtherGroup) {
+        attendance.studentsExcused.push(student._id);
+        statusMessage = 'Present From Other Group'
+      } else {
 
-           attendance.studentsPresent.push(student._id);
-            statusMessage = 'Present'
-          }
-          
+        attendance.studentsPresent.push(student._id);
+        statusMessage = 'Present'
+      }
+
 
 
       await attendance.save();
@@ -1109,7 +903,7 @@ const markAttendance = async (req, res) => {
       await attendance.populate('studentsExcused');
       console.log(attendance.studentsExcused);
 
-      if (attendOtherGroup){
+      if (attendOtherGroup) {
         student.AttendanceHistory.push({
           attendance: attendance._id,
           date: today,
@@ -1136,7 +930,7 @@ const markAttendance = async (req, res) => {
         hwLine = `\nولم يقم الطالب بحل الواجب.`;
       }
 
-const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
+      const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
 نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
 وقد تم تسجيل حضوره *بنجاح*.${hwLine}\n
 وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
@@ -1145,19 +939,22 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 *شكرًا لتعاونكم.*`;
 
 
-      // Send the message via the waapi (already present)
+      // Send notification to parent
       try {
         // Check if parent phone exists
         if (!student.parentPhone) {
           console.log(`Warning: No parent phone for student ${student.Username} (ID: ${student._id})`);
         } else {
-          console.log(`Sending WhatsApp message to parent phone: ${student.parentPhone} for student: ${student.Username}`);
-          await sendWappiMessage(messageWappi, student.parentPhone, req.userData.phone);
-          console.log('WhatsApp message sent successfully');
+          console.log(`Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`);
+          await sendNotificationMessage(student.parentPhone, messageWappi, {
+            studentName: student.Username,
+            type: 'attendance_present'
+          });
+          console.log('Notification sent successfully');
         }
-      } catch (whatsappError) {
-        console.error('WhatsApp message error:', whatsappError.message);
-        // Continue with attendance marking even if WhatsApp fails
+      } catch (notificationError) {
+        console.error('Notification error:', notificationError.message);
+        // Continue with attendance marking even if notification fails
         // The attendance is already saved, so we don't want to fail the entire operation
       }
 
@@ -1188,7 +985,7 @@ const getAttendedUsers = async (req, res) => {
   const group = await Group.findOne({
     CenterName: centerName,
     Grade: Grade,
-    gradeType : gradeType,
+    gradeType: gradeType,
     GroupTime: GroupTime,
   });
 
@@ -1238,7 +1035,7 @@ const removeAttendance = async (req, res) => {
       CenterName: centerName,
       Grade: Grade,
       GroupTime: GroupTime,
-      gradeType : gradeType,
+      gradeType: gradeType,
       students: student._id, // Ensure the student is part of this group
     });
 
@@ -1341,7 +1138,7 @@ const updateAmount = async (req, res) => {
       console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
       return res.status(500).json({ message: 'Error updating student data' });
     }
-    
+
     return res.status(200).json({ message: 'Amount updated successfully' });
   }
   catch (error) {
@@ -1358,7 +1155,7 @@ const finalizeAttendance = async (req, res) => {
     const group = await Group.findOne({
       CenterName: centerName,
       Grade: Grade,
-      gradeType : gradeType,
+      gradeType: gradeType,
       GroupTime: GroupTime,
     });
 
@@ -1367,9 +1164,9 @@ const finalizeAttendance = async (req, res) => {
     }
 
     // Find today's attendance record for the group
-      const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Cairo', // Egypt's time zone
-  }).format(new Date());
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo', // Egypt's time zone
+    }).format(new Date());
 
     let attendance = await Attendance.findOne({
       groupId: group._id,
@@ -1389,30 +1186,30 @@ const finalizeAttendance = async (req, res) => {
     const groupStudentIds = group.students;
 
     for (const studentId of groupStudentIds) {
-  
+
       const isPresent = attendance.studentsPresent.some((id) =>
         id.equals(studentId)
       );
       const isLate = attendance.studentsLate.some((id) => id.equals(studentId));
 
-      console.log( isPresent , isLate);
+      console.log(isPresent, isLate);
       if (!isPresent && !isLate) {
-      
+
         if (!attendance.studentsAbsent.includes(studentId)) {
           attendance.studentsAbsent.push(studentId);
 
           const student = await User.findById(studentId);
-         
+
           if (student) {
-          
+
             student.absences = (student.absences || 0) + 1;
-            student.AttendanceHistory.push({  
+            student.AttendanceHistory.push({
               attendance: attendance._id,
               date: today,
-              atTime : new Date().toLocaleTimeString(),
+              atTime: new Date().toLocaleTimeString(),
               status: 'Absent',
             });
-            
+
             // Save with validation disabled to avoid required field errors
             try {
               await student.save({ validateBeforeSave: false });
@@ -1430,8 +1227,8 @@ const finalizeAttendance = async (req, res) => {
     await attendance.populate('studentsAbsent');
     await attendance.populate('studentsPresent');
     await attendance.populate('studentsExcused');
- 
-  
+
+
 
     const workbook = new Excel.Workbook();
     const worksheet = workbook.addWorksheet('Attendance Data');
@@ -1486,7 +1283,7 @@ const finalizeAttendance = async (req, res) => {
     let totalAmount = 0;
     let totalAmountRemaining = 0;
 
-    attendance.studentsPresent.forEach(async(student) => {
+    attendance.studentsPresent.forEach(async (student) => {
       c++;
       const row = worksheet.addRow([
         c,
@@ -1558,7 +1355,7 @@ const finalizeAttendance = async (req, res) => {
       'Absences',
       'Amount',
       'Amount Remaining',
-      'Group Info' ,
+      'Group Info',
     ]);
     headerRow3.font = { bold: true };
     headerRow3.fill = {
@@ -1575,7 +1372,7 @@ const finalizeAttendance = async (req, res) => {
     let totalAmount3 = 0;
     let totalAmountRemaining3 = 0;
 
-    attendance.studentsExcused.forEach(async(student) => {
+    attendance.studentsExcused.forEach(async (student) => {
       c3++;
       const row = worksheet.addRow([
         c3,
@@ -1602,7 +1399,7 @@ const finalizeAttendance = async (req, res) => {
         };
       }
 
-const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
+      const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
 نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
 وقد تم تسجيل حضوره *بنجاح*.\n
 المبلغ المتبقي من سعر الحصة هو: *${student.amountRemaining} جنيه*.\n
@@ -1610,8 +1407,11 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 *شكرًا لتعاونكم.*`;
 
 
-      // Send the message via the waapi (already present)
-      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
+      // Send notification to parent
+      await sendNotificationMessage(student.parentPhone, messageWappi, {
+        studentName: student.Username,
+        type: 'attendance_present_finalize'
+      });
 
 
 
@@ -1670,7 +1470,7 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
     };
 
     let c2 = 0;
-    attendance.studentsAbsent.forEach(async(student) => {
+    attendance.studentsAbsent.forEach(async (student) => {
       c2++;
       const row = worksheet.addRow([
         c2,
@@ -1695,26 +1495,29 @@ const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Usern
 
 
 
-let subMessage = '';
-if (student.absences >= 3) {
-  subMessage = `\n\n❌ *وفقًا لعدد مرات الغياب التي تم تسجيلها لابنكم*، يرجى العلم أنه *لن يتمكن من دخول الحصة القادمة*.`;
-}
+      let subMessage = '';
+      if (student.absences >= 3) {
+        subMessage = `\n\n❌ *وفقًا لعدد مرات الغياب التي تم تسجيلها لابنكم*، يرجى العلم أنه *لن يتمكن من دخول الحصة القادمة*.`;
+      }
 
-const messageWappi = `❌ *عزيزي ولي أمر الطالب ${student.Username}*،\n
+      const messageWappi = `❌ *عزيزي ولي أمر الطالب ${student.Username}*،\n
 نود إعلامكم بأن ابنكم *لم يحضر اليوم*.\n
 وقد تم تسجيل غيابه .\n
 عدد مرات الغياب: *${student.absences}*.${subMessage}\n\n
 *شكرًا لتعاونكم.*`;
- 
 
-      // Send the message via the waapi (already present)
-      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
 
- 
+      // Send notification to parent
+      await sendNotificationMessage(student.parentPhone, messageWappi, {
+        studentName: student.Username,
+        type: 'attendance_present_finalize'
+      });
+
+
 
     });
 
- 
+
 
     // Add borders to all cells
     worksheet.eachRow((row, rowNumber) => {
@@ -1746,6 +1549,649 @@ const messageWappi = `❌ *عزيزي ولي أمر الطالب ${student.Usern
   }
 };
 
+// =================================================== All Notifications =================================================== //
+
+const Notification = require('../models/Notification');
+
+const allNotifications_get = async (req, res) => {
+  res.render('teacher/allNotifications', {
+    title: 'All Notifications',
+    path: req.path,
+  });
+};
+
+const getAllNotifications = async (req, res) => {
+  try {
+    const { startDate, endDate, type, phone, page = 1, limit = 20 } = req.query;
+
+    const query = {};
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    if (type) {
+      query.type = type;
+    }
+
+    if (phone) {
+      query.parentPhone = { $regex: phone, $options: 'i' };
+    }
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    const [notifications, total] = await Promise.all([
+      Notification.find(query)
+        .populate('studentId', 'Username Code phone parentPhone')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit, 10))
+        .lean(),
+      Notification.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / parseInt(limit, 10)) || 1;
+
+    res.json({
+      success: true,
+      data: notifications,
+      pagination: {
+        currentPage: parseInt(page, 10),
+        totalPages,
+        total,
+        limit: parseInt(limit, 10),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      data: null,
+    });
+  }
+};
+
+const getNotificationsStats = async (req, res) => {
+  try {
+    const { startDate, endDate, type, phone } = req.query;
+
+    const match = {};
+
+    if (startDate || endDate) {
+      match.createdAt = {};
+      if (startDate) {
+        match.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        match.createdAt.$lte = end;
+      }
+    }
+
+    if (type) {
+      match.type = type;
+    }
+
+    if (phone) {
+      match.parentPhone = { $regex: phone, $options: 'i' };
+    }
+
+    const stats = await Notification.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const total = await Notification.countDocuments(match);
+
+    const formattedStats = {
+      total,
+      attendance: 0,
+      payment: 0,
+      homework: 0,
+      block: 0,
+      unblock: 0,
+      custom: 0,
+    };
+
+    stats.forEach((stat) => {
+      if (stat && stat._id && typeof formattedStats[stat._id] !== 'undefined') {
+        formattedStats[stat._id] = stat.count;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: formattedStats,
+    });
+  } catch (error) {
+    console.error('Error fetching notification stats:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      data: null,
+    });
+  }
+};
+
+// =================================================== Send Notifications =================================================== //
+
+const sendNotifications_get = async (req, res) => {
+  res.render('teacher/sendNotifications', {
+    title: 'Send Notifications',
+    path: req.path,
+  });
+};
+
+const searchStudentsForNotifications = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.length < 2) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Build the search query - Code is a Number field, so handle it separately
+    const searchConditions = [
+      { Username: { $regex: q, $options: 'i' } },
+      { phone: { $regex: q, $options: 'i' } },
+      { parentPhone: { $regex: q, $options: 'i' } },
+    ];
+
+    // Only add Code search if the query is a valid number
+    const parsedCode = parseInt(q, 10);
+    if (!isNaN(parsedCode)) {
+      searchConditions.push({ Code: parsedCode });
+    }
+
+    const students = await User.find({
+      $or: searchConditions,
+    })
+      .select('Username Code phone parentPhone fcmToken')
+      .limit(20)
+      .lean();
+
+    res.json({ success: true, data: students });
+  } catch (error) {
+    console.error('Error searching students:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+      data: [],
+    });
+  }
+};
+
+const sendNotificationsToStudents = async (req, res) => {
+  try {
+    const { students, title, message } = req.body;
+
+    if (!students || !Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى اختيار طالب واحد على الأقل',
+      });
+    }
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى كتابة نص الرسالة',
+      });
+    }
+
+    const studentDocs = await User.find({ _id: { $in: students } });
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const student of studentDocs) {
+      try {
+        const phone = student.parentPhone || student.phone;
+
+        if (!phone) {
+          failed += 1;
+          continue;
+        }
+
+        const result = await sendNotificationMessage(
+          phone,
+          `${title}: ${message}`,
+          {
+            studentCode: student.Code,
+            studentName: student.Username,
+          }
+        );
+
+        if (result.success) {
+          await Notification.create({
+            studentId: student._id,
+            parentPhone: phone,
+            type: 'custom',
+            title: title || 'Mayada Academy',
+            body: message,
+            data: { sentBy: 'teacher' },
+          });
+          sent += 1;
+        } else {
+          failed += 1;
+        }
+      } catch (err) {
+        console.error('Error sending notification to student:', err);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      message: `تم إرسال ${sent} إشعار بنجاح`,
+    });
+  } catch (error) {
+    console.error('Error sending notifications to students:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendCustomNotification = async (req, res) => {
+  try {
+    const { phone, title, message } = req.body;
+
+    if (!phone || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى ملء جميع الحقول المطلوبة',
+      });
+    }
+
+    const normalized = phone.replace(/\D/g, '').slice(-9);
+
+    const student = await User.findOne({
+      $or: [
+        { phone: { $regex: normalized } },
+        { parentPhone: { $regex: normalized } },
+      ],
+    });
+
+    const result = await sendNotificationMessage(
+      phone,
+      `${title || 'Mayada Academy'}: ${message}`
+    );
+
+    if (result.success) {
+      await Notification.create({
+        studentId: student?._id,
+        parentPhone: phone,
+        type: 'custom',
+        title: title || 'Mayada Academy',
+        body: message,
+        data: { sentBy: 'custom' },
+      });
+
+      res.json({
+        success: true,
+        message: 'تم إرسال الإشعار بنجاح',
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message || 'فشل في إرسال الإشعار',
+      });
+    }
+  } catch (error) {
+    console.error('Error sending custom notification:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendNotificationToAllParents = async (req, res) => {
+  try {
+    const { title, message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى كتابة نص الرسالة',
+      });
+    }
+
+    const query = { parentPhone: { $exists: true, $ne: null, $ne: '' } };
+
+    const parents = await User.find(query)
+      .select('Username Code phone parentPhone fcmToken')
+      .lean();
+
+    let sent = 0;
+    let failed = 0;
+    const total = parents.length;
+
+    for (const parent of parents) {
+      try {
+        const phone = parent.parentPhone;
+
+        if (!phone) {
+          failed += 1;
+          continue;
+        }
+
+        const personalizedMessage = message.replace(
+          /{name}/g,
+          parent.Username || 'الطالب'
+        );
+
+        const result = await sendNotificationMessage(
+          phone,
+          `${title || 'Mayada Academy'}: ${personalizedMessage}`
+        );
+
+        if (result.success) {
+          await Notification.create({
+            studentId: parent._id,
+            parentPhone: phone,
+            type: 'custom',
+            title: title || 'Mayada Academy',
+            body: personalizedMessage,
+            data: { sentBy: 'all_parents_broadcast' },
+          });
+          sent += 1;
+        } else {
+          failed += 1;
+        }
+      } catch (err) {
+        console.error('Error sending notification to parent:', err);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      total,
+      message: `تم إرسال ${sent} إشعار من أصل ${total}`,
+    });
+  } catch (error) {
+    console.error('Error sending notifications to all parents:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const getGroupStudentsForNotifications = async (req, res) => {
+  try {
+    const { centerName, Grade, gradeType, groupTime } = req.query;
+
+    if (!centerName || !Grade || !gradeType || !groupTime) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى ملء جميع الحقول المطلوبة',
+      });
+    }
+
+    const query = { centerName, Grade, gradeType, groupTime };
+
+    const students = await User.find(query)
+      .select('Username Code phone parentPhone fcmToken _id')
+      .lean();
+
+    res.json({
+      success: true,
+      students,
+    });
+  } catch (error) {
+    console.error('Error getting group students for notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendNotificationsToGroup = async (req, res) => {
+  try {
+    const {
+      data,
+      centerName,
+      Grade,
+      gradeType,
+      groupTime,
+      option,
+      quizName,
+      maxGrade,
+      messageContent,
+    } = req.body;
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا توجد بيانات للإرسال',
+      });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const item of data) {
+      try {
+        let messageToSend = '';
+
+        if (option === 'HWStatus') {
+          if (item.hwStatus === 'none') continue;
+
+          const hwText =
+            item.hwStatus === 'yes' ? 'حل الواجب ✅' : 'لم يحل الواجب ❌';
+          const solvText =
+            item.solvStatus === 'true' ? ' (بدون خطوات)' : '';
+          messageToSend = `مرحباً ولي أمر الطالب ${item.studentName}\nحالة الواجب: ${hwText}${solvText}`;
+        } else if (option === 'gradeMsg') {
+          if (!item.grade || item.grade === '') continue;
+
+          messageToSend = `مرحباً ولي أمر الطالب ${item.studentName}\nنتيجة امتحان: ${quizName}\nالدرجة: ${item.grade}/${maxGrade}`;
+        } else if (option === 'sendMsg') {
+          messageToSend = messageContent.replace(
+            /{name}/g,
+            item.studentName || 'الطالب'
+          );
+        }
+
+        if (!item.parentPhone || item.parentPhone === '-') {
+          failed += 1;
+          continue;
+        }
+
+        try {
+          const result = await sendNotificationMessage(
+            item.parentPhone,
+            `Mayada Academy: ${messageToSend}`
+          );
+
+          if (result.success) {
+            const notificationType =
+              option === 'HWStatus' ? 'homework' : 'custom';
+            await Notification.create({
+              parentPhone: item.parentPhone,
+              type: notificationType,
+              title: 'Mayada Academy',
+              body: messageToSend,
+              data: {
+                sentBy: 'group_notification',
+                centerName,
+                Grade,
+                gradeType,
+                groupTime,
+                option,
+              },
+            });
+            sent += 1;
+          } else {
+            failed += 1;
+            errors.push(item.parentPhone);
+          }
+        } catch (phoneErr) {
+          console.error('Error sending to phone:', item.parentPhone, phoneErr);
+          failed += 1;
+          errors.push(item.parentPhone);
+        }
+      } catch (itemErr) {
+        console.error('Error processing item:', itemErr);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      errors,
+      message: `تم إرسال ${sent} إشعار`,
+    });
+  } catch (error) {
+    console.error('Error sending notifications to group:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendNotificationFromExcelJson = async (req, res) => {
+  try {
+    const {
+      title = 'Mayada Academy',
+      sendType,
+      phoneColumn,
+      nameColumn,
+      hwColumn,
+      quizName,
+      gradeColumn,
+      maxGrade,
+      messageContent,
+      excelData,
+    } = req.body;
+
+    if (!sendType || !phoneColumn || !nameColumn) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى إدخال نوع الإرسال وأسماء الأعمدة المطلوبة',
+      });
+    }
+
+    if (!excelData || !Array.isArray(excelData) || excelData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا توجد بيانات في الملف',
+      });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const total = excelData.length;
+
+    for (const row of excelData) {
+      const phone = row[phoneColumn]?.toString();
+      const name = row[nameColumn]?.toString();
+
+      if (!phone) {
+        failed += 1;
+        continue;
+      }
+
+      try {
+        let messageToSend = '';
+
+        if (sendType === 'hwStatus') {
+          const hwStatus = hwColumn ? row[hwColumn]?.toString() : '';
+          if (!hwStatus) {
+            failed += 1;
+            continue;
+          }
+          const hwText =
+            hwStatus.toLowerCase() === 'yes' || hwStatus === 'نعم'
+              ? 'حل الواجب ✅'
+              : 'لم يحل الواجب ❌';
+          messageToSend = `مرحباً ولي أمر الطالب ${name}\nحالة الواجب: ${hwText}`;
+        } else if (sendType === 'gradeMsg') {
+          const gradeValue = gradeColumn ? row[gradeColumn]?.toString() : '';
+          if (!gradeValue) {
+            failed += 1;
+            continue;
+          }
+          messageToSend = `مرحباً ولي أمر الطالب ${name}\nنتيجة امتحان: ${quizName}\nالدرجة: ${gradeValue}/${maxGrade}`;
+        } else if (sendType === 'sendMsg') {
+          messageToSend = messageContent.replace(/{name}/g, name || 'الطالب');
+        }
+
+        const result = await sendNotificationMessage(
+          phone,
+          `${title}: ${messageToSend}`
+        );
+
+        if (result.success) {
+          const notificationType =
+            sendType === 'hwStatus'
+              ? 'homework'
+              : sendType === 'gradeMsg'
+                ? 'custom'
+                : 'custom';
+
+          await Notification.create({
+            parentPhone: phone,
+            type: notificationType,
+            title,
+            body: messageToSend,
+            data: { sentBy: 'excel', source: 'excel_json', sendType },
+          });
+          sent += 1;
+        } else {
+          failed += 1;
+        }
+      } catch (err) {
+        console.error('Error sending notification from excel row:', err);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      total,
+      message: `تم إرسال ${sent} إشعار من أصل ${total}`,
+    });
+  } catch (error) {
+    console.error('Error processing excel json data:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+
 
 
 
@@ -1756,16 +2202,16 @@ const messageWappi = `❌ *عزيزي ولي أمر الطالب ${student.Usern
 // =================================================== Handel Attendance =================================================== //
 
 const handelAttendanceGet = async (req, res) => {
- 
+
   res.render('teacher/handelAttendance', { title: 'handelAttendance', path: req.path });
 }
 
 
 const getDates = async (req, res) => {
-  const { Grade, centerName, GroupTime , gradeType } = req.body;
+  const { Grade, centerName, GroupTime, gradeType } = req.body;
   console.log(Grade, centerName, GroupTime);
   try {
-    const group = await Group.findOne({ Grade, CenterName: centerName, GroupTime , gradeType });
+    const group = await Group.findOne({ Grade, CenterName: centerName, GroupTime, gradeType });
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
@@ -1787,37 +2233,37 @@ const getDates = async (req, res) => {
 }
 
 const getAttendees = async (req, res) => {
-    const { Grade, centerName, GroupTime, gradeType, date } = req.body;
+  const { Grade, centerName, GroupTime, gradeType, date } = req.body;
 
-    try {
-      const group = await Group.findOne({
-        Grade,
-        CenterName: centerName,
-        GroupTime,
-        gradeType,
-      });
+  try {
+    const group = await Group.findOne({
+      Grade,
+      CenterName: centerName,
+      GroupTime,
+      gradeType,
+    });
 
-      if (!group) {
-        return res.status(404).json({ message: 'Group not found' });
-      }
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
 
-      const attendance = await Attendance.findOne({ groupId: group._id, date }).populate('studentsPresent studentsAbsent studentsLate studentsExcused');
+    const attendance = await Attendance.findOne({ groupId: group._id, date }).populate('studentsPresent studentsAbsent studentsLate studentsExcused');
 
-      if (!attendance) {
-        return res.status(404).json({ message: 'No attendance record found for this session.' });
-      }
+    if (!attendance) {
+      return res.status(404).json({ message: 'No attendance record found for this session.' });
+    }
 
-      return res.status(200).json({ attendance , message: 'Attendance record found successfully' });
-    } catch (error) {
-      console.error('Error fetching attendees:', error);
-      return res.status(500).json({ message: 'Server error. Please try again.' });
+    return res.status(200).json({ attendance, message: 'Attendance record found successfully' });
+  } catch (error) {
+    console.error('Error fetching attendees:', error);
+    return res.status(500).json({ message: 'Server error. Please try again.' });
 
-}
+  }
 
 }
 
 const convertAttendeesToExcel = async (req, res) => {
-  const { centerName, Grade, GroupTime , gradeType } = req.body;
+  const { centerName, Grade, GroupTime, gradeType } = req.body;
 
   try {
     // Find the group
@@ -2156,8 +2602,11 @@ const convertAttendeesToExcel = async (req, res) => {
 *شكرًا لتعاونكم.*`;
 
 
-      // Send the message via the waapi (already present)
-      await sendWappiMessage(messageWappi, student.parentPhone,req.userData.phone);
+      // Send notification to parent
+      await sendNotificationMessage(student.parentPhone, messageWappi, {
+        studentName: student.Username,
+        type: 'attendance_present_finalize'
+      });
 
     });
 
@@ -2379,8 +2828,8 @@ const convertAttendaceToExcel = async (req, res) => {
         };
       });
     });
-  const buffer = await workbook.xlsx.writeBuffer(); // Generates buffer from workbook
-  const base64Excel = buffer.toString('base64'); 
+    const buffer = await workbook.xlsx.writeBuffer(); // Generates buffer from workbook
+    const base64Excel = buffer.toString('base64');
     // Define the file path to save the report locally
     const fileName = `${studentCode}_attendance.xlsx`;
     const filePath = path.join(reportsDirectory, fileName);
@@ -2417,13 +2866,7 @@ const convertAttendaceToExcel = async (req, res) => {
 // =================================================== END My Student Data =================================================== //
 
 
-// =================================================== Whats App =================================================== //
-
-
-
-const whatsApp_get = (req,res)=>{
-  res.render('teacher/whatsApp', { title: 'whatsApp', path: req.path });
-}
+// =================================================== Notifications =================================================== //
 
 
 const sendGradeMessages = async (req, res) => {
@@ -2442,7 +2885,7 @@ const sendGradeMessages = async (req, res) => {
   let successCount = 0;
   let errorCount = 0;
   let errors = [];
-  
+
   // Emit initial status
   req.io.emit('sendingMessages', {
     nMessages: 0,
@@ -2455,19 +2898,19 @@ const sendGradeMessages = async (req, res) => {
   try {
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-        for (let i = 0; i < dataToSend.length; i++) {
+    for (let i = 0; i < dataToSend.length; i++) {
       const student = dataToSend[i];
       const grade = student[gradeCloumnName] ?? 0;
       const phone = student[phoneCloumnName];
       const name = student[nameCloumnName];
-      
+
       // Check if student entered the exam (default to 1 if not specified)
       const examEntry = examEntryCloumnName ? (student[examEntryCloumnName] ?? 1) : 1;
 
       console.log(`Processing ${i + 1}/${dataToSend.length}: ${name} (${phone})`);
 
       let message = '';
-      
+
       if (isOnlineQuiz) {
         // Online Quiz format
         if (examEntry === 0) {
@@ -2516,9 +2959,11 @@ ${courseName || ''}
       }
 
       try {
-        const result = await sendWappiMessage(message, phone, req.userData.phone);
+        const result = await sendNotificationMessage(phone, message, {
+          type: 'grade_message'
+        });
         successCount++;
-        
+
         // Emit progress update
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -2529,9 +2974,9 @@ ${courseName || ''}
           currentStudent: name,
           lastResult: 'success'
         });
-        
+
         console.log(`✅ Success: Message sent to ${name}`);
-        
+
       } catch (err) {
         errorCount++;
         const errorInfo = {
@@ -2541,7 +2986,7 @@ ${courseName || ''}
           timestamp: new Date().toISOString()
         };
         errors.push(errorInfo);
-        
+
         // Emit progress update with error
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -2553,7 +2998,7 @@ ${courseName || ''}
           lastResult: 'error',
           lastError: err.message
         });
-        
+
         console.error(`❌ Error sending message to ${name}:`, err.message);
       }
 
@@ -2576,7 +3021,7 @@ ${courseName || ''}
     });
 
     if (errorCount > 0) {
-      res.status(207).json({ 
+      res.status(207).json({
         message: `Messages completed with ${errorCount} errors`,
         successCount,
         errorCount,
@@ -2584,17 +3029,17 @@ ${courseName || ''}
         totalMessages: dataToSend.length
       });
     } else {
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
         totalMessages: dataToSend.length
       });
     }
-    
+
   } catch (error) {
     console.error('Critical error in sendGradeMessages:', error);
-    
+
     // Emit error status
     req.io.emit('sendingMessages', {
       nMessages: 0,
@@ -2604,8 +3049,8 @@ ${courseName || ''}
       status: 'failed',
       error: error.message
     });
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'Critical error occurred while sending messages',
       error: error.message,
       successCount,
@@ -2623,7 +3068,7 @@ const sendMessages = async (req, res) => {
   let successCount = 0;
   let errorCount = 0;
   let errors = [];
-  
+
   // Emit initial status
   req.io.emit('sendingMessages', {
     nMessages: 0,
@@ -2640,7 +3085,7 @@ const sendMessages = async (req, res) => {
       const student = dataToSend[i];
       let msg = '';
       const courseNameText = courseName || 'Basics Course';
-      
+
       if (!student[HWCloumnName]) {
         msg = `بعدم حل واجب حصة اليوم❌`;
       } else {
@@ -2656,9 +3101,12 @@ ${courseNameText}
 ${msg}`;
 
       try {
-        const result = await sendWappiMessage(theMessage, student[phoneCloumnName], req.userData.phone);
+        const result = await sendNotificationMessage(student[phoneCloumnName], theMessage, {
+          studentName: student[nameCloumnName],
+          type: 'homework_status'
+        });
         successCount++;
-        
+
         // Emit progress update
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -2669,9 +3117,9 @@ ${msg}`;
           currentStudent: student[nameCloumnName],
           lastResult: 'success'
         });
-        
+
         console.log(`✅ Success: Message sent to ${student[nameCloumnName]}`);
-        
+
       } catch (err) {
         errorCount++;
         const errorInfo = {
@@ -2681,7 +3129,7 @@ ${msg}`;
           timestamp: new Date().toISOString()
         };
         errors.push(errorInfo);
-        
+
         // Emit progress update with error
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -2693,7 +3141,7 @@ ${msg}`;
           lastResult: 'error',
           lastError: err.message
         });
-        
+
         console.error(`❌ Error sending message to ${student[nameCloumnName]}:`, err.message);
       }
 
@@ -2716,7 +3164,7 @@ ${msg}`;
     });
 
     if (errorCount > 0) {
-      res.status(207).json({ 
+      res.status(207).json({
         message: `Messages completed with ${errorCount} errors`,
         successCount,
         errorCount,
@@ -2724,17 +3172,17 @@ ${msg}`;
         totalMessages: dataToSend.length
       });
     } else {
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
         totalMessages: dataToSend.length
       });
     }
-    
+
   } catch (error) {
     console.error('Critical error in sendMessages:', error);
-    
+
     // Emit error status
     req.io.emit('sendingMessages', {
       nMessages: 0,
@@ -2744,8 +3192,8 @@ ${msg}`;
       status: 'failed',
       error: error.message
     });
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'Critical error occurred while sending messages',
       error: error.message,
       successCount,
@@ -2771,7 +3219,7 @@ const sendCustomMessages = async (req, res) => {
   let errorCount = 0;
   let errors = [];
   let totalMessages = 0;
-  
+
   // Calculate total messages to be sent
   for (const row of dataToSend) {
     const targets = [];
@@ -2785,7 +3233,7 @@ const sendCustomMessages = async (req, res) => {
     }
     totalMessages += targets.length;
   }
-  
+
   // Emit initial status
   req.io.emit('sendingMessages', {
     nMessages: 0,
@@ -2821,10 +3269,14 @@ const sendCustomMessages = async (req, res) => {
             : `عزيزي الطالب ${name}`;
           const personalizedText = `${header}\n\n${baseMessage}`;
 
-          await sendWappiMessage(personalizedText, target.phone, req.userData.phone);
+          await sendNotificationMessage(target.phone, personalizedText, {
+            studentName: name,
+            type: 'custom_message',
+            recipientType: target.type
+          });
           successCount++;
           messageIndex++;
-          
+
           // Emit progress update
           req.io.emit('sendingMessages', {
             nMessages: messageIndex,
@@ -2836,9 +3288,9 @@ const sendCustomMessages = async (req, res) => {
             lastResult: 'success',
             targetType: target.type
           });
-          
+
           console.log(`✅ Success: Message sent to ${name} (${target.type})`);
-          
+
         } catch (err) {
           errorCount++;
           messageIndex++;
@@ -2850,7 +3302,7 @@ const sendCustomMessages = async (req, res) => {
             timestamp: new Date().toISOString()
           };
           errors.push(errorInfo);
-          
+
           // Emit progress update with error
           req.io.emit('sendingMessages', {
             nMessages: messageIndex,
@@ -2863,7 +3315,7 @@ const sendCustomMessages = async (req, res) => {
             lastError: err.message,
             targetType: target.type
           });
-          
+
           console.error(`❌ Error sending message to ${name} (${target.type}):`, err.message);
         }
 
@@ -2883,7 +3335,7 @@ const sendCustomMessages = async (req, res) => {
     });
 
     if (errorCount > 0) {
-      res.status(207).json({ 
+      res.status(207).json({
         message: `Messages completed with ${errorCount} errors`,
         successCount,
         errorCount,
@@ -2891,17 +3343,17 @@ const sendCustomMessages = async (req, res) => {
         totalMessages: totalMessages
       });
     } else {
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
         totalMessages: totalMessages
       });
     }
-    
+
   } catch (error) {
     console.error('Critical error in sendCustomMessages:', error);
-    
+
     // Emit error status
     req.io.emit('sendingMessages', {
       nMessages: 0,
@@ -2911,8 +3363,8 @@ const sendCustomMessages = async (req, res) => {
       status: 'failed',
       error: error.message
     });
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'Critical error occurred while sending messages',
       error: error.message,
       successCount,
@@ -2928,17 +3380,12 @@ const sendCustomMessages = async (req, res) => {
 
 
 
-// =================================================== Whats app 2 =================================================== //
-
-
-const whatsApp2_get = (req, res) => {
-  res.render('teacher/whatsApp2', { title: 'whatsApp2', path: req.path });
-}
+// =================================================== Student Data =================================================== //
 
 const getDataStudentInWhatsApp = async (req, res) => {
-  const {centerName,Grade,gradeType,groupTime} = req.query 
+  const { centerName, Grade, gradeType, groupTime } = req.query
   try {
-    const group = await Group.findOne({CenterName:centerName,Grade,gradeType,GroupTime:groupTime}).populate('students')
+    const group = await Group.findOne({ CenterName: centerName, Grade, gradeType, GroupTime: groupTime }).populate('students')
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
@@ -2957,7 +3404,7 @@ const submitData = async (req, res) => {
   let successCount = 0;
   let errorCount = 0;
   let errors = [];
-  
+
   // Emit initial status
   req.io.emit('sendingMessages', {
     nMessages: 0,
@@ -2973,7 +3420,7 @@ const submitData = async (req, res) => {
     for (let i = 0; i < data.length; i++) {
       const student = data[i];
       let theMessage = '';
-      
+
       if (option === 'HWStatus') {
         let msg = '';
         if (student['hwStatus'] == 'no') {
@@ -2990,14 +3437,17 @@ ${msg}
         theMessage = `
 السلام عليكم
 مع حضرتك Assistant Miss Mayada EST/ACT/SAT Teacher
-برجاء العلم ان تم حصول الطالب ${student['studentName']} على درجة (${student['grade']? student['grade'] : 'لم يحضر' }) من (${maxGrade}) في (${quizName})
+برجاء العلم ان تم حصول الطالب ${student['studentName']} على درجة (${student['grade'] ? student['grade'] : 'لم يحضر'}) من (${maxGrade}) في (${quizName})
 `;
       }
 
       try {
-        await sendWappiMessage(theMessage, student['parentPhone'], req.userData.phone);
+        await sendNotificationMessage(student['parentPhone'], theMessage, {
+          studentName: student['studentName'],
+          type: option === 'HWStatus' ? 'homework_status' : 'grade_message'
+        });
         successCount++;
-        
+
         // Emit progress update
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -3008,9 +3458,9 @@ ${msg}
           currentStudent: student['studentName'],
           lastResult: 'success'
         });
-        
+
         console.log(`✅ Success: Message sent to ${student['studentName']}`);
-        
+
       } catch (err) {
         errorCount++;
         const errorInfo = {
@@ -3020,7 +3470,7 @@ ${msg}
           timestamp: new Date().toISOString()
         };
         errors.push(errorInfo);
-        
+
         // Emit progress update with error
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -3032,7 +3482,7 @@ ${msg}
           lastResult: 'error',
           lastError: err.message
         });
-        
+
         console.error(`❌ Error sending message to ${student['studentName']}:`, err.message);
       }
 
@@ -3055,7 +3505,7 @@ ${msg}
     });
 
     if (errorCount > 0) {
-      res.status(207).json({ 
+      res.status(207).json({
         message: `Messages completed with ${errorCount} errors`,
         successCount,
         errorCount,
@@ -3063,17 +3513,17 @@ ${msg}
         totalMessages: data.length
       });
     } else {
-      res.status(200).json({ 
+      res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
         totalMessages: data.length
       });
     }
-    
+
   } catch (error) {
     console.error('Critical error in submitData:', error);
-    
+
     // Emit error status
     req.io.emit('sendingMessages', {
       nMessages: 0,
@@ -3083,8 +3533,8 @@ ${msg}
       status: 'failed',
       error: error.message
     });
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'Critical error occurred while sending messages',
       error: error.message,
       successCount,
@@ -3096,21 +3546,21 @@ ${msg}
 
 
 const sendAttendanceMessages = async (req, res) => {
-  const { 
-    courseName, 
-    phoneColumnName, 
-    nameColumnName, 
-    attendanceValueColumnName, 
-    attendanceTimeColumnName, 
+  const {
+    courseName,
+    phoneColumnName,
+    nameColumnName,
+    attendanceValueColumnName,
+    attendanceTimeColumnName,
     cameraColumnName,
-    totalSessionTime, 
-    dataToSend 
+    totalSessionTime,
+    dataToSend
   } = req.body;
 
   let successCount = 0;
   let errorCount = 0;
   let errors = [];
-  
+
   // Emit initial status
   req.io.emit('sendingMessages', {
     nMessages: 0,
@@ -3130,9 +3580,9 @@ const sendAttendanceMessages = async (req, res) => {
       const attendanceValue = student[attendanceValueColumnName];
       const attendanceTime = attendanceTimeColumnName ? student[attendanceTimeColumnName] : null;
       const cameraStatus = cameraColumnName ? student[cameraColumnName] : null;
-      
+
       let message = '';
-      
+
       // Determine message based on attendance value
       if (attendanceValue == 1) {
         // Student attended
@@ -3142,7 +3592,7 @@ const sendAttendanceMessages = async (req, res) => {
         } else if (cameraStatus == 0) {
           cameraText = '\n\nمع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.';
         }
-        
+
         if (attendanceTime && attendanceTime > 0 && attendanceTime < totalSessionTime) {
           // Partial attendance
           message = `السلام عليكم 🙏🏻
@@ -3176,9 +3626,13 @@ ${courseName}
       }
 
       try {
-        await sendWasenderMessage(message, phoneNumber, req.userData.phone);
+        await sendNotificationMessage(phoneNumber, message, {
+          studentName: studentName,
+          type: 'attendance_status',
+          courseName: courseName
+        });
         successCount++;
-        
+
         // Emit progress update
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -3189,9 +3643,9 @@ ${courseName}
           currentStudent: studentName,
           lastResult: 'success'
         });
-        
+
         console.log(`✅ Success: Attendance message sent to ${studentName}`);
-        
+
       } catch (err) {
         errorCount++;
         const errorInfo = {
@@ -3201,7 +3655,7 @@ ${courseName}
           timestamp: new Date().toISOString()
         };
         errors.push(errorInfo);
-        
+
         // Emit progress update with error
         req.io.emit('sendingMessages', {
           nMessages: i + 1,
@@ -3213,7 +3667,7 @@ ${courseName}
           lastResult: 'error',
           lastError: err.message
         });
-        
+
         console.error(`❌ Error sending attendance message to ${studentName}:`, err.message);
       }
 
@@ -3254,7 +3708,7 @@ ${courseName}
 
   } catch (error) {
     console.error('Critical error in sendAttendanceMessages:', error);
-    
+
     // Emit error status
     req.io.emit('sendingMessages', {
       status: 'failed',
@@ -3263,8 +3717,8 @@ ${courseName}
       errorCount,
       totalMessages: dataToSend.length
     });
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: 'Critical error occurred while sending attendance messages',
       error: error.message,
       successCount,
@@ -3416,13 +3870,13 @@ const sendCollectionMessages = async (req, res) => {
           // Attendance
           if (seg.attendanceValue == 1) {
             message += `الحضور: تم الحضور✅\n`;
-            
+
             // Always add time info if provided
             if (seg.attendanceTime && Number(seg.attendanceTime) > 0) {
-            
-                message += `مع العلم أن الطالب حضر ${seg.attendanceTime} دقيقة من أصل 120 دقيقة مدة الحصة.\n`;
-     
-        
+
+              message += `مع العلم أن الطالب حضر ${seg.attendanceTime} دقيقة من أصل 120 دقيقة مدة الحصة.\n`;
+
+
             }
             // Camera info on a separate line if provided (only if camera value is explicitly set)
             if (seg.camera !== undefined && seg.camera !== '') {
@@ -3492,7 +3946,10 @@ const sendCollectionMessages = async (req, res) => {
       });
 
       try {
-        await sendWappiMessage(message, parentPhone, req.userData.phone);
+        await sendNotificationMessage(parentPhone, message, {
+          type: 'collection_report',
+          studentName: studentName
+        });
         successCount++;
         if (req.io) {
           req.io.emit('sendingMessages', {
@@ -3792,7 +4249,7 @@ const convertGroup_get = (req, res) => {
 }
 
 const getDataToTransferring = async (req, res) => {
-  const {Code} = req.params;
+  const { Code } = req.params;
 
   try {
     const student = await User.findOne({
@@ -3809,7 +4266,7 @@ const getDataToTransferring = async (req, res) => {
       return res.status(404).json({ message: 'No groups found for this student' });
     }
 
-    return res.status(200).json(  student  );
+    return res.status(200).json(student);
   }
   catch (error) {
     console.error('Error fetching groups:', error);
@@ -3818,8 +4275,8 @@ const getDataToTransferring = async (req, res) => {
 }
 
 const transferStudent = async (req, res) => {
-  const {  centerName, Grade, gradeType, groupTime } = req.body;
-  const {Code} = req.params;
+  const { centerName, Grade, gradeType, groupTime } = req.body;
+  const { Code } = req.params;
   console.log(req.body)
   try {
     const student = await User.findOne({
@@ -3878,396 +4335,6 @@ const transferStudent = async (req, res) => {
 };
 
 
-// =================================================== Connect WhatsApp =================================================== //
-
-
-const connectWhatsapp_get = (req, res) => {
-  res.render('teacher/connectWhatsapp', { title: 'Connect WhatsApp', path: req.path });
-};
-
-const createInstance = async (req, res) => {
-  const { phoneNumber, name } = req.body;
-  try {
-    console.log(`Creating Wasender session (phone: ${phoneNumber || '-'}, name: ${name || '-'})`);
-    
-    // Create session with proper payload including required fields
-    const sessionPayload = {
-      name: name || 'WhatsApp Session',
-      phone_number: phoneNumber || null,
-      account_protection: true,  // Required field
-      log_messages: true,        // Required field
-      webhook_enabled: false,
-      webhook_events: []
-    };
-    
-    const resp = await wasender.createSession(sessionPayload);
-    
-    if (!resp.success) {
-      return res.status(400).json(resp);
-    }
-    
-    // Use the created session data from API response
-    const created = resp.data;
-    
-    // If API doesn't return session data, create a fallback
-    if (!created || !created.id) {
-      const fallbackInstance = {
-        id: `WA${Date.now()}`,
-        name: name || 'WhatsApp Session',
-        phone_number: phoneNumber || '-',
-        status: 'disconnected',
-        account_protection: true,
-        log_messages: true,
-        webhook_url: null,
-        webhook_enabled: false,
-        webhook_events: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      return res.status(201).json({ success: true, data: fallbackInstance });
-    }
-    
-    return res.status(201).json({ success: true, data: created });
-  } catch (error) {
-    console.error('Error creating Wasender session:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to create session', error: error.message });
-  }
-};
-
-const getInstances = async (req, res) => {
-  try {
-    const resp = await wasender.getAllSessions();
-    if (!resp.success) {
-      return res.status(401).json(resp);
-    }
-    return res.json(resp);
-  } catch (error) {
-    console.error('Error fetching sessions from Wasender:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to fetch sessions', error: error.message });
-  }
-};
-
-const testWasenderAuth = async (req, res) => {
-  try {
-    const resp = await wasender.testAuth();
-    return res.json(resp);
-  } catch (error) {
-    console.error('Error testing Wasender auth:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to test authentication', error: error.message });
-  }
-};
-
-const checkRealInstanceStatus = async (req, res) => {
-  const { instanceId } = req.params;
-  try {
-    console.log(`Checking status for session: ${instanceId}`);
-    
-    // Get session details
-    const detailsResult = await wasender.getSessionDetails(instanceId);
-    if (!detailsResult.success) {
-      console.error('Failed to get session details:', detailsResult.message);
-      return res.status(500).json({ 
-        success: false, 
-        message: `Failed to get session details: ${detailsResult.message}` 
-      });
-    }
-    
-    const session = detailsResult.data;
-    const waStatus = (session.status || 'unknown').toString().toUpperCase();
-    
-    console.log(`Session status: ${waStatus}`);
-
-    // Map to UI statuses
-    const mapStatus = (s) => {
-      switch (s) {
-        case 'CONNECTED':
-        case 'AUTHENTICATED':
-        case 'READY':
-          return 'connected';
-        case 'CONNECTING':
-        case 'INITIALIZING':
-          return 'connecting';
-        case 'NEED_SCAN':
-        case 'REQUIRE_QR':
-        case 'UNPAIRED':
-        case 'UNPAIRED_IDLE':
-          return 'qr';
-        case 'LOGGED_OUT':
-        case 'DISCONNECTED':
-          return 'disconnected';
-        default:
-          return 'disconnected';
-      }
-    };
-
-    const status = mapStatus(waStatus);
-    
-    console.log(`Mapped status: ${status}`);
-
-    return res.json({ 
-      success: true, 
-      apiStatus: waStatus, 
-      status,
-      session: {
-        id: session.id,
-        name: session.name,
-        phone_number: session.phone_number,
-        status: session.status,
-        last_active_at: session.last_active_at
-      }
-    });
-  } catch (error) {
-    console.error('Error checking session status:', error.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error checking session status', 
-      error: error.message 
-    });
-  }
-};
-
-const generateQrCode = async (req, res) => {
-  const { instanceId } = req.params;
-  
-  try {
-    console.log(`Generating QR code for session: ${instanceId}`);
-    
-    // Step 1: Connect the session first
-    const connectResult = await wasender.connectSession(instanceId);
-    if (!connectResult.success) {
-      console.error('Failed to connect session:', connectResult.message);
-      return res.status(500).json({ 
-        success: false, 
-        message: `Failed to connect session: ${connectResult.message}` 
-      });
-    }
-    
-    console.log('Session connected successfully, getting QR code...');
-    
-    // Step 2: Get the QR code
-    const qrResult = await wasender.getQRCode(instanceId);
-    if (!qrResult.success) {
-      console.error('Failed to get QR code:', qrResult.message);
-      return res.status(500).json({ 
-        success: false, 
-        message: `Failed to get QR code: ${qrResult.message}` 
-      });
-    }
-    
-    let qrCodeData = qrResult.data?.qrcode || null;
-    if (!qrCodeData) {
-      console.error('No QR code data received');
-      return res.status(500).json({ 
-        success: false, 
-        message: 'No QR code data received from API' 
-      });
-    }
-    
-    console.log('Raw QR code data received, converting to image...');
-    
-    // Convert the raw QR code data to a proper image
-    // The Wasender API returns raw QR code data that needs to be converted
-    try {
-      // Generate QR code as data URL
-      const qrImageDataUrl = await QRCode.toDataURL(qrCodeData, {
-        errorCorrectionLevel: 'M',
-        type: 'image/png',
-        quality: 0.92,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        width: 300
-      });
-      
-      console.log('QR code converted to image successfully');
-      
-      // Emit socket event for real-time updates
-      if (req.io) {
-        req.io.emit('instance-status-change', { 
-          instanceId, 
-          status: 'qr', 
-          qrCode: qrImageDataUrl 
-        });
-      }
-      
-      return res.json({ 
-        success: true, 
-        qrCode: qrImageDataUrl, 
-        status: 'qr',
-        expiresIn: 45 // QR codes expire in 45 seconds
-      });
-      
-    } catch (qrError) {
-      console.error('Error converting QR code to image:', qrError);
-      
-      // Fallback: return the raw data with instructions
-      return res.json({ 
-        success: true, 
-        qrCode: qrCodeData, 
-        status: 'qr',
-        note: 'Raw QR data - needs manual conversion',
-        instructions: 'Please scan this QR code data manually or use a QR code generator',
-        expiresIn: 45
-      });
-    }
-    
-  } catch (error) {
-    console.error('Error generating QR code:', error.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error while generating QR code',
-      error: error.message 
-    });
-  }
-};
-
-
-const deleteInstance = async (req, res) => {
-  const { instanceId } = req.params;
-  
-  try {
-    try { await wasender.disconnectSession(instanceId); } catch (_) {}
-    try { await wasender.deleteSession(instanceId); } catch (_) {}
-    if (req.io) req.io.emit('instance-deleted', { instanceId });
-    return res.json({ success: true, message: 'Session deleted' });
-  } catch (error) {
-    console.error('Error deleting session:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to delete session', error: error.message });
-  }
-};
-
-// Note: Wasender API doesn't have a direct webhook setting endpoint
-// This function is kept for compatibility but will need to be updated
-// when webhook functionality is available in Wasender API
-const setWebhook = async (req, res) => {
-  const { instanceId } = req.params;
-  const { webhookUrl } = req.body;
-  
-  if (!webhookUrl) {
-    return res.status(400).json({
-      success: false,
-      message: 'Webhook URL is required'
-    });
-  }
-  
-  try {
-    // Wasender API does not expose webhook setup in the provided collection.
-    // Acknowledge and return success so UI can proceed.
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook setup is not supported by the current Wasender API. Value accepted locally.',
-      webhookUrl
-    });
-  } catch (error) {
-    console.error('Error setting webhook:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error setting webhook',
-      error: error.message
-    });
-  }
-};
-
-const rebootInstance = async (req, res) => {
-  const { instanceId } = req.params;
-  
-  try {
-    try { await wasender.disconnectSession(instanceId); } catch (_) {}
-    await wasender.connectSession(instanceId);
-    if (req.io) req.io.emit('instance-status-change', { instanceId, status: 'connecting' });
-    return res.json({ success: true, message: 'Reconnecting initiated' });
-  } catch (error) {
-    console.error('Error reconnecting session:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to reconnect', error: error.message });
-  }
-};
-
-
-const regenerateQrCode = async (req, res) => {
-  const { instanceId } = req.params;
-  
-  try {
-    console.log(`Regenerating QR code for session: ${instanceId}`);
-    
-    // Use the new regenerate method
-    const qrResult = await wasender.regenerateQRCode(instanceId);
-    if (!qrResult.success) {
-      console.error('Failed to regenerate QR code:', qrResult.message);
-      return res.status(500).json({ 
-        success: false, 
-        message: `Failed to regenerate QR code: ${qrResult.message}` 
-      });
-    }
-    
-    let qrCodeData = qrResult.data?.qrcode || null;
-    if (!qrCodeData) {
-      console.error('No QR code data received after regeneration');
-      return res.status(500).json({ 
-        success: false, 
-        message: 'No QR code data received after regeneration' 
-      });
-    }
-    
-    console.log('New QR code data received, converting to image...');
-    
-    // Convert the raw QR code data to a proper image
-    try {
-      const qrImageDataUrl = await QRCode.toDataURL(qrCodeData, {
-        errorCorrectionLevel: 'M',
-        type: 'image/png',
-        quality: 0.92,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        width: 300
-      });
-      
-      console.log('New QR code converted to image successfully');
-      
-      // Emit socket event for real-time updates
-      if (req.io) {
-        req.io.emit('instance-status-change', { 
-          instanceId, 
-          status: 'qr', 
-          qrCode: qrImageDataUrl 
-        });
-      }
-      
-      return res.json({ 
-        success: true, 
-        qrCode: qrImageDataUrl, 
-        status: 'qr',
-        expiresIn: 45,
-        regenerated: true
-      });
-      
-    } catch (qrError) {
-      console.error('Error converting regenerated QR code to image:', qrError);
-      
-      return res.json({ 
-        success: true, 
-        qrCode: qrCodeData, 
-        status: 'qr',
-        note: 'Raw QR data - needs manual conversion',
-        instructions: 'Please scan this QR code data manually or use a QR code generator',
-        expiresIn: 45,
-        regenerated: true
-      });
-    }
-    
-  } catch (error) {
-    console.error('Error regenerating QR code:', error.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error while regenerating QR code',
-      error: error.message 
-    });
-  }
-};
 
 
 // =================================================== Send Registration Message =================================================== //
@@ -4282,11 +4349,11 @@ const logOut = async (req, res) => {
 
 const exportErrorDetailsToExcel = async (req, res) => {
   const { errors } = req.body;
-  
+
   if (!errors || !Array.isArray(errors) || errors.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'No error data provided for export' 
+    return res.status(400).json({
+      success: false,
+      message: 'No error data provided for export'
     });
   }
 
@@ -4335,10 +4402,10 @@ const exportErrorDetailsToExcel = async (req, res) => {
 
   } catch (error) {
     console.error('Error exporting error details to Excel:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to export error details to Excel',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -4378,41 +4445,31 @@ module.exports = {
   // My Student Data
   getStudentData,
   convertAttendaceToExcel,
-  
 
-  // WhatsApp
 
-  whatsApp_get,
+  // Notifications
   sendGradeMessages,
   sendMessages,
   sendCustomMessages,
   sendAttendanceMessages,
   sendCollectionMessages,
   collectionSampleExcel,
-  sendCollectionMessages,
-  
-  // WhatsApp Collection Messages
-  
-  
-  // WhatsApp custom
-  
+  // New FCM Notifications pages
+  allNotifications_get,
+  getAllNotifications,
+  getNotificationsStats,
+  sendNotifications_get,
+  searchStudentsForNotifications,
+  sendNotificationsToStudents,
+  sendNotificationFromExcelJson,
+  sendCustomNotification,
+  sendNotificationToAllParents,
+  getGroupStudentsForNotifications,
+  sendNotificationsToGroup,
 
-  // WhatsApp 2
-  whatsApp2_get,
+  // Student Data
   getDataStudentInWhatsApp,
   submitData,
-
-  // Connect WhatsApp
-  connectWhatsapp_get,
-  createInstance,
-  getInstances,
-  generateQrCode,
-  deleteInstance,
-  checkRealInstanceStatus,
-  testWasenderAuth,
-  setWebhook,
-  rebootInstance,
-  regenerateQrCode,
   // Convert Group
   convertGroup_get,
   getDataToTransferring,

@@ -6,7 +6,12 @@ const notificationSchema = new Schema(
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+    },
+    teacherId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
     },
     parentPhone: {
       type: String,
@@ -15,7 +20,16 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['attendance', 'homework', 'payment', 'custom', 'block', 'unblock'],
+      enum: [
+        'attendance',
+        'homework',
+        'payment',
+        'custom',
+        'block',
+        'unblock',
+        'verification',
+        'registration',
+      ],
       default: 'custom',
     },
     title: {
@@ -33,6 +47,11 @@ const notificationSchema = new Schema(
     isRead: {
       type: Boolean,
       default: false,
+    },
+    status: {
+      type: String,
+      enum: ['sent', 'failed', 'pending'],
+      default: 'sent',
     },
   },
   { timestamps: true }

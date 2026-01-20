@@ -1,15 +1,3 @@
-/**
- * Firebase Cloud Messaging (FCM) Utility
- * 
- * This module provides functions for sending push notifications to mobile devices.
- * 
- * SETUP INSTRUCTIONS:
- * 1. Go to Firebase Console -> Project Settings -> Service Accounts
- * 2. Generate a new private key
- * 3. Save the JSON file as 'firebase-service-account.json' in the project root
- * 4. Add FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json to .env
- */
-
 const admin = require('firebase-admin');
 const path = require('path');
 
@@ -20,15 +8,9 @@ const initializeFirebase = () => {
   if (firebaseInitialized) return true;
 
   try {
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-    
-    if (!serviceAccountPath) {
-      console.warn('FCM Warning: FIREBASE_SERVICE_ACCOUNT_PATH not set in .env');
-      return false;
-    }
-
-    const absolutePath = path.resolve(serviceAccountPath);
-    const serviceAccount = require(absolutePath);
+    // Use serviceAccount.json from project root
+    const serviceAccountPath = path.resolve(__dirname, '../serviceAccount.json');
+    const serviceAccount = require(serviceAccountPath);
 
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
