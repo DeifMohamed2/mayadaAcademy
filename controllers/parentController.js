@@ -20,7 +20,7 @@ const parentLogin = async (req, res) => {
     if (!parentPhone || !studentCode) {
       return res.status(400).json({
         success: false,
-        message: 'Parent phone and student code are required',
+        message: 'Phone number and student code are required',
       });
     }
 
@@ -37,9 +37,21 @@ const parentLogin = async (req, res) => {
       });
     }
 
-    // Verify this student belongs to the parent phone
-    const studentParentPhone = studentByCode.parentPhone.replace(/\D/g, '');
-    if (!studentParentPhone.includes(cleanPhone) && !cleanPhone.includes(studentParentPhone)) {
+    // Verify this phone belongs to either the parent or the student themselves
+    const studentParentPhone = (studentByCode.parentPhone || '').replace(
+      /\D/g,
+      '',
+    );
+    const studentOwnPhone = (studentByCode.phone || '').replace(/\D/g, '');
+
+    const isParentPhone =
+      studentParentPhone.includes(cleanPhone) ||
+      cleanPhone.includes(studentParentPhone);
+    const isStudentPhone =
+      studentOwnPhone.includes(cleanPhone) ||
+      cleanPhone.includes(studentOwnPhone);
+
+    if (!isParentPhone && !isStudentPhone) {
       return res.status(401).json({
         success: false,
         message: 'This student is not associated with this phone number',
@@ -60,14 +72,14 @@ const parentLogin = async (req, res) => {
         balance: 1,
         amountRemaining: 1,
         absences: 1,
-      }
+      },
     );
 
     // Update FCM token for all students of this parent if provided
     if (fcmToken) {
       await User.updateMany(
         { parentPhone: studentByCode.parentPhone },
-        { $set: { fcmToken: fcmToken } }
+        { $set: { fcmToken: fcmToken } },
       );
     }
 
@@ -78,7 +90,7 @@ const parentLogin = async (req, res) => {
         studentIds: students.map((s) => s._id),
       },
       jwtSecret,
-      { expiresIn: '30d' }
+      { expiresIn: '30d' },
     );
 
     return res.status(200).json({
@@ -126,7 +138,7 @@ const getDashboard = async (req, res) => {
     // Get last session status from AttendanceHistory
     const attendanceHistory = student.AttendanceHistory || [];
     const sortedHistory = attendanceHistory.sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
+      (a, b) => new Date(b.date) - new Date(a.date),
     );
     const lastSession = sortedHistory[0] || null;
 
@@ -327,7 +339,7 @@ const markNotificationRead = async (req, res) => {
         $or: [{ parentPhone: parentPhone }, { studentId: { $in: studentIds } }],
       },
       { $set: { isRead: true } },
-      { new: true }
+      { new: true },
     );
 
     if (!notification) {
@@ -363,7 +375,7 @@ const markAllNotificationsRead = async (req, res) => {
         $or: [{ parentPhone: parentPhone }, { studentId: { $in: studentIds } }],
         isRead: false,
       },
-      { $set: { isRead: true } }
+      { $set: { isRead: true } },
     );
 
     return res.status(200).json({
@@ -401,7 +413,7 @@ const getStudents = async (req, res) => {
         amountRemaining: 1,
         absences: 1,
         blocked: 1,
-      }
+      },
     );
 
     return res.status(200).json({
