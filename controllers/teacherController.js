@@ -163,6 +163,7 @@ const converStudentRequestsToExcel = async (req, res) => {
       phone: 1,
       parentPhone: 1,
       schoolName: 1,
+      absences: 1,
     });
 
     // Create a new Excel workbook
@@ -176,6 +177,7 @@ const converStudentRequestsToExcel = async (req, res) => {
       'School Name',
       'Phone Number',
       'Parent Phone Number',
+      'Absences',
     ]);
 
     // Style headers - bold text only, no colors
@@ -188,6 +190,7 @@ const converStudentRequestsToExcel = async (req, res) => {
       { key: 'schoolName', width: 30 },
       { key: 'phone', width: 20 },
       { key: 'parentPhone', width: 20 },
+      { key: 'absences', width: 15 },
     ];
 
     // Add user data to the worksheet - no colors, simple formatting
@@ -198,6 +201,7 @@ const converStudentRequestsToExcel = async (req, res) => {
         user.schoolName || '',
         user.phone || '',
         user.parentPhone || '',
+        user.absences || 0,
       ]);
 
       // Simple formatting - no colors, just clean data
