@@ -27,10 +27,18 @@ function validateAndFormatPhoneNumber(phone) {
   }
 
   // Handle different input formats for Egyptian numbers
-  if (cleanPhone.length === 11 && cleanPhone.startsWith('0') && cleanPhone.charAt(1) === '1') {
+  if (
+    cleanPhone.length === 11 &&
+    cleanPhone.startsWith('0') &&
+    cleanPhone.charAt(1) === '1'
+  ) {
     // Egyptian mobile format (01xxxxxxxxx) -> convert to international (20xxxxxxxxxx)
     return '20' + cleanPhone.substring(1);
-  } else if (cleanPhone.startsWith('20') && cleanPhone.length === 12 && cleanPhone.charAt(2) === '1') {
+  } else if (
+    cleanPhone.startsWith('20') &&
+    cleanPhone.length === 12 &&
+    cleanPhone.charAt(2) === '1'
+  ) {
     // Already in Egyptian international format (20xxxxxxxxxx)
     return cleanPhone;
   } else if (cleanPhone.length === 10 && cleanPhone.startsWith('1')) {
@@ -38,15 +46,14 @@ function validateAndFormatPhoneNumber(phone) {
     return '20' + cleanPhone;
   } else {
     // For non-Egyptian numbers or other formats, return as is without modification
-    console.log(`Non-Egyptian number detected: ${cleanPhone} - using without country code modification`);
+    console.log(
+      `Non-Egyptian number detected: ${cleanPhone} - using without country code modification`,
+    );
     return cleanPhone;
   }
 }
 
-
-
 const dash_get = async (req, res) => {
-
   res.render('teacher/dash', { title: 'DashBoard', path: req.path });
 };
 
@@ -122,7 +129,6 @@ const studentsRequests_get = async (req, res) => {
   }
 };
 
-
 const searchForUser = async (req, res) => {
   const { searchBy, searchInput } = req.body;
   try {
@@ -136,7 +142,7 @@ const searchForUser = async (req, res) => {
         subscribe: 1,
         balance: 1,
         amountRemaining: 1,
-      }
+      },
     ).then((result) => {
       res.render('teacher/studentsRequests', {
         title: 'StudentsRequests',
@@ -151,7 +157,7 @@ const searchForUser = async (req, res) => {
         previousPage: null, // Calculate previous page
       });
     });
-  } catch (error) { }
+  } catch (error) {}
 };
 
 const converStudentRequestsToExcel = async (req, res) => {
@@ -213,11 +219,11 @@ const converStudentRequestsToExcel = async (req, res) => {
     // Set response headers for file download
     res.setHeader(
       'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="StudentsData.xlsx"`
+      `attachment; filename="StudentsData.xlsx"`,
     );
 
     // Send Excel file as response
@@ -232,18 +238,15 @@ const getSingleUserAllData = async (req, res) => {
   try {
     const studentID = req.params.studentID;
     console.log(studentID);
-    await User.findOne(
-      { _id: studentID },
-
-    ).then((result) => {
-
-      res.status(200).send(result);
-    }).catch((error) => {
-      console.log(error);
-    });
+    await User.findOne({ _id: studentID })
+      .then((result) => {
+        res.status(200).send(result);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   } catch (error) {
     console.log(error);
-
   }
 };
 
@@ -281,7 +284,7 @@ const updateUserData = async (req, res) => {
     if (attendingType) updateFields.attendingType = attendingType;
     if (bookTaken !== undefined) updateFields.bookTaken = bookTaken === 'true';
     if (schoolName) updateFields.schoolName = schoolName;
-    if (absences) updateFields.absences = absences
+    if (absences) updateFields.absences = absences;
 
     // Optional fields with additional checks
     // if (centerName) updateFields.centerName = centerName;
@@ -302,9 +305,14 @@ const updateUserData = async (req, res) => {
 
     // Check if bookTaken status was changed and send notification
     const newBookTakenValue = bookTaken === 'true';
-    if (bookTaken !== undefined && newBookTakenValue !== currentUser.bookTaken) {
+    if (
+      bookTaken !== undefined &&
+      newBookTakenValue !== currentUser.bookTaken
+    ) {
       try {
-        console.log(`Book taken status changed for ${updatedUser.Username} from ${currentUser.bookTaken} to ${newBookTakenValue}`);
+        console.log(
+          `Book taken status changed for ${updatedUser.Username} from ${currentUser.bookTaken} to ${newBookTakenValue}`,
+        );
 
         const bookStatusMessage = `📚 تحديث حالة الكتاب\n\nالطالب: ${updatedUser.Username}\nالكود: ${updatedUser.Code}\n\nحالة الكتاب: ${newBookTakenValue ? 'تم استلام الكتاب ✅' : 'لم يتم استلام الكتاب ❌'}\n\nتاريخ التحديث: ${new Date().toLocaleDateString('ar-EG')}`;
 
@@ -313,22 +321,36 @@ const updateUserData = async (req, res) => {
         await sendNotificationMessage(studentPhone, bookStatusMessage, {
           studentName: updatedUser.Username,
           studentCode: updatedUser.Code,
-          type: 'book_status'
+          type: 'book_status',
         });
-        console.log(`Book status notification sent successfully to ${updatedUser.Username}`);
+        console.log(
+          `Book status notification sent successfully to ${updatedUser.Username}`,
+        );
 
         // Also send to parent's phone if different from student's phone
-        if (updatedUser.parentPhone && updatedUser.parentPhone !== studentPhone) {
+        if (
+          updatedUser.parentPhone &&
+          updatedUser.parentPhone !== studentPhone
+        ) {
           const parentMessage = `📚 تحديث حالة الكتاب لطفلك\n\nالطالب: ${updatedUser.Username}\nالكود: ${updatedUser.Code}\n\nحالة الكتاب: ${newBookTakenValue ? 'تم استلام الكتاب ✅' : 'لم يتم استلام الكتاب ❌'}\n\nتاريخ التحديث: ${new Date().toLocaleDateString('ar-EG')}`;
-          await sendNotificationMessage(updatedUser.parentPhone, parentMessage, {
-            studentName: updatedUser.Username,
-            studentCode: updatedUser.Code,
-            type: 'book_status'
-          });
-          console.log(`Book status notification sent to parent of ${updatedUser.Username}`);
+          await sendNotificationMessage(
+            updatedUser.parentPhone,
+            parentMessage,
+            {
+              studentName: updatedUser.Username,
+              studentCode: updatedUser.Code,
+              type: 'book_status',
+            },
+          );
+          console.log(
+            `Book status notification sent to parent of ${updatedUser.Username}`,
+          );
         }
       } catch (notificationError) {
-        console.error('Failed to send book status notification:', notificationError.message);
+        console.error(
+          'Failed to send book status notification:',
+          notificationError.message,
+        );
         // Don't fail the update if notification fails
       }
     }
@@ -371,7 +393,6 @@ const updateUserData = async (req, res) => {
   }
 };
 
-
 // const confirmDeleteStudent = async (req, res) => {
 //   try {
 //     const studentID = req.params.studentID;
@@ -406,7 +427,7 @@ const DeleteStudent = async (req, res) => {
 
     await Group.updateMany(
       { students: studentID },
-      { $pull: { students: studentID } }
+      { $pull: { students: studentID } },
     ).then(async (result) => {
       await User.findByIdAndDelete(studentID).then((result) => {
         return res
@@ -427,10 +448,9 @@ const searchToGetOneUserAllData = async (req, res) => {
   const { searchBy, searchInput } = req.query;
 
   try {
-    const result = await User.findOne({ [`${searchBy}`]: searchInput })
+    const result = await User.findOne({ [`${searchBy}`]: searchInput });
 
-    const attendance = await Card.findOne({ userId: result._id })
-
+    const attendance = await Card.findOne({ userId: result._id });
 
     res.render('teacher/myStudent', {
       title: 'Mystudent',
@@ -438,8 +458,7 @@ const searchToGetOneUserAllData = async (req, res) => {
       userData: result,
       attendance: attendance.cardHistory,
     });
-
-  } catch (error) { }
+  } catch (error) {}
 };
 
 const convertToExcelAllUserData = async (req, res) => {
@@ -590,11 +609,11 @@ const convertToExcelAllUserData = async (req, res) => {
         // Set response headers for file download
         res.setHeader(
           'Content-Type',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename=users_data.xlsx'
+          'attachment; filename=users_data.xlsx',
         );
 
         // Send Excel file as response
@@ -610,12 +629,9 @@ const convertToExcelAllUserData = async (req, res) => {
 
 // =================================================== END MyStudent ================================================ //
 
-
-
 const addCardGet = async (req, res) => {
-
   res.render('teacher/addCard', { title: 'addCard', path: req.path });
-}
+};
 
 const addCardToStudent = async (req, res) => {
   const { studentCode, assignedCard } = req.body;
@@ -624,44 +640,72 @@ const addCardToStudent = async (req, res) => {
   if (!studentCode || !assignedCard) {
     return res
       .status(400)
-      .json({ message: 'studentCode and assignedCard are required', Username: null });
+      .json({
+        message: 'studentCode and assignedCard are required',
+        Username: null,
+      });
   }
 
   try {
-    const userByCode = await User.findOne({ Code: studentCode }, { cardId: 1, Username: 1, Code: 1 });
+    const userByCode = await User.findOne(
+      { Code: studentCode },
+      { cardId: 1, Username: 1, Code: 1 },
+    );
     const userHasCard = await User.findOne({ cardId: assignedCard });
     if (!userByCode) {
-      return res.status(400).json({ message: 'This student does not exist, please verify the code', Username: '' });
+      return res
+        .status(400)
+        .json({
+          message: 'This student does not exist, please verify the code',
+          Username: '',
+        });
     }
 
     if (userByCode.cardId) {
-      return res.status(400).json({ message: 'This student already has a card.', Username: userByCode.Username });
+      return res
+        .status(400)
+        .json({
+          message: 'This student already has a card.',
+          Username: userByCode.Username,
+        });
     }
 
     if (userHasCard) {
-      return res.status(400).json({ message: "This card has already been used.", Username: `Used by ${userHasCard.Username}` });
+      return res
+        .status(400)
+        .json({
+          message: 'This card has already been used.',
+          Username: `Used by ${userHasCard.Username}`,
+        });
     }
-
-
 
     await User.updateOne(
       { Code: studentCode },
       {
         cardId: assignedCard,
-      }
-    ).then((result) => {
-      return res.status(200).json({ message: 'تم اضافه الكارت للطالب بنجاح', Username: userByCode.Username });
-    }).catch((err) => {
-      console.error(err);
-      return res.status(500).json({ message: 'يبدو ان هناك خطأ ما ', Username: null });
-    });
-
+      },
+    )
+      .then((result) => {
+        return res
+          .status(200)
+          .json({
+            message: 'تم اضافه الكارت للطالب بنجاح',
+            Username: userByCode.Username,
+          });
+      })
+      .catch((err) => {
+        console.error(err);
+        return res
+          .status(500)
+          .json({ message: 'يبدو ان هناك خطأ ما ', Username: null });
+      });
   } catch (error) {
     console.error('Error adding card:', error);
-    return res.status(500).json({ message: 'يبدو ان هناك خطأ ما ', Username: null });
+    return res
+      .status(500)
+      .json({ message: 'يبدو ان هناك خطأ ما ', Username: null });
   }
 };
-
 
 const markAttendance = async (req, res) => {
   const {
@@ -679,7 +723,6 @@ const markAttendance = async (req, res) => {
   } = req.body;
 
   try {
-
     const student = await User.findOne({
       $or: [{ cardId: attendId }, { Code: +attendId }],
     });
@@ -696,7 +739,6 @@ const markAttendance = async (req, res) => {
     // }else{
     //   HWmessage = '*لقد قام الطالب بحل الواجب بالخطوات*';
     // }
-
 
     console.log(student._id);
     // Check if student is in the group
@@ -724,23 +766,16 @@ const markAttendance = async (req, res) => {
         .json({ message: 'Student Not Found in This Group' });
     }
 
-
-
     let message = '';
     if (student.absences >= 3) {
-
       if (attendAbsencet) {
         student.absences -= 1;
-
       } else {
         return res.status(400).json({
           message: 'Student has already been marked absent 3 times',
         });
       }
-
     }
-
-
 
     // Mark student as present in today's attendance
     const today = new Intl.DateTimeFormat('en-CA', {
@@ -763,7 +798,6 @@ const markAttendance = async (req, res) => {
       });
     }
 
-
     // Check if student is already marked as present
     if (attendance.studentsPresent.includes(student._id)) {
       return res
@@ -777,19 +811,15 @@ const markAttendance = async (req, res) => {
         .json({ message: 'Student is already marked Late' });
     }
     if (attendance.studentsExcused.includes(student._id)) {
-      return res
-        .status(400)
-        .json({
-          message: 'Student is already marked present From Other Group',
-        });
+      return res.status(400).json({
+        message: 'Student is already marked present From Other Group',
+      });
     }
-
-
 
     // Handle if attendance is finalized (late marking logic)
     if (attendance.isFinalized) {
       attendance.studentsAbsent = attendance.studentsAbsent.filter(
-        (id) => !id.equals(student._id)
+        (id) => !id.equals(student._id),
       );
       attendance.studentsLate.push(student._id);
 
@@ -801,7 +831,7 @@ const markAttendance = async (req, res) => {
 
       // Find if an attendance history already exists for today
       const existingHistory = student.AttendanceHistory.find(
-        (record) => record.date === today
+        (record) => record.date === today,
       );
 
       if (existingHistory) {
@@ -829,7 +859,10 @@ const markAttendance = async (req, res) => {
       try {
         await student.save({ validateBeforeSave: false });
       } catch (saveError) {
-        console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
+        console.warn(
+          `Error saving student ${student.Username} (ID: ${student._id}):`,
+          saveError.message,
+        );
         // Continue with attendance marking even if student save fails
       }
 
@@ -851,21 +884,27 @@ const markAttendance = async (req, res) => {
       try {
         // Check if parent phone exists
         if (!student.parentPhone) {
-          console.log(`Warning: No parent phone for student ${student.Username} (ID: ${student._id})`);
+          console.log(
+            `Warning: No parent phone for student ${student.Username} (ID: ${student._id})`,
+          );
         } else {
-          console.log(`Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`);
+          console.log(
+            `Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`,
+          );
           await sendNotificationMessage(student.parentPhone, messageWappi, {
             studentName: student.Username,
-            type: 'attendance_late'
+            type: 'attendance_late',
           });
           console.log('Notification sent successfully for late attendance');
         }
       } catch (notificationError) {
-        console.error('Notification error for late attendance:', notificationError.message);
+        console.error(
+          'Notification error for late attendance:',
+          notificationError.message,
+        );
         // Continue with attendance marking even if notification fails
         // The attendance is already saved, so we don't want to fail the entire operation
       }
-
 
       return res.status(200).json({
         message: 'The Student Marked As Late \n' + message,
@@ -874,7 +913,6 @@ const markAttendance = async (req, res) => {
         studentsExcused: attendance.studentsExcused,
       });
     } else {
-
       let message = '';
       if (student.absences == 2) {
         message = 'The student has 2 absences and 1 remaining';
@@ -887,17 +925,14 @@ const markAttendance = async (req, res) => {
       //       message: 'Student has already been marked absent 3 times',
       //     });
       // }
-      let statusMessage = ''
+      let statusMessage = '';
       if (attendOtherGroup) {
         attendance.studentsExcused.push(student._id);
-        statusMessage = 'Present From Other Group'
+        statusMessage = 'Present From Other Group';
       } else {
-
         attendance.studentsPresent.push(student._id);
-        statusMessage = 'Present'
+        statusMessage = 'Present';
       }
-
-
 
       await attendance.save();
 
@@ -942,17 +977,20 @@ const markAttendance = async (req, res) => {
 التاريخ: ${today}
 *شكرًا لتعاونكم.*`;
 
-
       // Send notification to parent
       try {
         // Check if parent phone exists
         if (!student.parentPhone) {
-          console.log(`Warning: No parent phone for student ${student.Username} (ID: ${student._id})`);
+          console.log(
+            `Warning: No parent phone for student ${student.Username} (ID: ${student._id})`,
+          );
         } else {
-          console.log(`Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`);
+          console.log(
+            `Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`,
+          );
           await sendNotificationMessage(student.parentPhone, messageWappi, {
             studentName: student.Username,
-            type: 'attendance_present'
+            type: 'attendance_present',
           });
           console.log('Notification sent successfully');
         }
@@ -966,7 +1004,10 @@ const markAttendance = async (req, res) => {
       try {
         await student.save({ validateBeforeSave: false });
       } catch (saveError) {
-        console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
+        console.warn(
+          `Error saving student ${student.Username} (ID: ${student._id}):`,
+          saveError.message,
+        );
         // Continue with attendance marking even if student save fails
       }
       return res.status(200).json({
@@ -983,7 +1024,6 @@ const markAttendance = async (req, res) => {
   }
 };
 
-
 const getAttendedUsers = async (req, res) => {
   const { Grade, centerName, GroupTime, attendId, gradeType } = req.body;
   const group = await Group.findOne({
@@ -994,11 +1034,9 @@ const getAttendedUsers = async (req, res) => {
   });
 
   if (!group) {
-    return res
-      .status(404)
-      .json({
-        message: 'There are currently no students registered in this group',
-      });
+    return res.status(404).json({
+      message: 'There are currently no students registered in this group',
+    });
   }
 
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -1020,7 +1058,6 @@ const getAttendedUsers = async (req, res) => {
 
   return res.status(200).json({ attendance });
 };
-
 
 const removeAttendance = async (req, res) => {
   const { centerName, Grade, GroupTime, gradeType } = req.body;
@@ -1066,7 +1103,7 @@ const removeAttendance = async (req, res) => {
 
     // Check if the student is in the present or late lists
     const isPresent = attendance.studentsPresent.some((id) =>
-      id.equals(student._id)
+      id.equals(student._id),
     );
     const isLate = attendance.studentsLate.some((id) => id.equals(student._id));
 
@@ -1079,14 +1116,14 @@ const removeAttendance = async (req, res) => {
     // Remove the student from studentsPresent if present
     if (isPresent) {
       attendance.studentsPresent = attendance.studentsPresent.filter(
-        (id) => !id.equals(student._id)
+        (id) => !id.equals(student._id),
       );
     }
 
     // Remove the student from studentsLate if late
     if (isLate) {
       attendance.studentsLate = attendance.studentsLate.filter(
-        (id) => !id.equals(student._id)
+        (id) => !id.equals(student._id),
       );
     }
 
@@ -1100,14 +1137,17 @@ const removeAttendance = async (req, res) => {
 
     // Remove the attendance record from the student's history
     student.AttendanceHistory = student.AttendanceHistory.filter(
-      (att) => !att.attendance.equals(attendance._id) // Use .equals() for ObjectId comparison
+      (att) => !att.attendance.equals(attendance._id), // Use .equals() for ObjectId comparison
     );
 
     // Save with validation disabled to avoid required field errors
     try {
       await student.save({ validateBeforeSave: false });
     } catch (saveError) {
-      console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
+      console.warn(
+        `Error saving student ${student.Username} (ID: ${student._id}):`,
+        saveError.message,
+      );
       // Continue with attendance removal even if student save fails
     }
     return res.status(200).json({
@@ -1121,7 +1161,6 @@ const removeAttendance = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 const updateAmount = async (req, res) => {
   const amountRemaining = req.body.amountRemaining || 0;
@@ -1139,13 +1178,15 @@ const updateAmount = async (req, res) => {
     try {
       await student.save({ validateBeforeSave: false });
     } catch (saveError) {
-      console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
+      console.warn(
+        `Error saving student ${student.Username} (ID: ${student._id}):`,
+        saveError.message,
+      );
       return res.status(500).json({ message: 'Error updating student data' });
     }
 
     return res.status(200).json({ message: 'Amount updated successfully' });
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error updating amount:', error);
     return res.status(500).json({ message: 'Server error' });
   }
@@ -1190,22 +1231,19 @@ const finalizeAttendance = async (req, res) => {
     const groupStudentIds = group.students;
 
     for (const studentId of groupStudentIds) {
-
       const isPresent = attendance.studentsPresent.some((id) =>
-        id.equals(studentId)
+        id.equals(studentId),
       );
       const isLate = attendance.studentsLate.some((id) => id.equals(studentId));
 
       console.log(isPresent, isLate);
       if (!isPresent && !isLate) {
-
         if (!attendance.studentsAbsent.includes(studentId)) {
           attendance.studentsAbsent.push(studentId);
 
           const student = await User.findById(studentId);
 
           if (student) {
-
             student.absences = (student.absences || 0) + 1;
             student.AttendanceHistory.push({
               attendance: attendance._id,
@@ -1218,7 +1256,10 @@ const finalizeAttendance = async (req, res) => {
             try {
               await student.save({ validateBeforeSave: false });
             } catch (saveError) {
-              console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
+              console.warn(
+                `Error saving student ${student.Username} (ID: ${student._id}):`,
+                saveError.message,
+              );
               // Continue with other students even if one fails to save
             }
           }
@@ -1231,8 +1272,6 @@ const finalizeAttendance = async (req, res) => {
     await attendance.populate('studentsAbsent');
     await attendance.populate('studentsPresent');
     await attendance.populate('studentsExcused');
-
-
 
     const workbook = new Excel.Workbook();
     const worksheet = workbook.addWorksheet('Attendance Data');
@@ -1312,7 +1351,6 @@ const finalizeAttendance = async (req, res) => {
           fgColor: { argb: 'DDDDDD' },
         };
       }
-
     });
 
     // Add total row for Present Students
@@ -1410,15 +1448,11 @@ const finalizeAttendance = async (req, res) => {
 عدد مرات الغياب: *${student.absences}*.\n\n
 *شكرًا لتعاونكم.*`;
 
-
       // Send notification to parent
       await sendNotificationMessage(student.parentPhone, messageWappi, {
         studentName: student.Username,
-        type: 'attendance_present_finalize'
+        type: 'attendance_present_finalize',
       });
-
-
-
     });
 
     // Add total row for Present Other Group  Students
@@ -1488,7 +1522,6 @@ const finalizeAttendance = async (req, res) => {
       ]);
       row.font = { size: 13 };
 
-
       if (c2 % 2 === 0) {
         row.fill = {
           type: 'pattern',
@@ -1496,8 +1529,6 @@ const finalizeAttendance = async (req, res) => {
           fgColor: { argb: 'DDDDDD' },
         };
       }
-
-
 
       let subMessage = '';
       if (student.absences >= 3) {
@@ -1510,18 +1541,12 @@ const finalizeAttendance = async (req, res) => {
 عدد مرات الغياب: *${student.absences}*.${subMessage}\n\n
 *شكرًا لتعاونكم.*`;
 
-
       // Send notification to parent
       await sendNotificationMessage(student.parentPhone, messageWappi, {
         studentName: student.Username,
-        type: 'attendance_present_finalize'
+        type: 'attendance_present_finalize',
       });
-
-
-
     });
-
-
 
     // Add borders to all cells
     worksheet.eachRow((row, rowNumber) => {
@@ -1539,11 +1564,11 @@ const finalizeAttendance = async (req, res) => {
 
     res.setHeader(
       'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename=attendance_data.xlsx'
+      'attachment; filename=attendance_data.xlsx',
     );
 
     res.send(excelBuffer);
@@ -1778,7 +1803,7 @@ const sendNotificationsToStudents = async (req, res) => {
           {
             studentCode: student.Code,
             studentName: student.Username,
-          }
+          },
         );
 
         if (result.success) {
@@ -1837,7 +1862,7 @@ const sendCustomNotification = async (req, res) => {
 
     const result = await sendNotificationMessage(
       phone,
-      `${title || 'Mayada Academy'}: ${message}`
+      `${title || 'Mayada Academy'}: ${message}`,
     );
 
     if (result.success) {
@@ -1901,12 +1926,12 @@ const sendNotificationToAllParents = async (req, res) => {
 
         const personalizedMessage = message.replace(
           /{name}/g,
-          parent.Username || 'الطالب'
+          parent.Username || 'الطالب',
         );
 
         const result = await sendNotificationMessage(
           phone,
-          `${title || 'Mayada Academy'}: ${personalizedMessage}`
+          `${title || 'Mayada Academy'}: ${personalizedMessage}`,
         );
 
         if (result.success) {
@@ -2008,8 +2033,7 @@ const sendNotificationsToGroup = async (req, res) => {
 
           const hwText =
             item.hwStatus === 'yes' ? 'حل الواجب ✅' : 'لم يحل الواجب ❌';
-          const solvText =
-            item.solvStatus === 'true' ? ' (بدون خطوات)' : '';
+          const solvText = item.solvStatus === 'true' ? ' (بدون خطوات)' : '';
           messageToSend = `مرحباً ولي أمر الطالب ${item.studentName}\nحالة الواجب: ${hwText}${solvText}`;
         } else if (option === 'gradeMsg') {
           if (!item.grade || item.grade === '') continue;
@@ -2018,7 +2042,7 @@ const sendNotificationsToGroup = async (req, res) => {
         } else if (option === 'sendMsg') {
           messageToSend = messageContent.replace(
             /{name}/g,
-            item.studentName || 'الطالب'
+            item.studentName || 'الطالب',
           );
         }
 
@@ -2030,7 +2054,7 @@ const sendNotificationsToGroup = async (req, res) => {
         try {
           const result = await sendNotificationMessage(
             item.parentPhone,
-            `Mayada Academy: ${messageToSend}`
+            `Mayada Academy: ${messageToSend}`,
           );
 
           if (result.success) {
@@ -2151,7 +2175,7 @@ const sendNotificationFromExcelJson = async (req, res) => {
 
         const result = await sendNotificationMessage(
           phone,
-          `${title}: ${messageToSend}`
+          `${title}: ${messageToSend}`,
         );
 
         if (result.success) {
@@ -2195,27 +2219,27 @@ const sendNotificationFromExcelJson = async (req, res) => {
   }
 };
 
-
-
-
-
 // =================================================== END Add Card  &&  Attendance =================================================== //
-
-
 
 // =================================================== Handel Attendance =================================================== //
 
 const handelAttendanceGet = async (req, res) => {
-
-  res.render('teacher/handelAttendance', { title: 'handelAttendance', path: req.path });
-}
-
+  res.render('teacher/handelAttendance', {
+    title: 'handelAttendance',
+    path: req.path,
+  });
+};
 
 const getDates = async (req, res) => {
   const { Grade, centerName, GroupTime, gradeType } = req.body;
   console.log(Grade, centerName, GroupTime);
   try {
-    const group = await Group.findOne({ Grade, CenterName: centerName, GroupTime, gradeType });
+    const group = await Group.findOne({
+      Grade,
+      CenterName: centerName,
+      GroupTime,
+      gradeType,
+    });
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
@@ -2224,7 +2248,9 @@ const getDates = async (req, res) => {
     const attendanceRecords = await Attendance.find({ groupId: group._id });
     console.log(attendanceRecords);
     if (!attendanceRecords) {
-      return res.status(404).json({ message: 'No attendance records found for this session.' });
+      return res
+        .status(404)
+        .json({ message: 'No attendance records found for this session.' });
     }
 
     const dates = attendanceRecords.map((record) => record.date);
@@ -2233,8 +2259,7 @@ const getDates = async (req, res) => {
     console.error('Error fetching dates:', error);
     return res.status(500).json({ message: 'Server error. Please try again.' });
   }
-
-}
+};
 
 const getAttendees = async (req, res) => {
   const { Grade, centerName, GroupTime, gradeType, date } = req.body;
@@ -2251,20 +2276,25 @@ const getAttendees = async (req, res) => {
       return res.status(404).json({ message: 'Group not found' });
     }
 
-    const attendance = await Attendance.findOne({ groupId: group._id, date }).populate('studentsPresent studentsAbsent studentsLate studentsExcused');
+    const attendance = await Attendance.findOne({
+      groupId: group._id,
+      date,
+    }).populate('studentsPresent studentsAbsent studentsLate studentsExcused');
 
     if (!attendance) {
-      return res.status(404).json({ message: 'No attendance record found for this session.' });
+      return res
+        .status(404)
+        .json({ message: 'No attendance record found for this session.' });
     }
 
-    return res.status(200).json({ attendance, message: 'Attendance record found successfully' });
+    return res
+      .status(200)
+      .json({ attendance, message: 'Attendance record found successfully' });
   } catch (error) {
     console.error('Error fetching attendees:', error);
     return res.status(500).json({ message: 'Server error. Please try again.' });
-
   }
-
-}
+};
 
 const convertAttendeesToExcel = async (req, res) => {
   const { centerName, Grade, GroupTime, gradeType } = req.body;
@@ -2605,13 +2635,11 @@ const convertAttendeesToExcel = async (req, res) => {
 عدد مرات الغياب: *${student.absences}*.\n\n
 *شكرًا لتعاونكم.*`;
 
-
       // Send notification to parent
       await sendNotificationMessage(student.parentPhone, messageWappi, {
         studentName: student.Username,
-        type: 'attendance_present_finalize'
+        type: 'attendance_present_finalize',
       });
-
     });
 
     // Add total row for Present Other Group  Students
@@ -2658,11 +2686,11 @@ const convertAttendeesToExcel = async (req, res) => {
 
     res.setHeader(
       'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename=attendance_data.xlsx'
+      'attachment; filename=attendance_data.xlsx',
     );
 
     res.send(excelBuffer);
@@ -2672,10 +2700,7 @@ const convertAttendeesToExcel = async (req, res) => {
   }
 };
 
-
 // =================================================== END Handel Attendance =================================================== //
-
-
 
 // =================================================== My Student Data =================================================== //
 
@@ -2728,7 +2753,6 @@ const getStudentData = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 const fs = require('fs');
 const path = require('path');
@@ -2843,7 +2867,7 @@ const convertAttendaceToExcel = async (req, res) => {
 
     // Create a public URL to the file (you may need to expose the directory statically)
     const fileUrl = `${req.protocol}://${req.get(
-      'host'
+      'host',
     )}/attendance_reports/${fileName}`;
 
     // Use WhatsApp API to send the URL
@@ -2852,12 +2876,12 @@ const convertAttendaceToExcel = async (req, res) => {
 
     res.setHeader(
       'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
 
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename=attendance_data.xlsx'
+      'attachment; filename=attendance_data.xlsx',
     );
 
     res.send(excelBuffer);
@@ -2869,9 +2893,7 @@ const convertAttendaceToExcel = async (req, res) => {
 
 // =================================================== END My Student Data =================================================== //
 
-
 // =================================================== Notifications =================================================== //
-
 
 const sendGradeMessages = async (req, res) => {
   const {
@@ -2896,7 +2918,7 @@ const sendGradeMessages = async (req, res) => {
     totalMessages: dataToSend.length,
     successCount: 0,
     errorCount: 0,
-    status: 'starting'
+    status: 'starting',
   });
 
   try {
@@ -2909,9 +2931,13 @@ const sendGradeMessages = async (req, res) => {
       const name = student[nameCloumnName];
 
       // Check if student entered the exam (default to 1 if not specified)
-      const examEntry = examEntryCloumnName ? (student[examEntryCloumnName] ?? 1) : 1;
+      const examEntry = examEntryCloumnName
+        ? (student[examEntryCloumnName] ?? 1)
+        : 1;
 
-      console.log(`Processing ${i + 1}/${dataToSend.length}: ${name} (${phone})`);
+      console.log(
+        `Processing ${i + 1}/${dataToSend.length}: ${name} (${phone})`,
+      );
 
       let message = '';
 
@@ -2964,7 +2990,7 @@ ${courseName || ''}
 
       try {
         const result = await sendNotificationMessage(phone, message, {
-          type: 'grade_message'
+          type: 'grade_message',
         });
         successCount++;
 
@@ -2976,18 +3002,17 @@ ${courseName || ''}
           errorCount,
           status: 'progress',
           currentStudent: name,
-          lastResult: 'success'
+          lastResult: 'success',
         });
 
         console.log(`✅ Success: Message sent to ${name}`);
-
       } catch (err) {
         errorCount++;
         const errorInfo = {
           student: name,
           phone: phone,
           error: err.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
         errors.push(errorInfo);
 
@@ -3000,7 +3025,7 @@ ${courseName || ''}
           status: 'progress',
           currentStudent: name,
           lastResult: 'error',
-          lastError: err.message
+          lastError: err.message,
         });
 
         console.error(`❌ Error sending message to ${name}:`, err.message);
@@ -3009,7 +3034,7 @@ ${courseName || ''}
       // Introduce a random delay between 5 and 8 seconds
       const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
-        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`,
       );
       await delay(randomDelay);
     }
@@ -3021,7 +3046,7 @@ ${courseName || ''}
       successCount,
       errorCount,
       status: 'completed',
-      errors: errors
+      errors: errors,
     });
 
     if (errorCount > 0) {
@@ -3030,17 +3055,16 @@ ${courseName || ''}
         successCount,
         errorCount,
         errors,
-        totalMessages: dataToSend.length
+        totalMessages: dataToSend.length,
       });
     } else {
       res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
-        totalMessages: dataToSend.length
+        totalMessages: dataToSend.length,
       });
     }
-
   } catch (error) {
     console.error('Critical error in sendGradeMessages:', error);
 
@@ -3051,7 +3075,7 @@ ${courseName || ''}
       successCount,
       errorCount,
       status: 'failed',
-      error: error.message
+      error: error.message,
     });
 
     res.status(500).json({
@@ -3059,15 +3083,19 @@ ${courseName || ''}
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: dataToSend.length
+      totalMessages: dataToSend.length,
     });
   }
 };
 
-
 const sendMessages = async (req, res) => {
-  const { phoneCloumnName, nameCloumnName, dataToSend, HWCloumnName, courseName } =
-    req.body;
+  const {
+    phoneCloumnName,
+    nameCloumnName,
+    dataToSend,
+    HWCloumnName,
+    courseName,
+  } = req.body;
 
   let successCount = 0;
   let errorCount = 0;
@@ -3079,7 +3107,7 @@ const sendMessages = async (req, res) => {
     totalMessages: dataToSend.length,
     successCount: 0,
     errorCount: 0,
-    status: 'starting'
+    status: 'starting',
   });
 
   try {
@@ -3105,10 +3133,14 @@ ${courseNameText}
 ${msg}`;
 
       try {
-        const result = await sendNotificationMessage(student[phoneCloumnName], theMessage, {
-          studentName: student[nameCloumnName],
-          type: 'homework_status'
-        });
+        const result = await sendNotificationMessage(
+          student[phoneCloumnName],
+          theMessage,
+          {
+            studentName: student[nameCloumnName],
+            type: 'homework_status',
+          },
+        );
         successCount++;
 
         // Emit progress update
@@ -3119,18 +3151,17 @@ ${msg}`;
           errorCount,
           status: 'progress',
           currentStudent: student[nameCloumnName],
-          lastResult: 'success'
+          lastResult: 'success',
         });
 
         console.log(`✅ Success: Message sent to ${student[nameCloumnName]}`);
-
       } catch (err) {
         errorCount++;
         const errorInfo = {
           student: student[nameCloumnName],
           phone: student[phoneCloumnName],
           error: err.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
         errors.push(errorInfo);
 
@@ -3143,16 +3174,19 @@ ${msg}`;
           status: 'progress',
           currentStudent: student[nameCloumnName],
           lastResult: 'error',
-          lastError: err.message
+          lastError: err.message,
         });
 
-        console.error(`❌ Error sending message to ${student[nameCloumnName]}:`, err.message);
+        console.error(
+          `❌ Error sending message to ${student[nameCloumnName]}:`,
+          err.message,
+        );
       }
 
       // Introduce a random delay between 5 and 8 seconds
       const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
-        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`,
       );
       await delay(randomDelay);
     }
@@ -3164,7 +3198,7 @@ ${msg}`;
       successCount,
       errorCount,
       status: 'completed',
-      errors: errors
+      errors: errors,
     });
 
     if (errorCount > 0) {
@@ -3173,17 +3207,16 @@ ${msg}`;
         successCount,
         errorCount,
         errors,
-        totalMessages: dataToSend.length
+        totalMessages: dataToSend.length,
       });
     } else {
       res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
-        totalMessages: dataToSend.length
+        totalMessages: dataToSend.length,
       });
     }
-
   } catch (error) {
     console.error('Critical error in sendMessages:', error);
 
@@ -3194,7 +3227,7 @@ ${msg}`;
       successCount,
       errorCount,
       status: 'failed',
-      error: error.message
+      error: error.message,
     });
 
     res.status(500).json({
@@ -3202,11 +3235,10 @@ ${msg}`;
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: dataToSend.length
+      totalMessages: dataToSend.length,
     });
   }
 };
-
 
 // General custom messages from Excel
 const sendCustomMessages = async (req, res) => {
@@ -3228,11 +3260,15 @@ const sendCustomMessages = async (req, res) => {
   for (const row of dataToSend) {
     const targets = [];
     if (recipientType === 'parents' || recipientType === 'both') {
-      const parentPhone = parentPhoneColumnName ? row[parentPhoneColumnName] : undefined;
+      const parentPhone = parentPhoneColumnName
+        ? row[parentPhoneColumnName]
+        : undefined;
       if (parentPhone) targets.push(parentPhone);
     }
     if (recipientType === 'students' || recipientType === 'both') {
-      const studentPhone = studentPhoneColumnName ? row[studentPhoneColumnName] : undefined;
+      const studentPhone = studentPhoneColumnName
+        ? row[studentPhoneColumnName]
+        : undefined;
       if (studentPhone) targets.push(studentPhone);
     }
     totalMessages += targets.length;
@@ -3244,7 +3280,7 @@ const sendCustomMessages = async (req, res) => {
     totalMessages: totalMessages,
     successCount: 0,
     errorCount: 0,
-    status: 'starting'
+    status: 'starting',
   });
 
   try {
@@ -3257,26 +3293,32 @@ const sendCustomMessages = async (req, res) => {
 
       const targets = [];
       if (recipientType === 'parents' || recipientType === 'both') {
-        const parentPhone = parentPhoneColumnName ? row[parentPhoneColumnName] : undefined;
+        const parentPhone = parentPhoneColumnName
+          ? row[parentPhoneColumnName]
+          : undefined;
         if (parentPhone) targets.push({ phone: parentPhone, type: 'parent' });
       }
       if (recipientType === 'students' || recipientType === 'both') {
-        const studentPhone = studentPhoneColumnName ? row[studentPhoneColumnName] : undefined;
-        if (studentPhone) targets.push({ phone: studentPhone, type: 'student' });
+        const studentPhone = studentPhoneColumnName
+          ? row[studentPhoneColumnName]
+          : undefined;
+        if (studentPhone)
+          targets.push({ phone: studentPhone, type: 'student' });
       }
 
       for (const target of targets) {
         try {
           // Personalize header based on recipient type
-          const header = target.type === 'parent'
-            ? `هذه الرساله موجه لولي امر الطالب ${name}`
-            : `عزيزي الطالب ${name}`;
+          const header =
+            target.type === 'parent'
+              ? `هذه الرساله موجه لولي امر الطالب ${name}`
+              : `عزيزي الطالب ${name}`;
           const personalizedText = `${header}\n\n${baseMessage}`;
 
           await sendNotificationMessage(target.phone, personalizedText, {
             studentName: name,
             type: 'custom_message',
-            recipientType: target.type
+            recipientType: target.type,
           });
           successCount++;
           messageIndex++;
@@ -3290,11 +3332,10 @@ const sendCustomMessages = async (req, res) => {
             status: 'progress',
             currentStudent: name,
             lastResult: 'success',
-            targetType: target.type
+            targetType: target.type,
           });
 
           console.log(`✅ Success: Message sent to ${name} (${target.type})`);
-
         } catch (err) {
           errorCount++;
           messageIndex++;
@@ -3303,7 +3344,7 @@ const sendCustomMessages = async (req, res) => {
             phone: target.phone,
             type: target.type,
             error: err.message,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           };
           errors.push(errorInfo);
 
@@ -3317,10 +3358,13 @@ const sendCustomMessages = async (req, res) => {
             currentStudent: name,
             lastResult: 'error',
             lastError: err.message,
-            targetType: target.type
+            targetType: target.type,
           });
 
-          console.error(`❌ Error sending message to ${name} (${target.type}):`, err.message);
+          console.error(
+            `❌ Error sending message to ${name} (${target.type}):`,
+            err.message,
+          );
         }
 
         const randomDelay = Math.floor(Math.random() * (5 - 1 + 1) + 1) * 1000;
@@ -3335,7 +3379,7 @@ const sendCustomMessages = async (req, res) => {
       successCount,
       errorCount,
       status: 'completed',
-      errors: errors
+      errors: errors,
     });
 
     if (errorCount > 0) {
@@ -3344,17 +3388,16 @@ const sendCustomMessages = async (req, res) => {
         successCount,
         errorCount,
         errors,
-        totalMessages: totalMessages
+        totalMessages: totalMessages,
       });
     } else {
       res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
-        totalMessages: totalMessages
+        totalMessages: totalMessages,
       });
     }
-
   } catch (error) {
     console.error('Critical error in sendCustomMessages:', error);
 
@@ -3365,7 +3408,7 @@ const sendCustomMessages = async (req, res) => {
       successCount,
       errorCount,
       status: 'failed',
-      error: error.message
+      error: error.message,
     });
 
     res.status(500).json({
@@ -3373,35 +3416,34 @@ const sendCustomMessages = async (req, res) => {
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: totalMessages
+      totalMessages: totalMessages,
     });
   }
 };
 
-
-
 // =================================================== END Whats App =================================================== //
-
-
 
 // =================================================== Student Data =================================================== //
 
 const getDataStudentInWhatsApp = async (req, res) => {
-  const { centerName, Grade, gradeType, groupTime } = req.query
+  const { centerName, Grade, gradeType, groupTime } = req.query;
   try {
-    const group = await Group.findOne({ CenterName: centerName, Grade, gradeType, GroupTime: groupTime }).populate('students')
+    const group = await Group.findOne({
+      CenterName: centerName,
+      Grade,
+      gradeType,
+      GroupTime: groupTime,
+    }).populate('students');
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });
     }
     const students = group.students;
     return res.status(200).json({ students });
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error fetching attendees:', error);
     return res.status(500).json({ message: 'Server error. Please try again.' });
   }
-
-}
+};
 
 const submitData = async (req, res) => {
   const { data, option, quizName, maxGrade, instanceID } = req.body;
@@ -3415,7 +3457,7 @@ const submitData = async (req, res) => {
     totalMessages: data.length,
     successCount: 0,
     errorCount: 0,
-    status: 'starting'
+    status: 'starting',
   });
 
   try {
@@ -3448,7 +3490,7 @@ ${msg}
       try {
         await sendNotificationMessage(student['parentPhone'], theMessage, {
           studentName: student['studentName'],
-          type: option === 'HWStatus' ? 'homework_status' : 'grade_message'
+          type: option === 'HWStatus' ? 'homework_status' : 'grade_message',
         });
         successCount++;
 
@@ -3460,18 +3502,17 @@ ${msg}
           errorCount,
           status: 'progress',
           currentStudent: student['studentName'],
-          lastResult: 'success'
+          lastResult: 'success',
         });
 
         console.log(`✅ Success: Message sent to ${student['studentName']}`);
-
       } catch (err) {
         errorCount++;
         const errorInfo = {
           student: student['studentName'],
           phone: student['parentPhone'],
           error: err.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
         errors.push(errorInfo);
 
@@ -3484,16 +3525,19 @@ ${msg}
           status: 'progress',
           currentStudent: student['studentName'],
           lastResult: 'error',
-          lastError: err.message
+          lastError: err.message,
         });
 
-        console.error(`❌ Error sending message to ${student['studentName']}:`, err.message);
+        console.error(
+          `❌ Error sending message to ${student['studentName']}:`,
+          err.message,
+        );
       }
 
       // Introduce a random delay between 5 and 8 seconds
       const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
-        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`,
       );
       await delay(randomDelay);
     }
@@ -3505,7 +3549,7 @@ ${msg}
       successCount,
       errorCount,
       status: 'completed',
-      errors: errors
+      errors: errors,
     });
 
     if (errorCount > 0) {
@@ -3514,17 +3558,16 @@ ${msg}
         successCount,
         errorCount,
         errors,
-        totalMessages: data.length
+        totalMessages: data.length,
       });
     } else {
       res.status(200).json({
         message: 'All messages sent successfully',
         successCount,
         errorCount: 0,
-        totalMessages: data.length
+        totalMessages: data.length,
       });
     }
-
   } catch (error) {
     console.error('Critical error in submitData:', error);
 
@@ -3535,7 +3578,7 @@ ${msg}
       successCount,
       errorCount,
       status: 'failed',
-      error: error.message
+      error: error.message,
     });
 
     res.status(500).json({
@@ -3543,11 +3586,10 @@ ${msg}
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: data.length
+      totalMessages: data.length,
     });
   }
 };
-
 
 const sendAttendanceMessages = async (req, res) => {
   const {
@@ -3558,7 +3600,7 @@ const sendAttendanceMessages = async (req, res) => {
     attendanceTimeColumnName,
     cameraColumnName,
     totalSessionTime,
-    dataToSend
+    dataToSend,
   } = req.body;
 
   let successCount = 0;
@@ -3571,7 +3613,7 @@ const sendAttendanceMessages = async (req, res) => {
     totalMessages: dataToSend.length,
     successCount: 0,
     errorCount: 0,
-    status: 'starting'
+    status: 'starting',
   });
 
   try {
@@ -3582,7 +3624,9 @@ const sendAttendanceMessages = async (req, res) => {
       const studentName = student[nameColumnName];
       const phoneNumber = student[phoneColumnName];
       const attendanceValue = student[attendanceValueColumnName];
-      const attendanceTime = attendanceTimeColumnName ? student[attendanceTimeColumnName] : null;
+      const attendanceTime = attendanceTimeColumnName
+        ? student[attendanceTimeColumnName]
+        : null;
       const cameraStatus = cameraColumnName ? student[cameraColumnName] : null;
 
       let message = '';
@@ -3594,10 +3638,15 @@ const sendAttendanceMessages = async (req, res) => {
         if (cameraStatus == 1) {
           cameraText = '\n\nمع العلم أن الطالب قام بفتح الكاميرا خلال الحصة.';
         } else if (cameraStatus == 0) {
-          cameraText = '\n\nمع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.';
+          cameraText =
+            '\n\nمع العلم أن الطالب لم يقم بفتح الكاميرا خلال الحصة.';
         }
 
-        if (attendanceTime && attendanceTime > 0 && attendanceTime < totalSessionTime) {
+        if (
+          attendanceTime &&
+          attendanceTime > 0 &&
+          attendanceTime < totalSessionTime
+        ) {
           // Partial attendance
           message = `السلام عليكم 🙏🏻
 مع حضرتك Assistant Miss Mayada 
@@ -3633,7 +3682,7 @@ ${courseName}
         await sendNotificationMessage(phoneNumber, message, {
           studentName: studentName,
           type: 'attendance_status',
-          courseName: courseName
+          courseName: courseName,
         });
         successCount++;
 
@@ -3645,18 +3694,17 @@ ${courseName}
           errorCount,
           status: 'progress',
           currentStudent: studentName,
-          lastResult: 'success'
+          lastResult: 'success',
         });
 
         console.log(`✅ Success: Attendance message sent to ${studentName}`);
-
       } catch (err) {
         errorCount++;
         const errorInfo = {
           student: studentName,
           phone: phoneNumber,
           error: err.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
         errors.push(errorInfo);
 
@@ -3669,16 +3717,19 @@ ${courseName}
           status: 'progress',
           currentStudent: studentName,
           lastResult: 'error',
-          lastError: err.message
+          lastError: err.message,
         });
 
-        console.error(`❌ Error sending attendance message to ${studentName}:`, err.message);
+        console.error(
+          `❌ Error sending attendance message to ${studentName}:`,
+          err.message,
+        );
       }
 
       // Introduce a random delay between 5 and 8 seconds
       const randomDelay = Math.floor(Math.random() * (8 - 5 + 1) + 5) * 1000;
       console.log(
-        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`
+        `Delaying for ${randomDelay / 1000} seconds before sending the next message.`,
       );
       await delay(randomDelay);
     }
@@ -3690,7 +3741,7 @@ ${courseName}
       successCount,
       errorCount,
       status: 'completed',
-      errors: errors
+      errors: errors,
     });
 
     if (errorCount > 0) {
@@ -3699,17 +3750,16 @@ ${courseName}
         successCount,
         errorCount,
         totalMessages: dataToSend.length,
-        errors: errors
+        errors: errors,
       });
     } else {
       res.json({
         message: 'All attendance messages sent successfully',
         successCount,
         errorCount: 0,
-        totalMessages: dataToSend.length
+        totalMessages: dataToSend.length,
       });
     }
-
   } catch (error) {
     console.error('Critical error in sendAttendanceMessages:', error);
 
@@ -3719,7 +3769,7 @@ ${courseName}
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: dataToSend.length
+      totalMessages: dataToSend.length,
     });
 
     res.status(500).json({
@@ -3727,7 +3777,7 @@ ${courseName}
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: dataToSend.length
+      totalMessages: dataToSend.length,
     });
   }
 };
@@ -3743,19 +3793,19 @@ const sendCollectionMessages = async (req, res) => {
     hwPrefix,
     quizPrefix,
     // Structured prefixes (recommended, like other parts)
-    datePrefixStructured,            // e.g., 'Date'
-    attendanceValuePrefix,           // e.g., 'AttendanceValue' -> 1/0
-    attendanceTimePrefix,            // e.g., 'AttendanceTime' -> minutes attended
-    cameraPrefix,                    // e.g., 'Camera' -> 1/0
-    hwStatusPrefix,                  // e.g., 'HWStatus' -> yes/no/1/0
-    quizNamePrefix,                  // e.g., 'QuizName'
-    gradePrefix,                     // e.g., 'Grade'
-    maxGradePrefix,                  // e.g., 'MaxGrade'
-    examEntryPrefix,                 // e.g., 'ExamEntry' -> 1/0
-    totalSessionTime,                // number (minutes) to compare partial attendance
+    datePrefixStructured, // e.g., 'Date'
+    attendanceValuePrefix, // e.g., 'AttendanceValue' -> 1/0
+    attendanceTimePrefix, // e.g., 'AttendanceTime' -> minutes attended
+    cameraPrefix, // e.g., 'Camera' -> 1/0
+    hwStatusPrefix, // e.g., 'HWStatus' -> yes/no/1/0
+    quizNamePrefix, // e.g., 'QuizName'
+    gradePrefix, // e.g., 'Grade'
+    maxGradePrefix, // e.g., 'MaxGrade'
+    examEntryPrefix, // e.g., 'ExamEntry' -> 1/0
+    totalSessionTime, // number (minutes) to compare partial attendance
     headerIntro,
     title,
-    dataToSend
+    dataToSend,
   } = req.body;
 
   let successCount = 0;
@@ -3769,7 +3819,7 @@ const sendCollectionMessages = async (req, res) => {
       totalMessages: Array.isArray(dataToSend) ? dataToSend.length : 0,
       successCount: 0,
       errorCount: 0,
-      status: 'starting'
+      status: 'starting',
     });
   }
 
@@ -3786,7 +3836,8 @@ const sendCollectionMessages = async (req, res) => {
         keys.forEach((k) => {
           if (k.startsWith(prefix)) {
             const suffix = k.slice(prefix.length);
-            const idx = suffix && /^\d+$/.test(suffix) ? parseInt(suffix, 10) : 1;
+            const idx =
+              suffix && /^\d+$/.test(suffix) ? parseInt(suffix, 10) : 1;
             indexSet.add(idx);
           }
         });
@@ -3815,9 +3866,11 @@ const sendCollectionMessages = async (req, res) => {
       const getVal = (prefix, idx) => {
         if (!prefix) return undefined;
         const keyWithIndex = `${prefix}${idx}`;
-        if (Object.prototype.hasOwnProperty.call(row, keyWithIndex)) return row[keyWithIndex];
+        if (Object.prototype.hasOwnProperty.call(row, keyWithIndex))
+          return row[keyWithIndex];
         // fallback to plain prefix (no index) for first segment
-        if (idx === 1 && Object.prototype.hasOwnProperty.call(row, prefix)) return row[prefix];
+        if (idx === 1 && Object.prototype.hasOwnProperty.call(row, prefix))
+          return row[prefix];
         return undefined;
       };
 
@@ -3835,7 +3888,7 @@ const sendCollectionMessages = async (req, res) => {
         quizName: getVal(quizNamePrefix, i),
         grade: getVal(gradePrefix, i),
         maxGrade: getVal(maxGradePrefix, i),
-        examEntry: getVal(examEntryPrefix, i)
+        examEntry: getVal(examEntryPrefix, i),
       }));
     };
 
@@ -3867,7 +3920,14 @@ const sendCollectionMessages = async (req, res) => {
           seg.maxGrade !== undefined ||
           seg.examEntry !== undefined;
 
-        if (!seg.date && !usingStructured && !seg.attendance && !seg.hw && !seg.quiz) return;
+        if (
+          !seg.date &&
+          !usingStructured &&
+          !seg.attendance &&
+          !seg.hw &&
+          !seg.quiz
+        )
+          return;
         if (seg.date) message += `التاريخ ${seg.date}\n`;
 
         if (usingStructured) {
@@ -3877,10 +3937,7 @@ const sendCollectionMessages = async (req, res) => {
 
             // Always add time info if provided
             if (seg.attendanceTime && Number(seg.attendanceTime) > 0) {
-
               message += `مع العلم أن الطالب حضر ${seg.attendanceTime} دقيقة من أصل 120 دقيقة مدة الحصة.\n`;
-
-
             }
             // Camera info on a separate line if provided (only if camera value is explicitly set)
             if (seg.camera !== undefined && seg.camera !== '') {
@@ -3897,9 +3954,21 @@ const sendCollectionMessages = async (req, res) => {
           // Homework (prefer numeric 1/0; still compatible with old values)
           if (seg.hwStatus !== undefined && seg.hwStatus !== '') {
             const asString = String(seg.hwStatus).trim().toLowerCase();
-            if (asString === '1' || asString === 'yes' || asString === 'تم' || asString === 'نعم' || asString === 'true') {
+            if (
+              asString === '1' ||
+              asString === 'yes' ||
+              asString === 'تم' ||
+              asString === 'نعم' ||
+              asString === 'true'
+            ) {
               message += `الواجب: تم حل الواجب✅\n`;
-            } else if (asString === '0' || asString === 'no' || asString === 'لم' || asString === 'لا' || asString === 'false') {
+            } else if (
+              asString === '0' ||
+              asString === 'no' ||
+              asString === 'لم' ||
+              asString === 'لا' ||
+              asString === 'false'
+            ) {
               message += `الواجب: لم يتم حل الواجب❌\n`;
             } else {
               message += `الواجب: ${seg.hwStatus}\n`;
@@ -3910,13 +3979,19 @@ const sendCollectionMessages = async (req, res) => {
           }
 
           // Quiz
-          if (seg.examEntry !== undefined && seg.examEntry !== '' && seg.examEntry == 0) {
+          if (
+            seg.examEntry !== undefined &&
+            seg.examEntry !== '' &&
+            seg.examEntry == 0
+          ) {
             message += `الامتحان: لم يدخل الامتحان❌\n`;
           } else if (seg.quizName || seg.grade || seg.maxGrade) {
             let quizLine = 'الامتحان: ';
             if (seg.quizName) quizLine += `${seg.quizName}`;
             if (seg.grade !== undefined && seg.maxGrade !== undefined) {
-              quizLine += (seg.quizName ? ' | ' : '') + `الدرجة: ${seg.grade}/${seg.maxGrade}`;
+              quizLine +=
+                (seg.quizName ? ' | ' : '') +
+                `الدرجة: ${seg.grade}/${seg.maxGrade}`;
             }
             message += quizLine + '\n';
           } else {
@@ -3925,7 +4000,11 @@ const sendCollectionMessages = async (req, res) => {
           }
         } else {
           // Legacy fallback formatting
-          if (seg.attendance !== undefined && seg.attendance !== null && seg.attendance !== '') {
+          if (
+            seg.attendance !== undefined &&
+            seg.attendance !== null &&
+            seg.attendance !== ''
+          ) {
             // If legacy sheet also provides attendanceTime, include partial attendance phrasing
             if (
               seg.attendanceTime &&
@@ -3952,7 +4031,7 @@ const sendCollectionMessages = async (req, res) => {
       try {
         await sendNotificationMessage(parentPhone, message, {
           type: 'collection_report',
-          studentName: studentName
+          studentName: studentName,
         });
         successCount++;
         if (req.io) {
@@ -3963,7 +4042,7 @@ const sendCollectionMessages = async (req, res) => {
             errorCount,
             status: 'progress',
             currentStudent: studentName,
-            lastResult: 'success'
+            lastResult: 'success',
           });
         }
       } catch (err) {
@@ -3972,7 +4051,7 @@ const sendCollectionMessages = async (req, res) => {
           student: studentName,
           phone: parentPhone,
           error: err.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
         errors.push(errorInfo);
         if (req.io) {
@@ -3984,7 +4063,7 @@ const sendCollectionMessages = async (req, res) => {
             status: 'progress',
             currentStudent: studentName,
             lastResult: 'error',
-            lastError: err.message
+            lastError: err.message,
           });
         }
       }
@@ -4001,7 +4080,7 @@ const sendCollectionMessages = async (req, res) => {
         successCount,
         errorCount,
         status: 'completed',
-        errors: errors
+        errors: errors,
       });
     }
 
@@ -4011,7 +4090,7 @@ const sendCollectionMessages = async (req, res) => {
         successCount,
         errorCount,
         errors,
-        totalMessages: dataToSend.length
+        totalMessages: dataToSend.length,
       });
     }
 
@@ -4019,7 +4098,7 @@ const sendCollectionMessages = async (req, res) => {
       message: 'All collection messages sent successfully',
       successCount,
       errorCount: 0,
-      totalMessages: dataToSend.length
+      totalMessages: dataToSend.length,
     });
   } catch (error) {
     console.error('Critical error in sendCollectionMessages:', error);
@@ -4030,7 +4109,7 @@ const sendCollectionMessages = async (req, res) => {
         successCount,
         errorCount,
         status: 'failed',
-        error: error.message
+        error: error.message,
       });
     }
     return res.status(500).json({
@@ -4038,7 +4117,7 @@ const sendCollectionMessages = async (req, res) => {
       error: error.message,
       successCount,
       errorCount,
-      totalMessages: Array.isArray(dataToSend) ? dataToSend.length : 0
+      totalMessages: Array.isArray(dataToSend) ? dataToSend.length : 0,
     });
   }
 };
@@ -4082,7 +4161,7 @@ const collectionSampleExcel = async (req, res) => {
       'ExamEntry3',
       'QuizName3',
       'Grade3',
-      'MaxGrade3'
+      'MaxGrade3',
     ];
     worksheet.addRow(headers);
 
@@ -4091,35 +4170,35 @@ const collectionSampleExcel = async (req, res) => {
       'Lamis Yasser Mohamed',
       '01200000000',
       // seg1
-      '17/9',        // Date
-      1,             // AttendanceValue: present
-      70,            // AttendanceTime (minutes)
-      0,             // Camera: not opened
-      1,             // HWStatus: done
-      '',            // ExamEntry: empty (no exam)
-      '',            // QuizName
-      '',            // Grade
-      '',            // MaxGrade
+      '17/9', // Date
+      1, // AttendanceValue: present
+      70, // AttendanceTime (minutes)
+      0, // Camera: not opened
+      1, // HWStatus: done
+      '', // ExamEntry: empty (no exam)
+      '', // QuizName
+      '', // Grade
+      '', // MaxGrade
       // seg2
-      '20/9',        // Date2
-      0,             // AttendanceValue2: absent
-      '',            // AttendanceTime2
-      '',            // Camera2
-      1,             // HWStatus2: done
-      1,             // ExamEntry2: entered
+      '20/9', // Date2
+      0, // AttendanceValue2: absent
+      '', // AttendanceTime2
+      '', // Camera2
+      1, // HWStatus2: done
+      1, // ExamEntry2: entered
       'Vocab Quiz 19/9', // QuizName2
-      5,             // Grade2
-      10,            // MaxGrade2
+      5, // Grade2
+      10, // MaxGrade2
       // seg3
-      '25/9',        // Date3
-      1,             // AttendanceValue3: present
-      '',            // AttendanceTime3
-      '',            // Camera3
-      0,             // HWStatus3: not done
-      '',            // ExamEntry3: empty (no exam)
-      '',            // QuizName3
-      '',            // Grade3
-      ''             // MaxGrade3
+      '25/9', // Date3
+      1, // AttendanceValue3: present
+      '', // AttendanceTime3
+      '', // Camera3
+      0, // HWStatus3: not done
+      '', // ExamEntry3: empty (no exam)
+      '', // QuizName3
+      '', // Grade3
+      '', // MaxGrade3
     ]);
 
     // Case 2: Present with camera, no HW, quiz with score; then present with HW, no exam; then empty
@@ -4128,21 +4207,21 @@ const collectionSampleExcel = async (req, res) => {
       '01211111111',
       // seg1
       '10/9',
-      1,      // present
+      1, // present
       '',
-      1,      // camera opened
-      '',     // HWStatus: empty (no homework)
-      1,      // ExamEntry
+      1, // camera opened
+      '', // HWStatus: empty (no homework)
+      1, // ExamEntry
       'Quiz Unit 1',
       9,
       10,
       // seg2
       '12/9',
-      1,      // present
+      1, // present
       '',
-      '',     // camera: empty (not required)
-      1,      // HWStatus: done
-      '',     // ExamEntry: empty (no exam)
+      '', // camera: empty (not required)
+      1, // HWStatus: done
+      '', // ExamEntry: empty (no exam)
       '',
       '',
       '',
@@ -4155,7 +4234,7 @@ const collectionSampleExcel = async (req, res) => {
       '',
       '',
       '',
-      ''
+      '',
     ]);
 
     // Case 3: Date only, then absent with no exam, then present with quiz
@@ -4174,24 +4253,24 @@ const collectionSampleExcel = async (req, res) => {
       '',
       // seg2
       '05/10',
-      0,   // absent
+      0, // absent
       '',
       '',
       '',
-      0,   // no exam
+      0, // no exam
       '',
       '',
       '',
       // seg3
       '08/10',
-      1,   // present
+      1, // present
       '',
       '',
       '',
-      1,   // entered exam
+      1, // entered exam
       'Quiz Unit 2',
       7,
-      10
+      10,
     ]);
 
     // Case 4: Present with full time, camera on, no HW, no exam
@@ -4200,46 +4279,58 @@ const collectionSampleExcel = async (req, res) => {
       '01233333333',
       // seg1
       '03/10',
-      1,   // present
+      1, // present
       120, // full time
-      1,   // camera opened
-      '',  // HWStatus: empty (no homework)
-      '',  // ExamEntry: empty (no exam)
+      1, // camera opened
+      '', // HWStatus: empty (no homework)
+      '', // ExamEntry: empty (no exam)
       '',
       '',
       '',
       // seg2
       '05/10',
-      1,   // present
-      90,  // partial time
-      '',  // camera: empty (not required)
-      0,   // HWStatus: not done
-      1,   // ExamEntry: entered
+      1, // present
+      90, // partial time
+      '', // camera: empty (not required)
+      0, // HWStatus: not done
+      1, // ExamEntry: entered
       'Math Quiz',
       8,
       10,
       // seg3
       '07/10',
-      0,   // absent
+      0, // absent
       '',
       '',
       '',
       '',
       '',
       '',
-      ''
+      '',
     ]);
 
     // Column widths for readability
     worksheet.columns = headers.map(() => ({ width: 22 }));
 
     const buffer = await workbook.xlsx.writeBuffer();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=Collection_Message_Sample.xlsx');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=Collection_Message_Sample.xlsx',
+    );
     res.send(buffer);
   } catch (error) {
     console.error('Error generating sample Excel:', error);
-    res.status(500).json({ success: false, message: 'Failed to generate sample Excel', error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: 'Failed to generate sample Excel',
+        error: error.message,
+      });
   }
 };
 
@@ -4247,10 +4338,9 @@ const collectionSampleExcel = async (req, res) => {
 
 // =================================================== Convert Group =================================================== //
 
-
 const convertGroup_get = (req, res) => {
   res.render('teacher/convertGroup', { title: 'convertGroup', path: req.path });
-}
+};
 
 const getDataToTransferring = async (req, res) => {
   const { Code } = req.params;
@@ -4264,24 +4354,29 @@ const getDataToTransferring = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    const groups = await Group.find({ Grade: student.Grade, CenterName: student.centerName, gradeType: student.gradeType });
+    const groups = await Group.find({
+      Grade: student.Grade,
+      CenterName: student.centerName,
+      gradeType: student.gradeType,
+    });
 
     if (!groups) {
-      return res.status(404).json({ message: 'No groups found for this student' });
+      return res
+        .status(404)
+        .json({ message: 'No groups found for this student' });
     }
 
     return res.status(200).json(student);
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error fetching groups:', error);
     return res.status(500).json({ message: 'Server error. Please try again.' });
   }
-}
+};
 
 const transferStudent = async (req, res) => {
   const { centerName, Grade, gradeType, groupTime } = req.body;
   const { Code } = req.params;
-  console.log(req.body)
+  console.log(req.body);
   try {
     const student = await User.findOne({
       $or: [{ cardId: Code }, { Code: +Code }],
@@ -4305,14 +4400,15 @@ const transferStudent = async (req, res) => {
     // Remove the student from any previous group
     await Group.updateMany(
       { students: student._id },
-      { $pull: { students: student._id } }
+      { $pull: { students: student._id } },
     );
 
     // Check if the student is already in the group
     if (group.students.includes(student._id)) {
-      return res.status(400).json({ message: 'Student is already in the group' });
+      return res
+        .status(400)
+        .json({ message: 'Student is already in the group' });
     }
-
 
     // Update the student's group info
     student.centerName = centerName;
@@ -4323,7 +4419,10 @@ const transferStudent = async (req, res) => {
     try {
       await student.save({ validateBeforeSave: false });
     } catch (saveError) {
-      console.warn(`Error saving student ${student.Username} (ID: ${student._id}):`, saveError.message);
+      console.warn(
+        `Error saving student ${student.Username} (ID: ${student._id}):`,
+        saveError.message,
+      );
       return res.status(500).json({ message: 'Error updating student data' });
     }
 
@@ -4331,18 +4430,16 @@ const transferStudent = async (req, res) => {
     group.students.push(student._id);
     await group.save();
 
-    return res.status(200).json({ message: 'Student transferred successfully' });
+    return res
+      .status(200)
+      .json({ message: 'Student transferred successfully' });
   } catch (error) {
     console.error('Error transferring student:', error);
     return res.status(500).json({ message: 'Server error. Please try again.' });
   }
 };
 
-
-
-
 // =================================================== Send Registration Message =================================================== //
-
 
 const logOut = async (req, res) => {
   // Clearing the token cookie
@@ -4357,7 +4454,7 @@ const exportErrorDetailsToExcel = async (req, res) => {
   if (!errors || !Array.isArray(errors) || errors.length === 0) {
     return res.status(400).json({
       success: false,
-      message: 'No error data provided for export'
+      message: 'No error data provided for export',
     });
   }
 
@@ -4370,7 +4467,7 @@ const exportErrorDetailsToExcel = async (req, res) => {
       'Student Name',
       'Parent Phone Number',
       'HW Status',
-      'Error Message'
+      'Error Message',
     ]);
 
     // Add data rows
@@ -4379,7 +4476,7 @@ const exportErrorDetailsToExcel = async (req, res) => {
         error.student || '',
         error.phone || '',
         error.hwStatus || '',
-        error.error || ''
+        error.error || '',
       ]);
     });
 
@@ -4388,33 +4485,30 @@ const exportErrorDetailsToExcel = async (req, res) => {
       { key: 'studentName', width: 20 },
       { key: 'phoneNumber', width: 15 },
       { key: 'hwStatus', width: 15 },
-      { key: 'errorMessage', width: 40 }
+      { key: 'errorMessage', width: 40 },
     ];
 
     const excelBuffer = await workbook.xlsx.writeBuffer();
 
     res.setHeader(
       'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="ErrorDetails_${new Date().toISOString().split('T')[0]}.xlsx"`
+      `attachment; filename="ErrorDetails_${new Date().toISOString().split('T')[0]}.xlsx"`,
     );
 
     res.send(excelBuffer);
-
   } catch (error) {
     console.error('Error exporting error details to Excel:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to export error details to Excel',
-      error: error.message
+      error: error.message,
     });
   }
 };
-
-
 
 module.exports = {
   dash_get,
@@ -4450,7 +4544,6 @@ module.exports = {
   getStudentData,
   convertAttendaceToExcel,
 
-
   // Notifications
   sendGradeMessages,
   sendMessages,
@@ -4481,6 +4574,4 @@ module.exports = {
 
   logOut,
   exportErrorDetailsToExcel,
-
-
 };
