@@ -75,8 +75,8 @@ const parentLogin = async (req, res) => {
       },
     );
 
-    // Update FCM token for all students of this parent if provided
-    if (fcmToken) {
+    // Update FCM token only for parent login, not when student logs in with their own phone
+    if (fcmToken && isParentPhone) {
       await User.updateMany(
         { parentPhone: studentByCode.parentPhone },
         { $set: { fcmToken: fcmToken } },

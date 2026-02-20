@@ -15,7 +15,7 @@ require('dotenv').config();
 
 // Configuration
 const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/mayada?retryWrites=true&w=majority&appName=Cluster0';
-const TARGET_PHONE = process.argv[2] || '01003202768';
+const TARGET_PHONE = process.argv[2] || '01156012078';
 
 async function run() {
   try {
@@ -27,9 +27,7 @@ async function run() {
     // Find user by student phone or parent phone
     const user = await User.findOne({
       $or: [
-        { phone: TARGET_PHONE },
         { parentPhone: TARGET_PHONE },
-        { phone: { $regex: new RegExp(TARGET_PHONE.slice(-9)) } },
         { parentPhone: { $regex: new RegExp(TARGET_PHONE.slice(-9)) } }
       ]
     });
