@@ -93,11 +93,15 @@ const parentLogin = async (req, res) => {
       { expiresIn: '30d' },
     );
 
+    // Get notification language preference (from any student with this parent phone)
+    const notificationLanguage = studentByCode.notificationLanguage || 'EN';
+
     return res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
       students,
+      notificationLanguage,
     });
   } catch (error) {
     console.error('Parent login error:', error);
@@ -184,8 +188,11 @@ const getDashboard = async (req, res) => {
         ? {
             date: lastSession.date,
             status: lastSession.status,
-            time: lastSession.atTime,
-            homeworkStatus: lastSession.homeworkStatus || 'N/A',
+            time: lastSession.atTime || null,
+            homeworkStatus: lastSession.homeworkStatus || 'not_specified',
+            ignoredAbsencePolicy: lastSession.ignoredAbsencePolicy || false,
+            fromOtherGroup: lastSession.fromOtherGroup || false,
+            groupInfo: lastSession.groupInfo || null,
           }
         : null,
       payment: {
@@ -254,8 +261,11 @@ const getFullAttendance = async (req, res) => {
     const formattedAttendance = attendanceHistory.map((record) => ({
       date: record.date,
       status: record.status,
-      time: record.atTime,
-      homeworkStatus: record.homeworkStatus || 'N/A',
+      time: record.atTime || null,
+      homeworkStatus: record.homeworkStatus || 'not_specified',
+      ignoredAbsencePolicy: record.ignoredAbsencePolicy || false,
+      fromOtherGroup: record.fromOtherGroup || false,
+      groupInfo: record.groupInfo || null,
       amountPaid: record.amountPaid || 0,
       amountRemaining: record.amountRemaining || 0,
     }));
@@ -429,6 +439,77 @@ const getStudents = async (req, res) => {
   }
 };
 
+/**
+ * Change Notification Language API
+ * Allows parent to change notification language preference (EN/AR)
+ */
+const changeNotificationLanguage = async (req, res) => {
+  try {
+    const { language } = req.body;
+    const { parentPhone } = req.parentData;
+
+    // Validate language
+    if (!language || !['EN', 'AR'].includes(language.toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid language. Supported languages: EN, AR',
+      });
+    }
+
+    const normalizedLanguage = language.toUpperCase();
+
+    // Update all students with this parent phone
+    const result = await User.updateMany(
+      { parentPhone: parentPhone },
+      { $set: { notificationLanguage: normalizedLanguage } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Notification language changed to ${normalizedLanguage === 'EN' ? 'English' : 'Arabic'}`,
+      language: normalizedLanguage,
+      updatedStudents: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error('Change notification language error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again.',
+    });
+  }
+};
+
+/**
+ * Get Notification Language API
+ * Returns current notification language preference
+ */
+const getNotificationLanguage = async (req, res) => {
+  try {
+    const { parentPhone } = req.parentData;
+
+    // Get language from any student with this parent phone
+    const student = await User.findOne({ parentPhone: parentPhone });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'No students found for this parent',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      language: student.notificationLanguage || 'EN',
+    });
+  } catch (error) {
+    console.error('Get notification language error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again.',
+    });
+  }
+};
+
 module.exports = {
   parentLogin,
   getDashboard,
@@ -437,4 +518,6 @@ module.exports = {
   markNotificationRead,
   markAllNotificationsRead,
   getStudents,
+  changeNotificationLanguage,
+  getNotificationLanguage,
 };

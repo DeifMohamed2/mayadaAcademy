@@ -104,4 +104,19 @@ router.patch('/notifications/:id/read', parentAuthMiddleware, parentController.m
  */
 router.patch('/notifications/read-all', parentAuthMiddleware, parentController.markAllNotificationsRead);
 
+/**
+ * @route   GET /api/parent/settings/language
+ * @desc    Get current notification language preference
+ * @access  Private
+ */
+router.get('/settings/language', parentAuthMiddleware, parentController.getNotificationLanguage);
+
+/**
+ * @route   PUT /api/parent/settings/language
+ * @desc    Change notification language (EN/AR)
+ * @access  Private
+ * @body    { language: "EN" | "AR" }
+ */
+router.put('/settings/language', parentAuthMiddleware, parentController.changeNotificationLanguage);
+
 module.exports = router;

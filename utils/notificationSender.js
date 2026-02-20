@@ -14,6 +14,13 @@
 const { sendNotification, sendNotificationToParent, sendNotificationBatch } = require('./fcm');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const { 
+  buildAttendanceNotification, 
+  buildHomeworkNotification, 
+  buildQuizNotification,
+  getHomeworkStatusLine,
+  getHomeworkStatusLabel,
+} = require('./notificationTranslations');
 
 /**
  * Normalize phone number for lookup
@@ -57,6 +64,27 @@ async function findUserByPhone(phone) {
   }
   
   return user;
+}
+
+/**
+ * Get user's notification language preference
+ * @param {string} phone - Phone number to search for
+ * @returns {Promise<string>} - Language code (EN/AR), defaults to EN
+ */
+async function getUserLanguage(phone) {
+  if (!phone) return 'EN';
+  
+  const normalizedPhone = normalizePhone(phone);
+  
+  // Find user by parent phone to get language preference
+  const user = await User.findOne({ 
+    $or: [
+      { parentPhone: normalizedPhone },
+      { parentPhone: { $regex: new RegExp(normalizedPhone.slice(-9)) } }
+    ]
+  });
+  
+  return user?.notificationLanguage || 'EN';
 }
 
 /**
@@ -118,8 +146,8 @@ async function saveNotificationToDatabase(notificationData) {
   try {
     // Valid notification types from the Notification model
     const validTypes = [
-      'attendance', 'homework', 'payment', 'custom', 'block', 
-      'unblock', 'verification', 'registration', 'password_reset', 'general'
+      'attendance', 'attendance_present', 'attendance_late', 'attendance_absent',
+      'homework', 'payment', 'custom', 'block', 'unblock', 'registration', 'general'
     ];
     
     // Map unknown types to 'custom'
@@ -172,6 +200,9 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
     // Determine notification type from details
     const notificationType = details.type || 'custom';
     
+    // Get studentId from details if provided, otherwise use found user's ID
+    const studentId = details.studentId || null;
+    
     if (!user || !user.fcmToken) {
       // If user not found or no FCM token, try sending to parent
       const result = await sendNotificationToParent(
@@ -188,6 +219,7 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
       // Save notification to database even if no FCM token
       if (result.sent > 0) {
         await saveNotificationToDatabase({
+          studentId: studentId,
           parentPhone: normalizedPhone,
           title,
           body,
@@ -200,6 +232,7 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
       
       // Still save to database for record keeping
       await saveNotificationToDatabase({
+        studentId: studentId,
         parentPhone: normalizedPhone,
         title,
         body,
@@ -226,9 +259,9 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
       }
     );
     
-    // Save notification to database
+    // Save notification to database (use provided studentId or user's ID)
     await saveNotificationToDatabase({
-      studentId: user._id,
+      studentId: studentId || user._id,
       parentPhone: user.parentPhone || normalizedPhone,
       title,
       body,
@@ -281,35 +314,96 @@ async function sendStudentRegistrationNotification(phone, studentCode, studentIn
 }
 
 /**
- * Send verification code notification
- * @param {string} phone - Phone number
- * @param {string} code - Verification code
- * @param {string} countryCode - Country code (optional)
+ * Send attendance notification to parent (legacy - keeps backward compatibility)
+ * @param {string} phone - Parent phone number
+ * @param {string} title - Notification title
+ * @param {string} body - Notification body
+ * @param {object} data - Additional data (studentName, type, etc.)
  * @returns {Promise<{success: boolean, message?: string, data?: any}>}
  */
-async function sendVerificationCodeNotification(phone, code, countryCode = '20') {
-  const message = `Verification Code: ${code}\n\nPlease use this code to verify your account. This code will expire in 15 minutes.`;
+async function sendAttendanceNotification(phone, title, body, data = {}) {
+  const message = `${title}: ${body}`;
   
   return await sendNotificationMessage(phone, message, {
-    type: 'verification',
-    code: code
-  }, countryCode);
+    type: data.type || 'attendance',
+    ...data
+  });
 }
 
 /**
- * Send password reset notification
- * @param {string} phone - Phone number
- * @param {string} resetLink - Password reset link
- * @param {string} countryCode - Country code (optional)
+ * Send localized attendance notification based on user's language preference
+ * @param {string} phone - Parent phone number
+ * @param {string} attendanceType - Type: 'present', 'late', 'absent'
+ * @param {object} data - Data for notification template
  * @returns {Promise<{success: boolean, message?: string, data?: any}>}
  */
-async function sendPasswordResetNotification(phone, resetLink, countryCode = '20') {
-  const message = `Password Reset Request\n\nClick the link below to reset your password:\n${resetLink}\n\nThis link will expire in 15 minutes.`;
-  
-  return await sendNotificationMessage(phone, message, {
-    type: 'password_reset',
-    link: resetLink
-  }, countryCode);
+async function sendLocalizedAttendanceNotification(phone, attendanceType, data = {}) {
+  try {
+    // Get user's language preference
+    const language = await getUserLanguage(phone);
+    
+    // Build notification using translations
+    const notification = buildAttendanceNotification(attendanceType, data, language);
+    
+    const message = `${notification.title}: ${notification.body}`;
+    
+    return await sendNotificationMessage(phone, message, {
+      type: data.type || `attendance_${attendanceType}`,
+      language,
+      ...data
+    });
+  } catch (error) {
+    console.error('Error sending localized attendance notification:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Send localized homework notification based on user's language preference
+ * @param {string} phone - Parent phone number
+ * @param {object} data - Data for notification template { studentName, hwStatus, solvText }
+ * @returns {Promise<{success: boolean, message?: string, data?: any}>}
+ */
+async function sendLocalizedHomeworkNotification(phone, data = {}) {
+  try {
+    const language = await getUserLanguage(phone);
+    const notification = buildHomeworkNotification(data, language);
+    
+    const message = `${notification.title}: ${notification.body}`;
+    
+    return await sendNotificationMessage(phone, message, {
+      type: 'homework',
+      language,
+      ...data
+    });
+  } catch (error) {
+    console.error('Error sending localized homework notification:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Send localized quiz result notification based on user's language preference
+ * @param {string} phone - Parent phone number
+ * @param {object} data - Data for notification template { studentName, quizName, grade, maxGrade }
+ * @returns {Promise<{success: boolean, message?: string, data?: any}>}
+ */
+async function sendLocalizedQuizNotification(phone, data = {}) {
+  try {
+    const language = await getUserLanguage(phone);
+    const notification = buildQuizNotification(data, language);
+    
+    const message = `${notification.title}: ${notification.body}`;
+    
+    return await sendNotificationMessage(phone, message, {
+      type: 'custom',
+      language,
+      ...data
+    });
+  } catch (error) {
+    console.error('Error sending localized quiz notification:', error);
+    return { success: false, message: error.message };
+  }
 }
 
 /**
@@ -385,11 +479,16 @@ async function sendNotificationBatchByPhones(phones, message, details = {}) {
 module.exports = {
   sendNotificationMessage,
   sendStudentRegistrationNotification,
-  sendVerificationCodeNotification,
-  sendPasswordResetNotification,
+  sendAttendanceNotification,
+  sendLocalizedAttendanceNotification,
+  sendLocalizedHomeworkNotification,
+  sendLocalizedQuizNotification,
   sendNotificationBatchByPhones,
   formatNotificationMessage,
   findUserByPhone,
+  getUserLanguage,
   saveNotificationToDatabase,
+  getHomeworkStatusLine,
+  getHomeworkStatusLabel,
 };
 

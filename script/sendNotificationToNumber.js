@@ -1,14 +1,12 @@
 /**
- * Script to send all types of notifications to a specific number
- * Usage: node scripts/sendNotificationToNumber.js <phone_number>
+ * Script to send test notifications to a specific number
+ * Usage: node script/sendNotificationToNumber.js <phone_number>
  */
 
 const mongoose = require('mongoose');
 const { 
   sendNotificationMessage, 
   sendStudentRegistrationNotification,
-  sendVerificationCodeNotification,
-  sendPasswordResetNotification
 } = require('../utils/notificationSender');
 const User = require('../models/User');
 require('dotenv').config();
@@ -44,14 +42,14 @@ async function run() {
       console.log(`FCM Token found: ${user.fcmToken.substring(0, 20)}...`);
     }
 
-    console.log('\n--- Sending All Types of Notifications ---');
+    console.log('\n--- Sending Test Notifications ---');
 
     // 1. General Notification
     console.log('1. Sending General Notification...');
     const generalResult = await sendNotificationMessage(
       TARGET_PHONE, 
-      "Hello! This is a general test notification from Elkably system.",
-      { type: 'test_general' }
+      "General: هذا إشعار تجريبي من نظام Mayada Academy.",
+      { type: 'general' }
     );
     console.log('Result:', generalResult);
 
@@ -69,23 +67,8 @@ async function run() {
     );
     console.log('Result:', regResult);
 
-    // 3. Verification Code Notification
-    console.log('\n3. Sending Verification Code Notification...');
-    const verifyResult = await sendVerificationCodeNotification(
-      TARGET_PHONE,
-      "123456"
-    );
-    console.log('Result:', verifyResult);
-
-    // 4. Password Reset Notification
-    console.log('\n4. Sending Password Reset Notification...');
-    const resetResult = await sendPasswordResetNotification(
-      TARGET_PHONE,
-      "https://elkably.com/reset-password/test-token"
-    );
-    console.log('Result:', resetResult);
-
     console.log('\n--- All notification attempts completed ---');
+    console.log('\nFor attendance notifications, use: node script/testAttendanceNotifications.js');
     
     // Wait a bit for async operations to finish logging if any
     setTimeout(() => {

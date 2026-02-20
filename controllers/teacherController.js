@@ -3,7 +3,16 @@ const Group = require('../models/Group');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance');
 
-const { sendNotificationMessage } = require('../utils/notificationSender');
+const { 
+  sendAttendanceNotification, 
+  sendNotificationMessage,
+  sendLocalizedAttendanceNotification,
+  sendLocalizedHomeworkNotification,
+  sendLocalizedQuizNotification,
+  getUserLanguage,
+  getHomeworkStatusLine,
+  getHomeworkStatusLabel,
+} = require('../utils/notificationSender');
 const Excel = require('exceljs');
 const QRCode = require('qrcode');
 
@@ -716,7 +725,6 @@ const markAttendance = async (req, res) => {
     gradeType,
     attendAbsencet,
     attendOtherGroup,
-    attendWithHW,
     attendWithoutHW,
     // HWwithOutSteps,
     // attendWithOutHW,
@@ -829,6 +837,9 @@ const markAttendance = async (req, res) => {
 
       await attendance.save();
 
+      // Determine homework status for late attendance (default is done)
+      let lateHomeworkStatus = attendWithoutHW ? 'not_done' : 'done';
+
       // Find if an attendance history already exists for today
       const existingHistory = student.AttendanceHistory.find(
         (record) => record.date === today,
@@ -838,6 +849,15 @@ const markAttendance = async (req, res) => {
         // Update the status to 'Late' if an entry already exists
         existingHistory.status = 'Late';
         existingHistory.atTime = new Date().toLocaleTimeString();
+        existingHistory.homeworkStatus = lateHomeworkStatus;
+        existingHistory.ignoredAbsencePolicy = !!attendAbsencet;
+        existingHistory.fromOtherGroup = !!attendOtherGroup;
+        existingHistory.groupInfo = {
+          centerName: centerName,
+          grade: Grade,
+          gradeType: gradeType,
+          groupTime: GroupTime,
+        };
         existingHistory.amountPaid = student.balance || 0;
         existingHistory.amountRemaining = student.amountRemaining || 0;
 
@@ -850,6 +870,15 @@ const markAttendance = async (req, res) => {
           date: today,
           atTime: new Date().toLocaleTimeString(),
           status: 'Late',
+          homeworkStatus: lateHomeworkStatus,
+          ignoredAbsencePolicy: !!attendAbsencet,
+          fromOtherGroup: !!attendOtherGroup,
+          groupInfo: {
+            centerName: centerName,
+            grade: Grade,
+            gradeType: gradeType,
+            groupTime: GroupTime,
+          },
           amountPaid: student.balance || 0,
           amountRemaining: student.amountRemaining || 0,
         });
@@ -871,15 +900,6 @@ const markAttendance = async (req, res) => {
       await attendance.populate('studentsPresent');
       await attendance.populate('studentsExcused');
 
-      const messageWappi = `⚠️ *عزيزي ولي أمر الطالب ${student.Username}*،\n
-نود إعلامكم بأنه تم التحديث ابنكم قد *تأخر في الحضور اليوم*.\n
-وقد تم تسجيل حضوره *متأخرًا*.\n
-وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
-عدد مرات الغياب: *${student.absences}*.\n\n
-*يرجى الانتباه لمواعيد الحضور مستقبلًا*.\n\n
-التاريخ: ${today}
-*شكرًا لتعاونكم.*`;
-
       // Send notification to parent
       try {
         // Check if parent phone exists
@@ -891,10 +911,18 @@ const markAttendance = async (req, res) => {
           console.log(
             `Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`,
           );
-          await sendNotificationMessage(student.parentPhone, messageWappi, {
-            studentName: student.Username,
-            type: 'attendance_late',
-          });
+          await sendLocalizedAttendanceNotification(
+            student.parentPhone,
+            'late',
+            {
+              type: 'attendance_late',
+              studentName: student.Username,
+              studentCode: student.Code,
+              group: `${centerName} - ${Grade} - ${GroupTime}`,
+              absences: student.absences,
+              date: today,
+            }
+          );
           console.log('Notification sent successfully for late attendance');
         }
       } catch (notificationError) {
@@ -942,40 +970,30 @@ const markAttendance = async (req, res) => {
       await attendance.populate('studentsExcused');
       console.log(attendance.studentsExcused);
 
-      if (attendOtherGroup) {
-        student.AttendanceHistory.push({
-          attendance: attendance._id,
-          date: today,
-          atTime: new Date().toLocaleTimeString(),
-          status: 'Present From Other Group',
-          amountPaid: student.balance || 0,
-          amountRemaining: student.amountRemaining || 0,
-        });
-      } else {
-        student.AttendanceHistory.push({
-          attendance: attendance._id,
-          date: today,
-          atTime: new Date().toLocaleTimeString(),
-          status: 'Present',
-          amountPaid: student.balance || 0,
-          amountRemaining: student.amountRemaining || 0,
-        });
+      // Determine homework status (default is done)
+      let homeworkStatus = 'done';
+      if (attendWithoutHW) {
+        homeworkStatus = 'not_done';
       }
 
-      let hwLine = '';
-      if (attendWithHW) {
-        hwLine = `\nوقد قام الطالب بحل الواجب.`;
-      } else if (attendWithoutHW) {
-        hwLine = `\nولم يقم الطالب بحل الواجب.`;
-      }
-
-      const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
-نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
-وقد تم تسجيل حضوره *بنجاح*.${hwLine}\n
-وحضر في جروب *${centerName} - ${Grade} - ${GroupTime}*.\n
-عدد مرات الغياب: *${student.absences}*.\n
-التاريخ: ${today}
-*شكرًا لتعاونكم.*`;
+      // Save attendance history with all details
+      student.AttendanceHistory.push({
+        attendance: attendance._id,
+        date: today,
+        atTime: new Date().toLocaleTimeString(),
+        status: attendOtherGroup ? 'Present From Other Group' : 'Present',
+        homeworkStatus: homeworkStatus,
+        ignoredAbsencePolicy: !!attendAbsencet,
+        fromOtherGroup: !!attendOtherGroup,
+        groupInfo: {
+          centerName: centerName,
+          grade: Grade,
+          gradeType: gradeType,
+          groupTime: GroupTime,
+        },
+        amountPaid: student.balance || 0,
+        amountRemaining: student.amountRemaining || 0,
+      });
 
       // Send notification to parent
       try {
@@ -988,10 +1006,23 @@ const markAttendance = async (req, res) => {
           console.log(
             `Sending notification to parent phone: ${student.parentPhone} for student: ${student.Username}`,
           );
-          await sendNotificationMessage(student.parentPhone, messageWappi, {
-            studentName: student.Username,
-            type: 'attendance_present',
-          });
+          // Get user's language preference for homework line
+          const userLang = await getUserLanguage(student.parentPhone);
+          const hwLine = getHomeworkStatusLine(homeworkStatus, userLang);
+          
+          await sendLocalizedAttendanceNotification(
+            student.parentPhone,
+            'present',
+            {
+              type: 'attendance_present',
+              studentName: student.Username,
+              studentCode: student.Code,
+              group: `${centerName} - ${Grade} - ${GroupTime}`,
+              absences: student.absences,
+              hwLine: hwLine,
+              date: today,
+            }
+          );
           console.log('Notification sent successfully');
         }
       } catch (notificationError) {
@@ -1250,6 +1281,15 @@ const finalizeAttendance = async (req, res) => {
               date: today,
               atTime: new Date().toLocaleTimeString(),
               status: 'Absent',
+              homeworkStatus: 'not_specified',
+              ignoredAbsencePolicy: false,
+              fromOtherGroup: false,
+              groupInfo: {
+                centerName: centerName,
+                grade: Grade,
+                gradeType: gradeType,
+                groupTime: GroupTime,
+              },
             });
 
             // Save with validation disabled to avoid required field errors
@@ -1441,18 +1481,20 @@ const finalizeAttendance = async (req, res) => {
         };
       }
 
-      const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
-نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
-وقد تم تسجيل حضوره *بنجاح*.\n
-المبلغ المتبقي من سعر الحصة هو: *${student.amountRemaining} جنيه*.\n
-عدد مرات الغياب: *${student.absences}*.\n\n
-*شكرًا لتعاونكم.*`;
-
       // Send notification to parent
-      await sendNotificationMessage(student.parentPhone, messageWappi, {
-        studentName: student.Username,
-        type: 'attendance_present_finalize',
-      });
+      await sendLocalizedAttendanceNotification(
+        student.parentPhone,
+        'present',
+        {
+          type: 'attendance_present',
+          studentName: student.Username,
+          studentCode: student.Code,
+          group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
+          absences: student.absences,
+          hwLine: '',
+          date: today,
+        }
+      );
     });
 
     // Add total row for Present Other Group  Students
@@ -1532,20 +1574,23 @@ const finalizeAttendance = async (req, res) => {
 
       let subMessage = '';
       if (student.absences >= 3) {
-        subMessage = `\n\n❌ *وفقًا لعدد مرات الغياب التي تم تسجيلها لابنكم*، يرجى العلم أنه *لن يتمكن من دخول الحصة القادمة*.`;
+        subMessage = `\n\n⛔ تنبيه: لن يتمكن الطالب من دخول الحصة القادمة بسبب تجاوز عدد مرات الغياب المسموح بها.`;
       }
 
-      const messageWappi = `❌ *عزيزي ولي أمر الطالب ${student.Username}*،\n
-نود إعلامكم بأن ابنكم *لم يحضر اليوم*.\n
-وقد تم تسجيل غيابه .\n
-عدد مرات الغياب: *${student.absences}*.${subMessage}\n\n
-*شكرًا لتعاونكم.*`;
-
       // Send notification to parent
-      await sendNotificationMessage(student.parentPhone, messageWappi, {
-        studentName: student.Username,
-        type: 'attendance_present_finalize',
-      });
+      await sendLocalizedAttendanceNotification(
+        student.parentPhone,
+        'absent',
+        {
+          type: 'attendance_absent',
+          studentName: student.Username,
+          studentCode: student.Code,
+          group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
+          absences: student.absences,
+          date: today,
+          warningMessage: student.absences >= 3 ? subMessage : '',
+        }
+      );
     });
 
     // Add borders to all cells
@@ -1797,24 +1842,20 @@ const sendNotificationsToStudents = async (req, res) => {
           continue;
         }
 
+        const notificationTitle = title || 'Mayada Academy';
         const result = await sendNotificationMessage(
           phone,
-          `${title}: ${message}`,
+          `${notificationTitle}: ${message}`,
           {
+            studentId: student._id,
             studentCode: student.Code,
             studentName: student.Username,
+            type: 'custom',
+            sentBy: 'teacher',
           },
         );
 
         if (result.success) {
-          await Notification.create({
-            studentId: student._id,
-            parentPhone: phone,
-            type: 'custom',
-            title: title || 'Mayada Academy',
-            body: message,
-            data: { sentBy: 'teacher' },
-          });
           sent += 1;
         } else {
           failed += 1;
@@ -1863,18 +1904,16 @@ const sendCustomNotification = async (req, res) => {
     const result = await sendNotificationMessage(
       phone,
       `${title || 'Mayada Academy'}: ${message}`,
+      {
+        studentId: student?._id,
+        studentCode: student?.Code,
+        studentName: student?.Username,
+        type: 'custom',
+        sentBy: 'custom',
+      },
     );
 
     if (result.success) {
-      await Notification.create({
-        studentId: student?._id,
-        parentPhone: phone,
-        type: 'custom',
-        title: title || 'Mayada Academy',
-        body: message,
-        data: { sentBy: 'custom' },
-      });
-
       res.json({
         success: true,
         message: 'تم إرسال الإشعار بنجاح',
@@ -1932,17 +1971,16 @@ const sendNotificationToAllParents = async (req, res) => {
         const result = await sendNotificationMessage(
           phone,
           `${title || 'Mayada Academy'}: ${personalizedMessage}`,
+          {
+            studentId: parent._id,
+            studentCode: parent.Code,
+            studentName: parent.Username,
+            type: 'custom',
+            sentBy: 'all_parents_broadcast',
+          },
         );
 
         if (result.success) {
-          await Notification.create({
-            studentId: parent._id,
-            parentPhone: phone,
-            type: 'custom',
-            title: title || 'Mayada Academy',
-            body: personalizedMessage,
-            data: { sentBy: 'all_parents_broadcast' },
-          });
           sent += 1;
         } else {
           failed += 1;
@@ -2026,63 +2064,121 @@ const sendNotificationsToGroup = async (req, res) => {
 
     for (const item of data) {
       try {
-        let messageToSend = '';
-
-        if (option === 'HWStatus') {
-          if (item.hwStatus === 'none') continue;
-
-          const hwText =
-            item.hwStatus === 'yes' ? 'حل الواجب ✅' : 'لم يحل الواجب ❌';
-          const solvText = item.solvStatus === 'true' ? ' (بدون خطوات)' : '';
-          messageToSend = `مرحباً ولي أمر الطالب ${item.studentName}\nحالة الواجب: ${hwText}${solvText}`;
-        } else if (option === 'gradeMsg') {
-          if (!item.grade || item.grade === '') continue;
-
-          messageToSend = `مرحباً ولي أمر الطالب ${item.studentName}\nنتيجة امتحان: ${quizName}\nالدرجة: ${item.grade}/${maxGrade}`;
-        } else if (option === 'sendMsg') {
-          messageToSend = messageContent.replace(
-            /{name}/g,
-            item.studentName || 'الطالب',
-          );
-        }
-
         if (!item.parentPhone || item.parentPhone === '-') {
           failed += 1;
           continue;
         }
 
-        try {
-          const result = await sendNotificationMessage(
-            item.parentPhone,
-            `Mayada Academy: ${messageToSend}`,
-          );
+        // Get user's language preference
+        const userLang = await getUserLanguage(item.parentPhone);
 
-          if (result.success) {
-            const notificationType =
-              option === 'HWStatus' ? 'homework' : 'custom';
-            await Notification.create({
-              parentPhone: item.parentPhone,
-              type: notificationType,
-              title: 'Mayada Academy',
-              body: messageToSend,
-              data: {
+        if (option === 'HWStatus') {
+          if (item.hwStatus === 'none') continue;
+
+          const hwText = item.hwStatus === 'yes' 
+            ? (userLang === 'AR' ? 'حل الواجب ✅' : 'Homework Done ✅')
+            : (userLang === 'AR' ? 'لم يحل الواجب ❌' : 'Homework Not Done ❌');
+          const solvText = item.solvStatus === 'true' 
+            ? (userLang === 'AR' ? ' (بدون خطوات)' : ' (without steps)')
+            : '';
+          
+          const hwStatus = userLang === 'AR' ? hwText + solvText : hwText + solvText;
+          
+          try {
+            const result = await sendLocalizedHomeworkNotification(
+              item.parentPhone,
+              {
+                studentId: item.studentId,
+                studentCode: item.studentCode,
+                studentName: item.studentName,
+                hwStatus: hwStatus,
+                solvText: '',
                 sentBy: 'group_notification',
                 centerName,
                 Grade,
                 gradeType,
                 groupTime,
-                option,
-              },
-            });
-            sent += 1;
-          } else {
+              }
+            );
+
+            if (result.success) {
+              sent += 1;
+            } else {
+              failed += 1;
+              errors.push(item.parentPhone);
+            }
+          } catch (phoneErr) {
+            console.error('Error sending to phone:', item.parentPhone, phoneErr);
             failed += 1;
             errors.push(item.parentPhone);
           }
-        } catch (phoneErr) {
-          console.error('Error sending to phone:', item.parentPhone, phoneErr);
-          failed += 1;
-          errors.push(item.parentPhone);
+        } else if (option === 'gradeMsg') {
+          if (!item.grade || item.grade === '') continue;
+
+          try {
+            const result = await sendLocalizedQuizNotification(
+              item.parentPhone,
+              {
+                studentId: item.studentId,
+                studentCode: item.studentCode,
+                studentName: item.studentName,
+                quizName: quizName,
+                grade: item.grade,
+                maxGrade: maxGrade,
+                sentBy: 'group_notification',
+                centerName,
+                Grade,
+                gradeType,
+                groupTime,
+              }
+            );
+
+            if (result.success) {
+              sent += 1;
+            } else {
+              failed += 1;
+              errors.push(item.parentPhone);
+            }
+          } catch (phoneErr) {
+            console.error('Error sending to phone:', item.parentPhone, phoneErr);
+            failed += 1;
+            errors.push(item.parentPhone);
+          }
+        } else if (option === 'sendMsg') {
+          const studentPlaceholder = userLang === 'AR' ? 'الطالب' : 'Student';
+          const messageToSend = messageContent.replace(
+            /{name}/g,
+            item.studentName || studentPlaceholder,
+          );
+
+          try {
+            const result = await sendNotificationMessage(
+              item.parentPhone,
+              `Mayada Academy: ${messageToSend}`,
+              {
+                studentId: item.studentId,
+                studentCode: item.studentCode,
+                studentName: item.studentName,
+                type: 'custom',
+                sentBy: 'group_notification',
+                centerName,
+                Grade,
+                gradeType,
+                groupTime,
+              },
+            );
+
+            if (result.success) {
+              sent += 1;
+            } else {
+              failed += 1;
+              errors.push(item.parentPhone);
+            }
+          } catch (phoneErr) {
+            console.error('Error sending to phone:', item.parentPhone, phoneErr);
+            failed += 1;
+            errors.push(item.parentPhone);
+          }
         }
       } catch (itemErr) {
         console.error('Error processing item:', itemErr);
@@ -2149,7 +2245,8 @@ const sendNotificationFromExcelJson = async (req, res) => {
       }
 
       try {
-        let messageToSend = '';
+        // Get user's language preference
+        const userLang = await getUserLanguage(phone);
 
         if (sendType === 'hwStatus') {
           const hwStatus = hwColumn ? row[hwColumn]?.toString() : '';
@@ -2159,43 +2256,72 @@ const sendNotificationFromExcelJson = async (req, res) => {
           }
           const hwText =
             hwStatus.toLowerCase() === 'yes' || hwStatus === 'نعم'
-              ? 'حل الواجب ✅'
-              : 'لم يحل الواجب ❌';
-          messageToSend = `مرحباً ولي أمر الطالب ${name}\nحالة الواجب: ${hwText}`;
+              ? (userLang === 'AR' ? 'حل الواجب ✅' : 'Homework Done ✅')
+              : (userLang === 'AR' ? 'لم يحل الواجب ❌' : 'Homework Not Done ❌');
+          
+          const result = await sendLocalizedHomeworkNotification(
+            phone,
+            {
+              studentName: name,
+              hwStatus: hwText,
+              solvText: '',
+              sentBy: 'excel',
+              source: 'excel_json',
+              sendType,
+            },
+          );
+
+          if (result.success) {
+            sent += 1;
+          } else {
+            failed += 1;
+          }
         } else if (sendType === 'gradeMsg') {
           const gradeValue = gradeColumn ? row[gradeColumn]?.toString() : '';
           if (!gradeValue) {
             failed += 1;
             continue;
           }
-          messageToSend = `مرحباً ولي أمر الطالب ${name}\nنتيجة امتحان: ${quizName}\nالدرجة: ${gradeValue}/${maxGrade}`;
+          
+          const result = await sendLocalizedQuizNotification(
+            phone,
+            {
+              studentName: name,
+              quizName: quizName,
+              grade: gradeValue,
+              maxGrade: maxGrade,
+              sentBy: 'excel',
+              source: 'excel_json',
+              sendType,
+            },
+          );
+
+          if (result.success) {
+            sent += 1;
+          } else {
+            failed += 1;
+          }
         } else if (sendType === 'sendMsg') {
-          messageToSend = messageContent.replace(/{name}/g, name || 'الطالب');
-        }
+          const studentPlaceholder = userLang === 'AR' ? 'الطالب' : 'Student';
+          const messageToSend = messageContent.replace(/{name}/g, name || studentPlaceholder);
 
-        const result = await sendNotificationMessage(
-          phone,
-          `${title}: ${messageToSend}`,
-        );
+          const result = await sendNotificationMessage(
+            phone,
+            `${title}: ${messageToSend}`,
+            {
+              studentName: name,
+              type: 'custom',
+              sentBy: 'excel',
+              source: 'excel_json',
+              sendType,
+            },
+          );
 
-        if (result.success) {
-          const notificationType =
-            sendType === 'hwStatus'
-              ? 'homework'
-              : sendType === 'gradeMsg'
-                ? 'custom'
-                : 'custom';
-
-          await Notification.create({
-            parentPhone: phone,
-            type: notificationType,
-            title,
-            body: messageToSend,
-            data: { sentBy: 'excel', source: 'excel_json', sendType },
-          });
-          sent += 1;
-        } else {
-          failed += 1;
+          if (result.success) {
+            sent += 1;
+          } else {
+            failed += 1;
+          }
         }
       } catch (err) {
         console.error('Error sending notification from excel row:', err);
@@ -2208,7 +2334,7 @@ const sendNotificationFromExcelJson = async (req, res) => {
       sent,
       failed,
       total,
-      message: `تم إرسال ${sent} إشعار من أصل ${total}`,
+      message: `Sent ${sent} notifications out of ${total}`,
     });
   } catch (error) {
     console.error('Error processing excel json data:', error);
@@ -2628,18 +2754,20 @@ const convertAttendeesToExcel = async (req, res) => {
         };
       }
 
-      const messageWappi = `✅ *عزيزي ولي أمر الطالب ${student.Username}*،\n
-نود إعلامكم بأن ابنكم قد *حضر اليوم في المعاد المحدد*.\n
-وقد تم تسجيل حضوره *بنجاح*.\n
-المبلغ المتبقي من سعر الحصة هو: *${student.totalAmount4} جنيه*.\n
-عدد مرات الغياب: *${student.absences}*.\n\n
-*شكرًا لتعاونكم.*`;
-
       // Send notification to parent
-      await sendNotificationMessage(student.parentPhone, messageWappi, {
-        studentName: student.Username,
-        type: 'attendance_present_finalize',
-      });
+      await sendLocalizedAttendanceNotification(
+        student.parentPhone,
+        'present',
+        {
+          type: 'attendance_present',
+          studentName: student.Username,
+          studentCode: student.Code,
+          group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
+          absences: student.absences,
+          hwLine: '',
+          date: today,
+        }
+      );
     });
 
     // Add total row for Present Other Group  Students

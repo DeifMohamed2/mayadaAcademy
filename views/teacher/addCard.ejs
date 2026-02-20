@@ -209,13 +209,6 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-check mt-3">
-                                            <input type="checkbox" class="form-check-input" id="attendWithHW">
-                                            <label class="form-check-label" for="attendWithHW">Attend With Homework</label>
-                                        </div>
-
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="form-check mt-3">
                                             <input type="checkbox" class="form-check-input" id="attendWithoutHW">
                                             <label class="form-check-label" for="attendWithoutHW">Attend Without Homework</label>
                                         </div>
@@ -410,7 +403,6 @@
 
     const attendAbsencet = document.getElementById('attendAbsencet');
     const attendOtherGroup = document.getElementById('attendOtherGroup');
-    const attendWithHW = document.getElementById('attendWithHW');
     const attendWithoutHW = document.getElementById('attendWithoutHW');
 
     // const HWwithOutSteps = document.getElementById('HWwithOutSteps')
@@ -440,7 +432,6 @@
        spinnerInTabel.classList.add('d-none');
        attendAbsencet.checked = false;
        attendOtherGroup.checked = false;
-       attendWithHW.checked = false;
        attendWithoutHW.checked = false;
        attendeeID.focus();
     };
@@ -547,7 +538,6 @@
             gradeType : gradeType.value,
             attendAbsencet : attendAbsencet.checked,
             attendOtherGroup : attendOtherGroup.checked,
-            attendWithHW : attendWithHW.checked,
             attendWithoutHW : attendWithoutHW.checked,
             attendId: attendeeID.value
         };

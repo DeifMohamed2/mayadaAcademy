@@ -98,11 +98,63 @@ const userSchema = new Schema(
       type: String,
       default: null,
     },
-    AttendanceHistory: {
-      type: Array,
-      required: false,
-      default: [],
+
+    notificationLanguage: {
+      type: String,
+      enum: ['EN', 'AR'],
+      default: 'EN',
     },
+    
+    // Attendance History with proper structure
+    AttendanceHistory: [{
+      attendance: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Attendance',
+      },
+      date: {
+        type: String,  // 'YYYY-MM-DD'
+        required: true,
+      },
+      atTime: {
+        type: String,  // Time of attendance
+      },
+      status: {
+        type: String,
+        enum: ['Present', 'Late', 'Absent', 'Present From Other Group'],
+        default: 'Present',
+      },
+      // Homework status
+      homeworkStatus: {
+        type: String,
+        enum: ['done', 'not_done', 'not_specified'],
+        default: 'not_specified',
+      },
+      // Attendance options
+      ignoredAbsencePolicy: {
+        type: Boolean,
+        default: false,
+      },
+      fromOtherGroup: {
+        type: Boolean,
+        default: false,
+      },
+      // Group info at time of attendance
+      groupInfo: {
+        centerName: String,
+        grade: String,
+        gradeType: String,
+        groupTime: String,
+      },
+      // Payment info
+      amountPaid: {
+        type: Number,
+        default: 0,
+      },
+      amountRemaining: {
+        type: Number,
+        default: 0,
+      },
+    }],
 
     subscribe: {
       type: Boolean,
