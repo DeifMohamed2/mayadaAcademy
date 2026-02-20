@@ -29,6 +29,8 @@ const notificationSchema = new Schema(
         'unblock',
         'verification',
         'registration',
+        'password_reset',
+        'general',
       ],
       default: 'custom',
     },

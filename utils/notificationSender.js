@@ -13,6 +13,7 @@
 
 const { sendNotification, sendNotificationToParent, sendNotificationBatch } = require('./fcm');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 /**
  * Normalize phone number for lookup
@@ -109,6 +110,45 @@ function formatNotificationMessage(baseMessage, details = {}) {
 }
 
 /**
+ * Save notification to the database
+ * @param {object} notificationData - Notification data to save
+ * @returns {Promise<object|null>} - Saved notification or null
+ */
+async function saveNotificationToDatabase(notificationData) {
+  try {
+    // Valid notification types from the Notification model
+    const validTypes = [
+      'attendance', 'homework', 'payment', 'custom', 'block', 
+      'unblock', 'verification', 'registration', 'password_reset', 'general'
+    ];
+    
+    // Map unknown types to 'custom'
+    const notificationType = validTypes.includes(notificationData.type) 
+      ? notificationData.type 
+      : 'custom';
+    
+    const notification = new Notification({
+      studentId: notificationData.studentId || null,
+      teacherId: notificationData.teacherId || null,
+      parentPhone: notificationData.parentPhone,
+      type: notificationType,
+      title: notificationData.title,
+      body: notificationData.body,
+      data: notificationData.data || {},
+      status: notificationData.status || 'sent',
+      isRead: false,
+    });
+    
+    await notification.save();
+    console.log('Notification saved to database:', notification._id);
+    return notification;
+  } catch (error) {
+    console.error('Error saving notification to database:', error.message);
+    return null;
+  }
+}
+
+/**
  * Send notification to a user by phone number
  * @param {string} phone - Phone number (student or parent)
  * @param {string} message - Message text
@@ -127,10 +167,13 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
     
     // Find user by phone
     const user = await findUserByPhone(phone);
+    const normalizedPhone = normalizePhone(phone);
+    
+    // Determine notification type from details
+    const notificationType = details.type || 'custom';
     
     if (!user || !user.fcmToken) {
       // If user not found or no FCM token, try sending to parent
-      const normalizedPhone = normalizePhone(phone);
       const result = await sendNotificationToParent(
         normalizedPhone,
         title,
@@ -142,9 +185,28 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
         }
       );
       
+      // Save notification to database even if no FCM token
       if (result.sent > 0) {
+        await saveNotificationToDatabase({
+          parentPhone: normalizedPhone,
+          title,
+          body,
+          type: notificationType,
+          data: details,
+          status: 'sent'
+        });
         return { success: true, data: result, message: `Sent to ${result.sent} device(s)` };
       }
+      
+      // Still save to database for record keeping
+      await saveNotificationToDatabase({
+        parentPhone: normalizedPhone,
+        title,
+        body,
+        type: notificationType,
+        data: details,
+        status: 'failed'
+      });
       
       return { 
         success: false, 
@@ -163,6 +225,17 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
         ...details
       }
     );
+    
+    // Save notification to database
+    await saveNotificationToDatabase({
+      studentId: user._id,
+      parentPhone: user.parentPhone || normalizedPhone,
+      title,
+      body,
+      type: notificationType,
+      data: details,
+      status: result.success ? 'sent' : 'failed'
+    });
     
     if (result.success) {
       return { success: true, data: result };
@@ -190,6 +263,7 @@ async function sendStudentRegistrationNotification(phone, studentCode, studentIn
   const message = `Welcome to Mayada Academy! Your account has been created successfully.`;
   
   const details = {
+    type: 'registration',
     studentCode: studentCode,
     studentName: studentInfo.studentName || studentInfo.Username,
     grade: studentInfo.Grade,
@@ -316,5 +390,6 @@ module.exports = {
   sendNotificationBatchByPhones,
   formatNotificationMessage,
   findUserByPhone,
+  saveNotificationToDatabase,
 };
 
