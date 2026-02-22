@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 const parentController = require('../controllers/parentController');
 
 const jwtSecret = process.env.JWTSECRET;
@@ -25,6 +26,22 @@ const parentAuthMiddleware = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, jwtSecret);
       
+      // Verify session is still active (single-device enforcement)
+      if (decoded.sessionId) {
+        const anyStudent = await User.findOne({
+          parentPhone: decoded.parentPhone,
+          parentSessionId: decoded.sessionId,
+        });
+
+        if (!anyStudent) {
+          return res.status(401).json({
+            success: false,
+            message: 'Session expired. You have been logged in from another device.',
+            code: 'SESSION_REPLACED',
+          });
+        }
+      }
+
       // Attach parent data to request
       req.parentData = {
         parentPhone: decoded.parentPhone,
@@ -118,5 +135,12 @@ router.get('/settings/language', parentAuthMiddleware, parentController.getNotif
  * @body    { language: "EN" | "AR" }
  */
 router.put('/settings/language', parentAuthMiddleware, parentController.changeNotificationLanguage);
+
+/**
+ * @route   POST /api/parent/logout
+ * @desc    Logout parent - removes FCM tokens and invalidates session
+ * @access  Private
+ */
+router.post('/logout', parentAuthMiddleware, parentController.parentLogout);
 
 module.exports = router;

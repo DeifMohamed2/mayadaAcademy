@@ -99,6 +99,11 @@ const userSchema = new Schema(
       default: null,
     },
 
+    parentSessionId: {
+      type: String,
+      default: null,
+    },
+
     notificationLanguage: {
       type: String,
       enum: ['EN', 'AR'],

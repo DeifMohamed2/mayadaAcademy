@@ -3,6 +3,7 @@ const Notification = require('../models/Notification');
 const Attendance = require('../models/Attendance');
 const Group = require('../models/Group');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { sendNotification } = require('../utils/fcm');
 
 const jwtSecret = process.env.JWTSECRET;
@@ -75,19 +76,26 @@ const parentLogin = async (req, res) => {
       },
     );
 
-    // Update FCM token only for parent login, not when student logs in with their own phone
-    if (fcmToken && isParentPhone) {
-      await User.updateMany(
-        { parentPhone: studentByCode.parentPhone },
-        { $set: { fcmToken: fcmToken } },
-      );
-    }
+    // Generate a unique session ID to enforce single-device login
+    const sessionId = crypto.randomBytes(32).toString('hex');
 
-    // Generate JWT token
+    // Update FCM token and session ID for all students of this parent
+    // This invalidates any previous session (logs out other devices)
+    const updateFields = { parentSessionId: sessionId };
+    if (fcmToken && isParentPhone) {
+      updateFields.fcmToken = fcmToken;
+    }
+    await User.updateMany(
+      { parentPhone: studentByCode.parentPhone },
+      { $set: updateFields },
+    );
+
+    // Generate JWT token with session ID
     const token = jwt.sign(
       {
         parentPhone: studentByCode.parentPhone,
         studentIds: students.map((s) => s._id),
+        sessionId: sessionId,
       },
       jwtSecret,
       { expiresIn: '30d' },
@@ -510,8 +518,36 @@ const getNotificationLanguage = async (req, res) => {
   }
 };
 
+/**
+ * Parent Logout API
+ * Removes FCM tokens from all students and invalidates the session
+ */
+const parentLogout = async (req, res) => {
+  try {
+    const { parentPhone } = req.parentData;
+
+    // Remove FCM tokens and clear session ID for all students of this parent
+    await User.updateMany(
+      { parentPhone: parentPhone },
+      { $set: { fcmToken: null, parentSessionId: null } },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Logged out successfully. FCM tokens removed.',
+    });
+  } catch (error) {
+    console.error('Parent logout error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again.',
+    });
+  }
+};
+
 module.exports = {
   parentLogin,
+  parentLogout,
   getDashboard,
   getFullAttendance,
   getNotifications,
