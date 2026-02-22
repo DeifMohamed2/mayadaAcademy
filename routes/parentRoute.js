@@ -25,7 +25,7 @@ const parentAuthMiddleware = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, jwtSecret);
-      
+
       // Verify session is still active (single-device enforcement)
       if (decoded.sessionId) {
         const anyStudent = await User.findOne({
@@ -36,7 +36,8 @@ const parentAuthMiddleware = async (req, res, next) => {
         if (!anyStudent) {
           return res.status(401).json({
             success: false,
-            message: 'Session expired. You have been logged in from another device.',
+            message:
+              'Session expired. You have been logged in from another device.',
             code: 'SESSION_REPLACED',
           });
         }
@@ -47,7 +48,7 @@ const parentAuthMiddleware = async (req, res, next) => {
         parentPhone: decoded.parentPhone,
         studentIds: decoded.studentIds || [],
       };
-      
+
       next();
     } catch (err) {
       return res.status(401).json({
@@ -87,7 +88,11 @@ router.get('/students', parentAuthMiddleware, parentController.getStudents);
  * @desc    Get dashboard data for a specific student
  * @access  Private
  */
-router.get('/dashboard/:studentId', parentAuthMiddleware, parentController.getDashboard);
+router.get(
+  '/dashboard/:studentId',
+  parentAuthMiddleware,
+  parentController.getDashboard,
+);
 
 /**
  * @route   GET /api/parent/attendance/:studentId
@@ -96,7 +101,11 @@ router.get('/dashboard/:studentId', parentAuthMiddleware, parentController.getDa
  * @query   start - Start date (YYYY-MM-DD)
  * @query   end - End date (YYYY-MM-DD)
  */
-router.get('/attendance/:studentId', parentAuthMiddleware, parentController.getFullAttendance);
+router.get(
+  '/attendance/:studentId',
+  parentAuthMiddleware,
+  parentController.getFullAttendance,
+);
 
 /**
  * @route   GET /api/parent/notifications
@@ -105,28 +114,44 @@ router.get('/attendance/:studentId', parentAuthMiddleware, parentController.getF
  * @query   page - Page number (default: 1)
  * @query   limit - Items per page (default: 20)
  */
-router.get('/notifications', parentAuthMiddleware, parentController.getNotifications);
+router.get(
+  '/notifications',
+  parentAuthMiddleware,
+  parentController.getNotifications,
+);
 
 /**
  * @route   PATCH /api/parent/notifications/:id/read
  * @desc    Mark a notification as read
  * @access  Private
  */
-router.patch('/notifications/:id/read', parentAuthMiddleware, parentController.markNotificationRead);
+router.patch(
+  '/notifications/:id/read',
+  parentAuthMiddleware,
+  parentController.markNotificationRead,
+);
 
 /**
  * @route   PATCH /api/parent/notifications/read-all
  * @desc    Mark all notifications as read
  * @access  Private
  */
-router.patch('/notifications/read-all', parentAuthMiddleware, parentController.markAllNotificationsRead);
+router.patch(
+  '/notifications/read-all',
+  parentAuthMiddleware,
+  parentController.markAllNotificationsRead,
+);
 
 /**
  * @route   GET /api/parent/settings/language
  * @desc    Get current notification language preference
  * @access  Private
  */
-router.get('/settings/language', parentAuthMiddleware, parentController.getNotificationLanguage);
+router.get(
+  '/settings/language',
+  parentAuthMiddleware,
+  parentController.getNotificationLanguage,
+);
 
 /**
  * @route   PUT /api/parent/settings/language
@@ -134,7 +159,11 @@ router.get('/settings/language', parentAuthMiddleware, parentController.getNotif
  * @access  Private
  * @body    { language: "EN" | "AR" }
  */
-router.put('/settings/language', parentAuthMiddleware, parentController.changeNotificationLanguage);
+router.put(
+  '/settings/language',
+  parentAuthMiddleware,
+  parentController.changeNotificationLanguage,
+);
 
 /**
  * @route   POST /api/parent/logout

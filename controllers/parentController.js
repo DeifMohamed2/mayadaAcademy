@@ -469,7 +469,7 @@ const changeNotificationLanguage = async (req, res) => {
     // Update all students with this parent phone
     const result = await User.updateMany(
       { parentPhone: parentPhone },
-      { $set: { notificationLanguage: normalizedLanguage } }
+      { $set: { notificationLanguage: normalizedLanguage } },
     );
 
     return res.status(200).json({
