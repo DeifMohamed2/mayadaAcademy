@@ -26,21 +26,27 @@ const parentAuthMiddleware = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, jwtSecret);
 
-      // Verify session is still active (single-device enforcement)
-      if (decoded.sessionId) {
-        const anyStudent = await User.findOne({
-          parentPhone: decoded.parentPhone,
-          parentSessionId: decoded.sessionId,
+      // Session ID is required - reject old tokens without it
+      if (!decoded.sessionId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expired. Please login again.',
+          code: 'SESSION_EXPIRED',
         });
+      }
 
-        if (!anyStudent) {
-          return res.status(401).json({
-            success: false,
-            message:
-              'Session expired. You have been logged in from another device.',
-            code: 'SESSION_REPLACED',
-          });
-        }
+      // Verify session is still active (single-device enforcement)
+      const anyStudent = await User.findOne({
+        parentPhone: decoded.parentPhone,
+        parentSessionId: decoded.sessionId,
+      });
+
+      if (!anyStudent) {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expired. You have been logged in from another device.',
+          code: 'SESSION_REPLACED',
+        });
       }
 
       // Attach parent data to request

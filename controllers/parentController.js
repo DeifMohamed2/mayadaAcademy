@@ -85,10 +85,11 @@ const parentLogin = async (req, res) => {
     if (fcmToken && isParentPhone) {
       updateFields.fcmToken = fcmToken;
     }
-    await User.updateMany(
+    const updateResult = await User.updateMany(
       { parentPhone: studentByCode.parentPhone },
       { $set: updateFields },
     );
+    console.log(`[LOGIN] Parent ${studentByCode.parentPhone} - New sessionId: ${sessionId.substring(0, 8)}... - Updated ${updateResult.modifiedCount} students`);
 
     // Generate JWT token with session ID
     const token = jwt.sign(
