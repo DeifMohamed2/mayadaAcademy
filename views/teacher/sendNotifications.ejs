@@ -1684,7 +1684,7 @@
                                 <td>${student.Code}</td>
                                 <td>${student.parentPhone || '-'}</td>
                                 <td><input type="text" name="groupQuizGrade${index + 1}" class="form-control mx-auto" style="width: 80px; text-align: center;" value="" dir="ltr"></td>
-                                <td class="hidden">${student.phone || ''}</td>
+                                <td class="hidden">${student._id}</td>
                             </tr>
                         `;
           });
@@ -1758,9 +1758,11 @@
           const studentName = row.cells[1].innerText;
           const studentCode = row.cells[2].innerText;
           const parentPhone = row.cells[3].innerText;
+          const studentId = row.cells[5].innerText;
           const gradeInput = row.querySelector(`input[name="groupQuizGrade${index + 1}"]`);
           const gradeVal = gradeInput ? gradeInput.value : '0';
           data.push({
+            studentId,
             studentName,
             studentCode,
             parentPhone,
@@ -1781,6 +1783,7 @@
 
         groupStudentsData.forEach(student => {
           data.push({
+            studentId: student._id,
             studentName: student.Username,
             studentCode: student.Code,
             parentPhone: student.parentPhone

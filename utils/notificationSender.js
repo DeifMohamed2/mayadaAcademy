@@ -155,6 +155,28 @@ async function saveNotificationToDatabase(notificationData) {
       ? notificationData.type 
       : 'custom';
     
+    // Duplicate prevention: Check if an identical notification was saved in the last 60 seconds
+    const deduplicationWindow = new Date(Date.now() - 60 * 1000);
+    const deduplicationQuery = {
+      parentPhone: notificationData.parentPhone,
+      type: notificationType,
+      title: notificationData.title,
+      body: notificationData.body,
+      createdAt: { $gte: deduplicationWindow }
+    };
+    // Include studentId in dedup check if provided
+    if (notificationData.studentId) {
+      deduplicationQuery.studentId = notificationData.studentId;
+    }
+    
+    const existingNotification = await Notification.findOne(deduplicationQuery);
+    
+    if (existingNotification) {
+      console.log('Duplicate notification detected, reusing existing ID:', existingNotification._id);
+      existingNotification._isDuplicate = true;
+      return existingNotification;
+    }
+    
     const notification = new Notification({
       studentId: notificationData.studentId || null,
       teacherId: notificationData.teacherId || null,
@@ -169,6 +191,7 @@ async function saveNotificationToDatabase(notificationData) {
     
     await notification.save();
     console.log('Notification saved to database:', notification._id);
+    notification._isDuplicate = false;
     return notification;
   } catch (error) {
     console.error('Error saving notification to database:', error.message);
@@ -203,77 +226,80 @@ async function sendNotificationMessage(phone, message, details = {}, countryCode
     // Get studentId from details if provided, otherwise use found user's ID
     const studentId = details.studentId || null;
     
+    // Step 1: Save notification to database FIRST with 'pending' status
+    // This also handles deduplication - returns existing notification if duplicate
+    const savedNotification = await saveNotificationToDatabase({
+      studentId: studentId || (user ? user._id : null),
+      teacherId: details.teacherId || null,
+      parentPhone: (user ? user.parentPhone : null) || normalizedPhone,
+      title,
+      body,
+      type: notificationType,
+      data: details,
+      status: 'pending'
+    });
+    
+    // Get the notification ID to include in FCM data payload
+    const notificationId = savedNotification ? savedNotification._id.toString() : '';
+    
+    // If this is a duplicate that was already sent successfully, skip re-sending
+    if (savedNotification && savedNotification._isDuplicate && savedNotification.status === 'sent') {
+      console.log('Duplicate notification already sent, skipping FCM. ID:', notificationId);
+      return { success: true, message: 'Notification already sent', notificationId, duplicate: true };
+    }
+    
+    // Build FCM data payload with notificationId so the mobile app can read it
+    const fcmData = {
+      type: 'general',
+      timestamp: new Date().toISOString(),
+      notificationId,
+      ...details
+    };
+    
     if (!user || !user.fcmToken) {
       // If user not found or no FCM token, try sending to parent
       const result = await sendNotificationToParent(
         normalizedPhone,
         title,
         body,
-        {
-          type: 'general',
-          timestamp: new Date().toISOString(),
-          ...details
-        }
+        fcmData
       );
       
-      // Save notification to database even if no FCM token
-      if (result.sent > 0) {
-        await saveNotificationToDatabase({
-          studentId: studentId,
-          parentPhone: normalizedPhone,
-          title,
-          body,
-          type: notificationType,
-          data: details,
-          status: 'sent'
-        });
-        return { success: true, data: result, message: `Sent to ${result.sent} device(s)` };
+      // Update notification status based on result
+      if (savedNotification && !savedNotification._isDuplicate) {
+        savedNotification.status = result.sent > 0 ? 'sent' : 'failed';
+        await savedNotification.save();
       }
       
-      // Still save to database for record keeping
-      await saveNotificationToDatabase({
-        studentId: studentId,
-        parentPhone: normalizedPhone,
-        title,
-        body,
-        type: notificationType,
-        data: details,
-        status: 'failed'
-      });
+      if (result.sent > 0) {
+        return { success: true, data: result, message: `Sent to ${result.sent} device(s)`, notificationId };
+      }
       
       return { 
         success: false, 
-        message: 'No user found with FCM token for this phone number' 
+        message: 'No user found with FCM token for this phone number',
+        notificationId
       };
     }
     
-    // Send notification to the user
+    // Step 2: Send notification to the user with notificationId in data payload
     const result = await sendNotification(
       user.fcmToken,
       title,
       body,
-      {
-        type: 'general',
-        timestamp: new Date().toISOString(),
-        ...details
-      }
+      fcmData
     );
     
-    // Save notification to database (use provided studentId or user's ID)
-    await saveNotificationToDatabase({
-      studentId: studentId || user._id,
-      parentPhone: user.parentPhone || normalizedPhone,
-      title,
-      body,
-      type: notificationType,
-      data: details,
-      status: result.success ? 'sent' : 'failed'
-    });
+    // Step 3: Update notification status based on FCM result
+    if (savedNotification && !savedNotification._isDuplicate) {
+      savedNotification.status = result.success ? 'sent' : 'failed';
+      await savedNotification.save();
+    }
     
     if (result.success) {
-      return { success: true, data: result };
+      return { success: true, data: result, notificationId };
     } else {
-      return { success: false, message: result.message || 'Failed to send notification' };
+      return { success: false, message: result.message || 'Failed to send notification', notificationId };
     }
   } catch (error) {
     console.error('Error sending notification:', error);
