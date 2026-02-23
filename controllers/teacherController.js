@@ -2075,14 +2075,9 @@ const sendNotificationsToGroup = async (req, res) => {
         if (option === 'HWStatus') {
           if (item.hwStatus === 'none') continue;
 
-          const hwText = item.hwStatus === 'yes' 
+          const hwStatus = item.hwStatus === 'yes' 
             ? (userLang === 'AR' ? 'حل الواجب ✅' : 'Homework Done ✅')
             : (userLang === 'AR' ? 'لم يحل الواجب ❌' : 'Homework Not Done ❌');
-          const solvText = item.solvStatus === 'true' 
-            ? (userLang === 'AR' ? ' (بدون خطوات)' : ' (without steps)')
-            : '';
-          
-          const hwStatus = userLang === 'AR' ? hwText + solvText : hwText + solvText;
           
           try {
             const result = await sendLocalizedHomeworkNotification(

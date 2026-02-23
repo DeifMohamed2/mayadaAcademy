@@ -44,7 +44,8 @@ const parentAuthMiddleware = async (req, res, next) => {
       if (!anyStudent) {
         return res.status(401).json({
           success: false,
-          message: 'Session expired. You have been logged in from another device.',
+          message:
+            'Session expired. You have been logged in from another device.',
           code: 'SESSION_REPLACED',
         });
       }

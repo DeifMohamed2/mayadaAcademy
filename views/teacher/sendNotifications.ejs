@@ -901,9 +901,9 @@
                                             <label><i class="fa-solid fa-building"></i> السنتر</label>
                                             <select class="form-control" id="groupCenterName">
                                                 <option value="">اختر السنتر</option>
-                                                <option value="GTA">GTA</option>
+                                                <option value="ZHub">ZHub</option>
                                                 <option value="tagmo3">Tagmo3</option>
-                                                <option value="Online">Online</option>
+                                                <option value="online">online</option>
                                             </select>
                                         </div>
                                         <div class="col-md-3 mb-3">
@@ -982,7 +982,6 @@
                                                         <th>رقم ولي الأمر</th>
                                                         <th>نعم</th>
                                                         <th>لا</th>
-                                                        <th>بدون خطوات</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="groupHWStatusTbody"></tbody>
@@ -1511,14 +1510,14 @@
 
         // ==================== Group Tab Functions ====================
         
-        // Group dropdowns change handlers
+        // Group dropdowns change handlers - using same data as group.ejs (centerNames, gradeTypeOptions, groupTimes)
         document.getElementById('groupCenterName').addEventListener('change', function() {
             const centerVal = this.value;
             const gradeSelect = document.getElementById('groupGrade');
             gradeSelect.innerHTML = '<option value="">اختر الصف</option>';
             
-            if (window.__groupOptions && window.__groupOptions.centerNames[centerVal]) {
-                window.__groupOptions.centerNames[centerVal].forEach(center => {
+            if (centerNames && centerNames[centerVal]) {
+                centerNames[centerVal].forEach(center => {
                     const option = document.createElement('option');
                     option.value = center.value;
                     option.textContent = center.text;
@@ -1535,8 +1534,8 @@
             const gradeTypeSelect = document.getElementById('groupGradeType');
             gradeTypeSelect.innerHTML = '<option value="">اختر النوع</option>';
             
-            if (window.__groupOptions && window.__groupOptions.gradeTypeOptions[selectedGrade]) {
-                window.__groupOptions.gradeTypeOptions[selectedGrade].forEach(opt => {
+            if (gradeTypeOptions && gradeTypeOptions[selectedGrade]) {
+                gradeTypeOptions[selectedGrade].forEach(opt => {
                     const option = document.createElement('option');
                     option.value = opt.value;
                     option.textContent = opt.text;
@@ -1554,10 +1553,11 @@
             const groupTimeSelect = document.getElementById('groupTime');
             groupTimeSelect.innerHTML = '<option value="">اختر الوقت</option>';
             
-            if (window.__groupOptions && 
-                window.__groupOptions.groupTimes[centerName] && 
-                window.__groupOptions.groupTimes[centerName][grade]) {
-                const times = window.__groupOptions.groupTimes[centerName][grade][gradeType];
+            if (groupTimes && 
+                groupTimes[centerName] && 
+                groupTimes[centerName][grade] &&
+                groupTimes[centerName][grade][gradeType]) {
+                const times = groupTimes[centerName][grade][gradeType];
                 if (times && Array.isArray(times) && times.length > 0) {
                     times.forEach(time => {
                         const option = document.createElement('option');
@@ -1640,7 +1640,6 @@
                                 <td>${student.parentPhone || '-'}</td>
                                 <td><input type="radio" name="groupHwStatus${index + 1}" value="yes" style="width: 20px; height: 20px;"></td>
                                 <td><input type="radio" name="groupHwStatus${index + 1}" value="no" style="width: 20px; height: 20px;"></td>
-                                <td><input type="radio" name="groupSolvStatus${index + 1}" value="true" style="width: 20px; height: 20px;"></td>
                                 <td class="hidden">${student._id}</td>
                             </tr>
                         `;
@@ -1703,12 +1702,10 @@
                     const studentName = row.cells[1].innerText;
                     const studentCode = row.cells[2].innerText;
                     const parentPhone = row.cells[3].innerText;
-                    const studentId = row.cells[7].innerText;
+                    const studentId = row.cells[6].innerText;
                     const hwStatusInput = row.querySelector(`input[name="groupHwStatus${index + 1}"]:checked`);
-                    const solvStatusInput = row.querySelector(`input[name="groupSolvStatus${index + 1}"]:checked`);
                     const hwStatus = hwStatusInput ? hwStatusInput.value : 'none';
-                    const solvStatus = solvStatusInput ? solvStatusInput.value : 'false';
-                    data.push({ studentId, studentName, studentCode, parentPhone, hwStatus, solvStatus });
+                    data.push({ studentId, studentName, studentCode, parentPhone, hwStatus });
                 });
             } else if (optionSelect === 'gradeMsg') {
                 const quizName = document.getElementById('groupQuizName').value;

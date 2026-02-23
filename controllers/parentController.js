@@ -89,7 +89,9 @@ const parentLogin = async (req, res) => {
       { parentPhone: studentByCode.parentPhone },
       { $set: updateFields },
     );
-    console.log(`[LOGIN] Parent ${studentByCode.parentPhone} - New sessionId: ${sessionId.substring(0, 8)}... - Updated ${updateResult.modifiedCount} students`);
+    console.log(
+      `[LOGIN] Parent ${studentByCode.parentPhone} - New sessionId: ${sessionId.substring(0, 8)}... - Updated ${updateResult.modifiedCount} students`,
+    );
 
     // Generate JWT token with session ID
     const token = jwt.sign(
