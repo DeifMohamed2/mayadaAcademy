@@ -3,8 +3,8 @@ const Group = require('../models/Group');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance');
 
-const { 
-  sendAttendanceNotification, 
+const {
+  sendAttendanceNotification,
   sendNotificationMessage,
   sendLocalizedAttendanceNotification,
   sendLocalizedHomeworkNotification,
@@ -647,12 +647,10 @@ const addCardToStudent = async (req, res) => {
 
   // Check for missing fields
   if (!studentCode || !assignedCard) {
-    return res
-      .status(400)
-      .json({
-        message: 'studentCode and assignedCard are required',
-        Username: null,
-      });
+    return res.status(400).json({
+      message: 'studentCode and assignedCard are required',
+      Username: null,
+    });
   }
 
   try {
@@ -662,30 +660,24 @@ const addCardToStudent = async (req, res) => {
     );
     const userHasCard = await User.findOne({ cardId: assignedCard });
     if (!userByCode) {
-      return res
-        .status(400)
-        .json({
-          message: 'This student does not exist, please verify the code',
-          Username: '',
-        });
+      return res.status(400).json({
+        message: 'This student does not exist, please verify the code',
+        Username: '',
+      });
     }
 
     if (userByCode.cardId) {
-      return res
-        .status(400)
-        .json({
-          message: 'This student already has a card.',
-          Username: userByCode.Username,
-        });
+      return res.status(400).json({
+        message: 'This student already has a card.',
+        Username: userByCode.Username,
+      });
     }
 
     if (userHasCard) {
-      return res
-        .status(400)
-        .json({
-          message: 'This card has already been used.',
-          Username: `Used by ${userHasCard.Username}`,
-        });
+      return res.status(400).json({
+        message: 'This card has already been used.',
+        Username: `Used by ${userHasCard.Username}`,
+      });
     }
 
     await User.updateOne(
@@ -695,12 +687,10 @@ const addCardToStudent = async (req, res) => {
       },
     )
       .then((result) => {
-        return res
-          .status(200)
-          .json({
-            message: 'تم اضافه الكارت للطالب بنجاح',
-            Username: userByCode.Username,
-          });
+        return res.status(200).json({
+          message: 'تم اضافه الكارت للطالب بنجاح',
+          Username: userByCode.Username,
+        });
       })
       .catch((err) => {
         console.error(err);
@@ -921,7 +911,7 @@ const markAttendance = async (req, res) => {
               group: `${centerName} - ${Grade} - ${GroupTime}`,
               absences: student.absences,
               date: today,
-            }
+            },
           );
           console.log('Notification sent successfully for late attendance');
         }
@@ -1009,7 +999,7 @@ const markAttendance = async (req, res) => {
           // Get user's language preference for homework line
           const userLang = await getUserLanguage(student.parentPhone);
           const hwLine = getHomeworkStatusLine(homeworkStatus, userLang);
-          
+
           await sendLocalizedAttendanceNotification(
             student.parentPhone,
             'present',
@@ -1021,7 +1011,7 @@ const markAttendance = async (req, res) => {
               absences: student.absences,
               hwLine: hwLine,
               date: today,
-            }
+            },
           );
           console.log('Notification sent successfully');
         }
@@ -1493,7 +1483,7 @@ const finalizeAttendance = async (req, res) => {
           absences: student.absences,
           hwLine: '',
           date: today,
-        }
+        },
       );
     });
 
@@ -1578,19 +1568,15 @@ const finalizeAttendance = async (req, res) => {
       }
 
       // Send notification to parent
-      await sendLocalizedAttendanceNotification(
-        student.parentPhone,
-        'absent',
-        {
-          type: 'attendance_absent',
-          studentName: student.Username,
-          studentCode: student.Code,
-          group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
-          absences: student.absences,
-          date: today,
-          warningMessage: student.absences >= 3 ? subMessage : '',
-        }
-      );
+      await sendLocalizedAttendanceNotification(student.parentPhone, 'absent', {
+        type: 'attendance_absent',
+        studentName: student.Username,
+        studentCode: student.Code,
+        group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
+        absences: student.absences,
+        date: today,
+        warningMessage: student.absences >= 3 ? subMessage : '',
+      });
     });
 
     // Add borders to all cells
@@ -2075,10 +2061,15 @@ const sendNotificationsToGroup = async (req, res) => {
         if (option === 'HWStatus') {
           if (item.hwStatus === 'none') continue;
 
-          const hwStatus = item.hwStatus === 'yes' 
-            ? (userLang === 'AR' ? 'حل الواجب ✅' : 'Homework Done ✅')
-            : (userLang === 'AR' ? 'لم يحل الواجب ❌' : 'Homework Not Done ❌');
-          
+          const hwStatus =
+            item.hwStatus === 'yes'
+              ? userLang === 'AR'
+                ? 'حل الواجب ✅'
+                : 'Homework Done ✅'
+              : userLang === 'AR'
+                ? 'لم يحل الواجب ❌'
+                : 'Homework Not Done ❌';
+
           try {
             const result = await sendLocalizedHomeworkNotification(
               item.parentPhone,
@@ -2093,7 +2084,7 @@ const sendNotificationsToGroup = async (req, res) => {
                 Grade,
                 gradeType,
                 groupTime,
-              }
+              },
             );
 
             if (result.success) {
@@ -2103,7 +2094,11 @@ const sendNotificationsToGroup = async (req, res) => {
               errors.push(item.parentPhone);
             }
           } catch (phoneErr) {
-            console.error('Error sending to phone:', item.parentPhone, phoneErr);
+            console.error(
+              'Error sending to phone:',
+              item.parentPhone,
+              phoneErr,
+            );
             failed += 1;
             errors.push(item.parentPhone);
           }
@@ -2125,7 +2120,7 @@ const sendNotificationsToGroup = async (req, res) => {
                 Grade,
                 gradeType,
                 groupTime,
-              }
+              },
             );
 
             if (result.success) {
@@ -2135,7 +2130,11 @@ const sendNotificationsToGroup = async (req, res) => {
               errors.push(item.parentPhone);
             }
           } catch (phoneErr) {
-            console.error('Error sending to phone:', item.parentPhone, phoneErr);
+            console.error(
+              'Error sending to phone:',
+              item.parentPhone,
+              phoneErr,
+            );
             failed += 1;
             errors.push(item.parentPhone);
           }
@@ -2170,7 +2169,11 @@ const sendNotificationsToGroup = async (req, res) => {
               errors.push(item.parentPhone);
             }
           } catch (phoneErr) {
-            console.error('Error sending to phone:', item.parentPhone, phoneErr);
+            console.error(
+              'Error sending to phone:',
+              item.parentPhone,
+              phoneErr,
+            );
             failed += 1;
             errors.push(item.parentPhone);
           }
@@ -2251,20 +2254,21 @@ const sendNotificationFromExcelJson = async (req, res) => {
           }
           const hwText =
             hwStatus.toLowerCase() === 'yes' || hwStatus === 'نعم'
-              ? (userLang === 'AR' ? 'حل الواجب ✅' : 'Homework Done ✅')
-              : (userLang === 'AR' ? 'لم يحل الواجب ❌' : 'Homework Not Done ❌');
-          
-          const result = await sendLocalizedHomeworkNotification(
-            phone,
-            {
-              studentName: name,
-              hwStatus: hwText,
-              solvText: '',
-              sentBy: 'excel',
-              source: 'excel_json',
-              sendType,
-            },
-          );
+              ? userLang === 'AR'
+                ? 'حل الواجب ✅'
+                : 'Homework Done ✅'
+              : userLang === 'AR'
+                ? 'لم يحل الواجب ❌'
+                : 'Homework Not Done ❌';
+
+          const result = await sendLocalizedHomeworkNotification(phone, {
+            studentName: name,
+            hwStatus: hwText,
+            solvText: '',
+            sentBy: 'excel',
+            source: 'excel_json',
+            sendType,
+          });
 
           if (result.success) {
             sent += 1;
@@ -2277,19 +2281,16 @@ const sendNotificationFromExcelJson = async (req, res) => {
             failed += 1;
             continue;
           }
-          
-          const result = await sendLocalizedQuizNotification(
-            phone,
-            {
-              studentName: name,
-              quizName: quizName,
-              grade: gradeValue,
-              maxGrade: maxGrade,
-              sentBy: 'excel',
-              source: 'excel_json',
-              sendType,
-            },
-          );
+
+          const result = await sendLocalizedQuizNotification(phone, {
+            studentName: name,
+            quizName: quizName,
+            grade: gradeValue,
+            maxGrade: maxGrade,
+            sentBy: 'excel',
+            source: 'excel_json',
+            sendType,
+          });
 
           if (result.success) {
             sent += 1;
@@ -2298,7 +2299,10 @@ const sendNotificationFromExcelJson = async (req, res) => {
           }
         } else if (sendType === 'sendMsg') {
           const studentPlaceholder = userLang === 'AR' ? 'الطالب' : 'Student';
-          const messageToSend = messageContent.replace(/{name}/g, name || studentPlaceholder);
+          const messageToSend = messageContent.replace(
+            /{name}/g,
+            name || studentPlaceholder,
+          );
 
           const result = await sendNotificationMessage(
             phone,
@@ -2761,7 +2765,7 @@ const convertAttendeesToExcel = async (req, res) => {
           absences: student.absences,
           hwLine: '',
           date: today,
-        }
+        },
       );
     });
 
@@ -4447,13 +4451,11 @@ const collectionSampleExcel = async (req, res) => {
     res.send(buffer);
   } catch (error) {
     console.error('Error generating sample Excel:', error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: 'Failed to generate sample Excel',
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate sample Excel',
+      error: error.message,
+    });
   }
 };
 
