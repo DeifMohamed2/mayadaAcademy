@@ -1,7 +1,7 @@
 require('dotenv').config()
 const express = require('express');
 const morgan = require('morgan')
-const mongoose = require('mongoose')
+const { connectDB } = require('./config/db')
 const cookieParser = require('cookie-parser')
 const MongoStore = require('connect-mongo')
 const session = require('express-session')
@@ -23,9 +23,8 @@ const socketio = require('socket.io');
 
 // CONECT to mongodb
 let io
-const dbURI = 'mongodb+srv://deif:1qaz2wsx@3devway.aa4i6ga.mongodb.net/mayada?retryWrites=true&w=majority&appName=Cluster0'
-mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then((result) => {
+connectDB()
+    .then(() => {
         let server = app.listen(8420);
 
         io = socketio(server)
@@ -62,7 +61,7 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     store: MongoStore.create({
-        mongoUrl: dbURI
+        clientPromise: connectDB()
     }),
 
 }))
