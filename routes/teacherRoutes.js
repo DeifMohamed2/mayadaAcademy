@@ -133,6 +133,7 @@ router.post('/handelAttendance/getDates', authMiddleware, teacherController.getD
 router.post('/handelAttendance/getAttendees', authMiddleware, teacherController.getAttendees);
 
 router.post('/handelAttendance/convertAttendeesToExcel', authMiddleware, teacherController.convertAttendeesToExcel);
+router.post('/handelAttendance/exportGroupAttendanceReportToExcel', authMiddleware, teacherController.exportGroupAttendanceReportToExcel);
 
 
 

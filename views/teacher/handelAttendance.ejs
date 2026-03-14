@@ -221,8 +221,9 @@
 
                     <div class="pagination justify-content-between mb-5">
                            
-                        <div class="mx-auto">
-                            <button class="paginationBtns" id="ConvertAttadnaceToExcel">Convert To Excel</button> 
+                        <div class="mx-auto d-flex gap-2 flex-wrap justify-content-center">
+                            <button class="paginationBtns" id="ConvertAttadnaceToExcel">تصدير الحضور ليوم محدد</button>
+                            <button class="paginationBtns btn-success" id="ExportFullAttendanceReport" disabled>تصدير تقرير الحضور الكامل (كل التواريخ)</button>
                         </div>
                       
                     </div>
@@ -384,6 +385,8 @@ function hideSpinner() {
                         Dates.appendChild(option);
                     });
                     getAttendeesDataBtn.disabled = false;
+                    const exportFullBtn = document.getElementById('ExportFullAttendanceReport');
+                    if (exportFullBtn) exportFullBtn.disabled = false;
 
                     showMessage('Dates fetched successfully.');
                     setTimeout(() => {
@@ -493,6 +496,45 @@ function hideSpinner() {
                     hideSpinner()
                 }
             });
+
+
+        // Export Full Attendance Report (all dates, حضر/غائب per date, totals)
+        document.getElementById('ExportFullAttendanceReport')?.addEventListener('click', async () => {
+            showSpinner();
+            showMessage('', false);
+            const data = {
+                Grade: Grade.value,
+                centerName: centerName.value,
+                GroupTime: GroupTime.value,
+                gradeType: gradeType.value,
+            };
+            try {
+                const response = await fetch('/teacher/handelAttendance/exportGroupAttendanceReportToExcel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'attendance_report_full.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                    showMessage('تم تصدير تقرير الحضور الكامل بنجاح.');
+                } else {
+                    const responseData = await response.json();
+                    showMessage(responseData.message || 'حدث خطأ', true);
+                }
+            } catch (error) {
+                showMessage('حدث خطأ أثناء التصدير', true);
+            } finally {
+                hideSpinner();
+            }
+        });
 
 
 

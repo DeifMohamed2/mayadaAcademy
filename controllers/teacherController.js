@@ -1299,9 +1299,7 @@ const finalizeAttendance = async (req, res) => {
 
     attendance.isFinalized = true;
     await attendance.save();
-    await attendance.populate('studentsAbsent');
-    await attendance.populate('studentsPresent');
-    await attendance.populate('studentsExcused');
+    await attendance.populate('studentsPresent studentsAbsent studentsLate studentsExcused');
 
     const workbook = new Excel.Workbook();
     const worksheet = workbook.addWorksheet('Attendance Data');
@@ -1406,6 +1404,83 @@ const finalizeAttendance = async (req, res) => {
       fgColor: { argb: 'FFFF00' },
     };
     totalRowPresent.getCell(8).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF00' },
+    };
+
+    // Add Late students section
+    row = worksheet.addRow(['Late Students']);
+    row.font = { bold: true, size: 16, color: { argb: 'FFA500' } };
+    worksheet.mergeCells(`A${row.number}:H${row.number}`);
+    row.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    const headerRowLate = worksheet.addRow([
+      '#',
+      'Student Name',
+      'Student Code',
+      'Phone',
+      'Parent Phone',
+      'Absences',
+      'Amount',
+      'Amount Remaining',
+    ]);
+    headerRowLate.font = { bold: true };
+    headerRowLate.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF00' },
+    };
+
+    let cLate = 0;
+    let totalAmountLate = 0;
+    let totalAmountRemainingLate = 0;
+    (attendance.studentsLate || []).forEach((student) => {
+      cLate++;
+      const lateRow = worksheet.addRow([
+        cLate,
+        student.Username,
+        student.Code,
+        student.phone,
+        student.parentPhone,
+        student.absences,
+        student.balance,
+        student.amountRemaining,
+      ]);
+      lateRow.font = { size: 13 };
+      totalAmountLate += student.balance;
+      totalAmountRemainingLate += student.amountRemaining;
+      if (cLate % 2 === 0) {
+        lateRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'DDDDDD' },
+        };
+      }
+    });
+
+    const totalRowLate = worksheet.addRow([
+      '',
+      '',
+      '',
+      '',
+      '',
+      'Total',
+      totalAmountLate,
+      totalAmountRemainingLate,
+    ]);
+    totalRowLate.font = { bold: true };
+    totalRowLate.getCell(6).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF00' },
+    };
+    totalRowLate.getCell(7).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFF00' },
+    };
+    totalRowLate.getCell(8).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFFF00' },
@@ -2422,7 +2497,7 @@ const getAttendees = async (req, res) => {
 };
 
 const convertAttendeesToExcel = async (req, res) => {
-  const { centerName, Grade, GroupTime, gradeType } = req.body;
+  const { centerName, Grade, GroupTime, gradeType, date } = req.body;
 
   try {
     // Find the group
@@ -2437,20 +2512,22 @@ const convertAttendeesToExcel = async (req, res) => {
       return res.status(404).json({ message: 'Group not found' });
     }
 
-    // Find today's attendance record for the group
-    const today = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Africa/Cairo', // Egypt's time zone
-    }).format(new Date());
+    // Use selected date if provided, otherwise today
+    const targetDate =
+      date ||
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Cairo',
+      }).format(new Date());
 
     let attendance = await Attendance.findOne({
       groupId: group._id,
-      date: today,
+      date: targetDate,
     }).populate('studentsPresent studentsAbsent studentsLate studentsExcused');
 
     if (!attendance) {
       return res
         .status(404)
-        .json({ message: 'No attendance record found for today' });
+        .json({ message: 'No attendance record found for the selected date' });
     }
 
     const workbook = new Excel.Workbook();
@@ -2471,7 +2548,7 @@ const convertAttendeesToExcel = async (req, res) => {
     ]);
     groupInfoRow.font = { bold: true };
 
-    worksheet.addRow([Grade, centerName, GroupTime, today]);
+    worksheet.addRow([Grade, centerName, GroupTime, targetDate]);
 
     // Add present students section
     let row = worksheet.addRow([]);
@@ -2823,6 +2900,166 @@ const convertAttendeesToExcel = async (req, res) => {
     res.send(excelBuffer);
   } catch (error) {
     console.error('Error finalizing attendance:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * Export full attendance report for a group: each date as column, student status (حضر/غائب) per date, Total حضور, Total غياب
+ */
+const exportGroupAttendanceReportToExcel = async (req, res) => {
+  const { centerName, Grade, GroupTime, gradeType } = req.body;
+
+  try {
+    const group = await Group.findOne({
+      CenterName: centerName,
+      Grade: Grade,
+      GroupTime: GroupTime,
+      gradeType: gradeType,
+    }).populate('students');
+
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+
+    // Get all attendance records for the group, sorted by date
+    const attendanceRecords = await Attendance.find({ groupId: group._id })
+      .populate('studentsPresent studentsAbsent studentsLate studentsExcused')
+      .sort({ date: 1 });
+
+    if (!attendanceRecords || attendanceRecords.length === 0) {
+      return res.status(404).json({
+        message: 'No attendance records found for this group',
+      });
+    }
+
+    const dates = attendanceRecords.map((r) => r.date);
+
+    // Build student status map: studentId -> { date -> 'حضر' | 'غائب' | '-' }
+    const studentStatusMap = new Map();
+
+    for (const student of group.students) {
+      const statusByDate = {};
+      for (const d of dates) {
+        statusByDate[d] = '-';
+      }
+      studentStatusMap.set(student._id.toString(), {
+        student,
+        statusByDate,
+        totalPresent: 0,
+        totalAbsent: 0,
+      });
+    }
+
+    for (const att of attendanceRecords) {
+      const presentIds = new Set(
+        [
+          ...(att.studentsPresent || []),
+          ...(att.studentsLate || []),
+          ...(att.studentsExcused || []),
+        ].map((s) => (s._id || s).toString())
+      );
+      const absentIds = new Set(
+        (att.studentsAbsent || []).map((s) => (s._id || s).toString())
+      );
+
+      for (const [studentId, data] of studentStatusMap) {
+        const status = presentIds.has(studentId)
+          ? 'حضر'
+          : absentIds.has(studentId)
+            ? 'غائب'
+            : '-';
+        data.statusByDate[att.date] = status;
+        if (status === 'حضر') data.totalPresent += 1;
+        else if (status === 'غائب') data.totalAbsent += 1;
+      }
+    }
+
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet('تقرير الحضور والغياب');
+
+    // Title
+    const titleRow = worksheet.addRow(['تقرير الحضور والغياب - المجموعة']);
+    titleRow.font = { size: 18, bold: true };
+    const lastCol = dates.length + 4;
+    const getColLetter = (n) => {
+      let s = '';
+      while (n > 0) {
+        n--;
+        s = String.fromCharCode(65 + (n % 26)) + s;
+        n = Math.floor(n / 26);
+      }
+      return s || 'A';
+    };
+    worksheet.mergeCells(`A1:${getColLetter(lastCol)}1`);
+    titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Group info
+    worksheet.addRow([
+      'السنتر:',
+      centerName,
+      'الصف:',
+      Grade,
+      'النوع:',
+      gradeType,
+      'الوقت:',
+      GroupTime,
+    ]);
+
+    // Header row: اسم الطالب | الكود | Date1 | Date2 | ... | Total حضور | Total غياب
+    const headerCells = ['اسم الطالب', 'الكود', ...dates, 'إجمالي الحضور', 'إجمالي الغياب'];
+    const headerRow = worksheet.addRow(headerCells);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD700' },
+    };
+
+    // Data rows
+    for (const [studentId, data] of studentStatusMap) {
+      const row = [
+        data.student.Username,
+        data.student.Code,
+        ...dates.map((d) => data.statusByDate[d]),
+        data.totalPresent,
+        data.totalAbsent,
+      ];
+      const r = worksheet.addRow(row);
+      r.font = { size: 12 };
+    }
+
+    worksheet.columns.forEach((col, i) => {
+      col.width = Math.max(12, col.width || 10);
+    });
+
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+        if (cell.value === 'حضر') {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } };
+        } else if (cell.value === 'غائب') {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFB6C1' } };
+        }
+      });
+    });
+
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+    const fileName = `attendance_report_${Grade}_${gradeType}_${GroupTime}.xlsx`;
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Error exporting attendance report:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -4664,6 +4901,7 @@ module.exports = {
   getDates,
   getAttendees,
   convertAttendeesToExcel,
+  exportGroupAttendanceReportToExcel,
 
   // My Student Data
   getStudentData,
