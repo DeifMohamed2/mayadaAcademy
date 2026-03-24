@@ -2905,7 +2905,7 @@ const convertAttendeesToExcel = async (req, res) => {
 };
 
 /**
- * Export full attendance report for a group: each date as column, student status (حضر/غائب) per date, Total حضور, Total غياب
+ * Export full attendance report for a group: student code + phones, each date as column (حضر/غائب), totals
  */
 const exportGroupAttendanceReportToExcel = async (req, res) => {
   const { centerName, Grade, GroupTime, gradeType } = req.body;
@@ -2981,7 +2981,7 @@ const exportGroupAttendanceReportToExcel = async (req, res) => {
     // Title
     const titleRow = worksheet.addRow(['تقرير الحضور والغياب - المجموعة']);
     titleRow.font = { size: 18, bold: true };
-    const lastCol = dates.length + 4;
+    const lastCol = dates.length + 6;
     const getColLetter = (n) => {
       let s = '';
       while (n > 0) {
@@ -3006,8 +3006,16 @@ const exportGroupAttendanceReportToExcel = async (req, res) => {
       GroupTime,
     ]);
 
-    // Header row: اسم الطالب | الكود | Date1 | Date2 | ... | Total حضور | Total غياب
-    const headerCells = ['اسم الطالب', 'الكود', ...dates, 'إجمالي الحضور', 'إجمالي الغياب'];
+    // Header row: اسم الطالب | الكود | هاتف الطالب | هاتف ولي الأمر | Date1 | ... | إجمالي الحضور | إجمالي الغياب
+    const headerCells = [
+      'اسم الطالب',
+      'الكود',
+      'هاتف الطالب',
+      'هاتف ولي الأمر',
+      ...dates,
+      'إجمالي الحضور',
+      'إجمالي الغياب',
+    ];
     const headerRow = worksheet.addRow(headerCells);
     headerRow.font = { bold: true };
     headerRow.fill = {
@@ -3021,6 +3029,8 @@ const exportGroupAttendanceReportToExcel = async (req, res) => {
       const row = [
         data.student.Username,
         data.student.Code,
+        data.student.phone ?? '',
+        data.student.parentPhone ?? '',
         ...dates.map((d) => data.statusByDate[d]),
         data.totalPresent,
         data.totalAbsent,
