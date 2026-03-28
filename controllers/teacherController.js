@@ -2,6 +2,13 @@ const User = require('../models/User');
 const Group = require('../models/Group');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance');
+const { ALLOWED_CENTERS } = require('../config/groupHierarchy');
+const {
+  getSmsEnabled,
+  sendSms,
+  generateAdvansysRequestId,
+} = require('../utils/sms');
+const { estimateSmsSegments } = require('../utils/smsFormatting');
 
 const {
   sendAttendanceNotification,
@@ -1010,6 +1017,7 @@ const markAttendance = async (req, res) => {
               group: `${centerName} - ${Grade} - ${GroupTime}`,
               absences: student.absences,
               hwLine: hwLine,
+              homeworkStatus: homeworkStatus,
               date: today,
             },
           );
@@ -1557,6 +1565,7 @@ const finalizeAttendance = async (req, res) => {
           group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
           absences: student.absences,
           hwLine: '',
+          homeworkStatus: 'not_specified',
           date: today,
         },
       );
@@ -2841,6 +2850,7 @@ const convertAttendeesToExcel = async (req, res) => {
           group: `${student.centerName} - ${student.Grade} - ${student.groupTime}`,
           absences: student.absences,
           hwLine: '',
+          homeworkStatus: 'not_specified',
           date: today,
         },
       );
@@ -4814,10 +4824,8 @@ const transferStudent = async (req, res) => {
 // =================================================== Send Registration Message =================================================== //
 
 const logOut = async (req, res) => {
-  // Clearing the token cookie
-  res.clearCookie('token');
-  // Redirecting to the login page or any other desired page
-  res.redirect('../login');
+  res.clearCookie('token', { path: '/' });
+  res.redirect('/login');
 };
 
 const exportErrorDetailsToExcel = async (req, res) => {
@@ -4878,6 +4886,376 @@ const exportErrorDetailsToExcel = async (req, res) => {
       success: false,
       message: 'Failed to export error details to Excel',
       error: error.message,
+    });
+  }
+};
+
+// =================================================== Edit Groups (Management) =================================================== //
+
+const editGroups_get = async (req, res) => {
+  res.render('teacher/editGroups', { title: 'Edit Groups', path: req.path });
+};
+
+const getGroupOptions = async (req, res) => {
+  try {
+    const groups = await Group.find({ isActive: true })
+      .select('CenterName Grade gradeType GroupTime displayText')
+      .lean();
+
+    const centersSet = new Set();
+    const centerToGrades = {};
+    const gradeToTypes = {};
+    const timesTree = {};
+
+    for (const g of groups) {
+      centersSet.add(g.CenterName);
+
+      if (!centerToGrades[g.CenterName]) centerToGrades[g.CenterName] = new Set();
+      centerToGrades[g.CenterName].add(g.Grade);
+
+      if (!gradeToTypes[g.Grade]) gradeToTypes[g.Grade] = new Set();
+      gradeToTypes[g.Grade].add(g.gradeType);
+
+      if (!timesTree[g.CenterName]) timesTree[g.CenterName] = {};
+      if (!timesTree[g.CenterName][g.Grade]) timesTree[g.CenterName][g.Grade] = {};
+      if (!timesTree[g.CenterName][g.Grade][g.gradeType])
+        timesTree[g.CenterName][g.Grade][g.gradeType] = [];
+      timesTree[g.CenterName][g.Grade][g.gradeType].push({
+        value: g.GroupTime,
+        text: g.displayText || g.GroupTime,
+      });
+    }
+
+    const centers = Array.from(centersSet).sort();
+    const centerNames = {};
+    for (const center of centers) {
+      centerNames[center] = Array.from(centerToGrades[center] || []).map(
+        (gr) => ({ value: gr, text: gr }),
+      );
+    }
+
+    const gradeTypeOptions = {};
+    for (const gr of Object.keys(gradeToTypes)) {
+      gradeTypeOptions[gr] = Array.from(gradeToTypes[gr]).map((t) => ({
+        value: t,
+        text: t,
+      }));
+    }
+
+    res.status(200).json({ centers, centerNames, gradeTypeOptions, groupTimes: timesTree });
+  } catch (error) {
+    console.error('Error building group options:', error);
+    res.status(500).json({ message: 'Failed to load group options' });
+  }
+};
+
+const listRegisterGroups = async (req, res) => {
+  try {
+    const items = await Group.aggregate([
+      { $match: {} },
+      {
+        $project: {
+          CenterName: 1,
+          Grade: 1,
+          gradeType: 1,
+          GroupTime: 1,
+          displayText: 1,
+          isActive: 1,
+          createdAt: 1,
+          studentsCount: { $size: { $ifNull: ['$students', []] } },
+        },
+      },
+      { $sort: { CenterName: 1, Grade: 1, gradeType: 1, GroupTime: 1 } },
+    ]);
+    res.status(200).json({ items });
+  } catch (error) {
+    console.error('Error listing groups:', error);
+    res.status(500).json({ message: 'Failed to list groups' });
+  }
+};
+
+const listStudentsWithoutGroup = async (req, res) => {
+  try {
+    const { centerName, Grade, gradeType } = req.query;
+
+    const groups = await Group.find({}).select('students').lean();
+    const assignedIdsSet = new Set();
+    for (const g of groups) {
+      if (Array.isArray(g.students)) {
+        for (const s of g.students) assignedIdsSet.add(String(s));
+      }
+    }
+
+    const filter = {};
+    if (centerName) filter.centerName = centerName;
+    if (Grade) filter.Grade = Grade;
+    if (gradeType) filter.gradeType = gradeType;
+
+    const users = await User.find(filter)
+      .select(
+        'Username Code phone parentPhone centerName Grade gradeType groupTime createdAt updatedAt',
+      )
+      .lean();
+
+    const unassigned = users.filter((u) => !assignedIdsSet.has(String(u._id)));
+
+    res.status(200).json({ count: unassigned.length, students: unassigned });
+  } catch (error) {
+    console.error('Error listing students without group:', error);
+    res.status(500).json({ message: 'Failed to load students without group' });
+  }
+};
+
+const createRegisterGroup = async (req, res) => {
+  try {
+    const { centerName, Grade, gradeType, groupTime, displayText, isActive } =
+      req.body;
+    if (!centerName || !Grade || !gradeType || !groupTime || !displayText) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    if (!ALLOWED_CENTERS.has(centerName)) {
+      return res.status(400).json({
+        message: 'Center must be one of ZHub, tagmo3, online',
+      });
+    }
+    const item = await Group.create({
+      CenterName: centerName,
+      Grade,
+      gradeType,
+      GroupTime: groupTime,
+      displayText,
+      isActive: isActive !== false,
+    });
+    res.status(201).json({
+      item: {
+        ...item.toObject(),
+        studentsCount: (item.students || []).length,
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message:
+          'A group with the same Center, Grade, Type and Group Key already exists',
+      });
+    }
+    console.error('Error creating group:', error);
+    res.status(500).json({ message: 'Failed to create group' });
+  }
+};
+
+const updateRegisterGroup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { displayText, isActive } = req.body;
+    const updates = {};
+    if (displayText !== undefined) updates.displayText = displayText;
+    if (isActive !== undefined) updates.isActive = isActive;
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'Nothing to update' });
+    }
+    const item = await Group.findByIdAndUpdate(id, updates, { new: true });
+    if (!item) return res.status(404).json({ message: 'Group not found' });
+    res.status(200).json({
+      item: {
+        ...item.toObject(),
+        studentsCount: (item.students || []).length,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating group:', error);
+    res.status(500).json({ message: 'Failed to update group' });
+  }
+};
+
+const deleteRegisterGroup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const group = await Group.findById(id);
+    if (!group) return res.status(404).json({ message: 'Group not found' });
+
+    const studentCount = group.students ? group.students.length : 0;
+
+    await User.deleteMany({ _id: { $in: group.students } });
+
+    await Attendance.deleteMany({ groupId: group._id });
+
+    await Group.deleteOne({ _id: group._id });
+
+    console.log(
+      `Group deleted successfully. Removed ${studentCount} students from the system.`,
+    );
+    res.status(200).json({
+      message: 'Group and all associated students deleted successfully',
+      studentsRemoved: studentCount,
+    });
+  } catch (error) {
+    console.error('Error deleting group:', error);
+    res.status(500).json({ message: 'Failed to delete group' });
+  }
+};
+
+const getGroupStudents = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const group = await Group.findById(id).populate(
+      'students',
+      'Username Code phone parentPhone absences balance amountRemaining',
+    );
+    if (!group) return res.status(404).json({ message: 'Group not found' });
+    res.status(200).json({ students: group.students });
+  } catch (error) {
+    console.error('Error fetching group students:', error);
+    res.status(500).json({ message: 'Failed to fetch group students' });
+  }
+};
+
+const clearRegisterGroupStudents = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const group = await Group.findById(id);
+    if (!group) return res.status(404).json({ message: 'Group not found' });
+
+    const removedCount = (group.students || []).length;
+    group.students = [];
+    await group.save();
+
+    return res.status(200).json({
+      message: 'All students removed from group successfully',
+      removedCount,
+    });
+  } catch (error) {
+    console.error('Error clearing group students:', error);
+    res.status(500).json({ message: 'Failed to clear group students' });
+  }
+};
+
+const removeStudentFromRegisterGroup = async (req, res) => {
+  try {
+    const { id, studentId } = req.params;
+    const group = await Group.findById(id);
+    if (!group) return res.status(404).json({ message: 'Group not found' });
+
+    const wasMember = group.students?.some((s) =>
+      s.equals ? s.equals(studentId) : String(s) === String(studentId),
+    );
+    if (!wasMember) {
+      return res.status(400).json({ message: 'Student is not in this group' });
+    }
+
+    await Group.updateOne({ _id: id }, { $pull: { students: studentId } });
+
+    const updated = await Group.findById(id).populate(
+      'students',
+      'Username Code',
+    );
+    res.status(200).json({
+      message: 'Student removed from group successfully',
+      remainingCount: updated?.students?.length || 0,
+    });
+  } catch (error) {
+    console.error('Error removing student from group:', error);
+    res.status(500).json({ message: 'Failed to remove student from group' });
+  }
+};
+
+// =================================================== Send SMS (teacher) =================================================== //
+
+const SMS_BULK_MAX = 50;
+
+const sendSms_get = async (req, res) => {
+  res.render('teacher/sendSms', {
+    title: 'Send SMS',
+    path: req.path,
+    smsEnabled: getSmsEnabled(),
+  });
+};
+
+const sendSms_post = async (req, res) => {
+  try {
+    if (!getSmsEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SMS is disabled (SMS_ENABLED)',
+      });
+    }
+
+    const { message, phones, recipients } = req.body;
+    const text = (message || '').trim();
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message is required',
+      });
+    }
+
+    let list = [];
+    if (Array.isArray(phones)) {
+      list = phones.map((p) => String(p).trim()).filter(Boolean);
+    } else if (typeof phones === 'string' && phones.trim()) {
+      list = phones
+        .split(/[\n,;]+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+    } else if (Array.isArray(recipients)) {
+      list = recipients.map((p) => String(p).trim()).filter(Boolean);
+    }
+
+    if (list.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one phone number is required',
+      });
+    }
+
+    if (list.length > SMS_BULK_MAX) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum ${SMS_BULK_MAX} numbers per request`,
+      });
+    }
+
+    const seg = estimateSmsSegments(text);
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const phone of list) {
+      try {
+        const result = await sendSms({
+          phoneNumber: phone,
+          message: text,
+          requestId: generateAdvansysRequestId(),
+        });
+        if (result.success) sent += 1;
+        else {
+          failed += 1;
+          errors.push({ phone, message: result.message || 'Failed' });
+        }
+      } catch (e) {
+        failed += 1;
+        errors.push({ phone, message: e.message || 'Error' });
+      }
+    }
+
+    const total = list.length;
+    res.json({
+      success: failed === 0,
+      sent,
+      failed,
+      total,
+      segmentEstimate: seg,
+      messageSummaryAr:
+        failed === 0
+          ? `تم الإرسال بنجاح — ${sent} رقم`
+          : `اكتمل الإرسال — نجح ${sent}، فشل ${failed} من أصل ${total}`,
+      errors: errors.slice(0, 30),
+    });
+  } catch (error) {
+    console.error('sendSms_post:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error',
     });
   }
 };
@@ -4947,4 +5325,18 @@ module.exports = {
 
   logOut,
   exportErrorDetailsToExcel,
+
+  editGroups_get,
+  getGroupOptions,
+  listRegisterGroups,
+  listStudentsWithoutGroup,
+  createRegisterGroup,
+  updateRegisterGroup,
+  deleteRegisterGroup,
+  getGroupStudents,
+  clearRegisterGroupStudents,
+  removeStudentFromRegisterGroup,
+
+  sendSms_get,
+  sendSms_post,
 };

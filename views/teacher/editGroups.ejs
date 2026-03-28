@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+    <%- include("./partials/head.ejs") %>
+
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-2">
+                <%- include("./partials/nav.ejs") %>
+            </div>
+            <div class="col-lg-10 ">
+                <main>
+                    <div class="row">
+                        <div class=" col-md-4 ">
+                            <div class="left" style="margin-top: 0.2rem;">
+                                <%- include("./partials/top.ejs") %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card bg-dark text-white border-0 shadow-sm">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">إدارة المجموعات</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="createGroupForm" class="row g-3">
+                                        <div class="col-md-2">
+                                            <label class="form-label">Center</label>
+                                            <select class="form-control" id="centerName" required>
+                                                <option value="">Choose</option>
+                                                <option value="ZHub">ZHub</option>
+                                                <option value="tagmo3">tagmo3</option>
+                                                <option value="online">online</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Grade</label>
+                                            <input type="text" class="form-control" id="Grade" placeholder="EST / SAT / Basics" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Type</label>
+                                            <input type="text" class="form-control" id="gradeType" placeholder="adv / normal" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Group Key</label>
+                                            <input type="text" class="form-control" id="groupTime" placeholder="group / test" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Display Text</label>
+                                            <input type="text" class="form-control" id="displayText" placeholder="e.g. Group" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-primary">إضافة</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card bg-dark text-white border-0 shadow-sm">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">القائمة</h5>
+                                    <small class="text-light-50">لا يمكن تعديل هوية المجموعة بعد الإنشاء (Center/Grade/Type/Key)</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-dark table-striped align-middle" id="groupsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Center</th>
+                                                    <th>Grade</th>
+                                                    <th>Type</th>
+                                                    <th>Group Key</th>
+                                                    <th>Display</th>
+                                                    <th>Students</th>
+                                                    <th>Created At</th>
+                                                    <th class="text-end">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                    <div id="studentsPanel" class="mt-4 d-none">
+                                        <h6 class="mb-3">Students in selected group</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-dark table-striped align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Name</th>
+                                                        <th>Code</th>
+                                                        <th>Phone</th>
+                                                        <th>Parent Phone</th>
+                                                        <th>Absences</th>
+                                                        <th>Amount</th>
+                                                        <th>Remaining</th>
+                                                        <th class="text-end">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="studentsTbody"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assest/bootstrap.bundle.min.js"></script>
+    <script src="/assest/bootstrap.min.js"></script>
+
+    <script>
+        const groupsTableBody = document.querySelector('#groupsTable tbody');
+        const form = document.getElementById('createGroupForm');
+        let currentGroupId = null;
+
+        async function loadGroups() {
+            groupsTableBody.innerHTML = '';
+            const res = await fetch('/teacher/registerGroups');
+            const data = await res.json();
+            if (!res.ok) return;
+            data.items.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                const disp = (item.displayText || '').replace(/"/g, '&quot;');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td><span class="badge bg-secondary">${item.CenterName || item.centerName}</span></td>
+                    <td>${item.Grade}</td>
+                    <td>${item.gradeType}</td>
+                    <td><code>${item.GroupTime || item.groupTime}</code></td>
+                    <td><input class="form-control form-control-sm" value="${disp}" data-field="displayText" data-id="${item._id}"></td>
+                    <td><span class="badge bg-info">${item.studentsCount || 0}</span></td>
+                    <td>${(item.createdAt ? new Date(item.createdAt).toLocaleDateString('ar-EG') : '')}</td>
+                    <td class="text-nowrap text-end">
+                        <button class="btn btn-sm btn-outline-info me-2" onclick="showStudents('${item._id}')">Show</button>
+                        <button class="btn btn-sm btn-warning me-2" onclick="updateItem('${item._id}')">Update</button>
+                        <button class="btn btn-sm btn-outline-danger me-2" onclick="clearStudents('${item._id}')">Clear Students</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteItem('${item._id}')">Delete</button>
+                    </td>
+                `;
+                groupsTableBody.appendChild(tr);
+            });
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                centerName: document.getElementById('centerName').value,
+                Grade: document.getElementById('Grade').value,
+                gradeType: document.getElementById('gradeType').value,
+                groupTime: document.getElementById('groupTime').value,
+                displayText: document.getElementById('displayText').value,
+            };
+            const res = await fetch('/teacher/registerGroups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'Failed to add');
+                return;
+            }
+            form.reset();
+            loadGroups();
+        });
+
+        async function updateItem(id) {
+            const rowInputs = Array.from(document.querySelectorAll(`[data-id="${id}"]`));
+            const body = {};
+            rowInputs.forEach((el) => {
+                if (el.dataset.field === 'displayText') body.displayText = el.value;
+            });
+            const res = await fetch(`/teacher/registerGroups/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'Failed to update');
+                return;
+            }
+            loadGroups();
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Are you sure? This will permanently delete the group AND all students in this group from the entire system. This action cannot be undone.')) return;
+            const res = await fetch(`/teacher/registerGroups/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'Failed to delete');
+                return;
+            }
+            if (data.studentsRemoved > 0) {
+                alert(`Group deleted successfully. ${data.studentsRemoved} students were also removed from the system.`);
+            } else {
+                alert('Group deleted successfully.');
+            }
+            loadGroups();
+        }
+
+        async function showStudents(id) {
+            const panel = document.getElementById('studentsPanel');
+            const tbody = document.getElementById('studentsTbody');
+            panel.classList.remove('d-none');
+            tbody.innerHTML = '';
+            const res = await fetch(`/teacher/registerGroups/${id}/students`);
+            const data = await res.json();
+            if (!res.ok) { panel.classList.add('d-none'); return; }
+            currentGroupId = id;
+            data.students.forEach((s, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${s.Username}</td>
+                    <td>${s.Code}</td>
+                    <td>${s.phone || ''}</td>
+                    <td>${s.parentPhone || ''}</td>
+                    <td>${s.absences ?? 0}</td>
+                    <td>${s.balance ?? 0}</td>
+                    <td>${s.amountRemaining ?? 0}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeStudent('${id}','${s._id}')">Remove</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function removeStudent(groupId, studentId) {
+            if (!confirm('Remove this student from the group?')) return;
+            const res = await fetch(`/teacher/registerGroups/${groupId}/students/${studentId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'Failed to remove student');
+                return;
+            }
+            if (currentGroupId) showStudents(currentGroupId);
+        }
+
+        async function clearStudents(groupId) {
+            if (!confirm('This will remove all students from this group. The group and student records will remain. Continue?')) return;
+            const res = await fetch(`/teacher/registerGroups/${groupId}/students`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'Failed to clear students');
+                return;
+            }
+            loadGroups();
+            if (currentGroupId === groupId) {
+                const panel = document.getElementById('studentsPanel');
+                const tbody = document.getElementById('studentsTbody');
+                panel.classList.add('d-none');
+                tbody.innerHTML = '';
+            }
+        }
+
+        window.updateItem = updateItem;
+        window.deleteItem = deleteItem;
+        window.showStudents = showStudents;
+        window.removeStudent = removeStudent;
+        window.clearStudents = clearStudents;
+        loadGroups();
+    </script>
+</body>
+
+</html>

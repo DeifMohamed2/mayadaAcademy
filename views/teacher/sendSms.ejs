@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<%- include("./partials/head.ejs") %>
+
+<body>
+  <div id="smsSendingOverlay" class="sms-send-overlay d-none" aria-hidden="true">
+    <div class="sms-send-overlay__inner">
+      <div class="sms-send-spinner" role="status"></div>
+      <p class="mb-1 fw-bold text-white">جاري إرسال الرسائل…</p>
+      <p class="small text-muted mb-0">يرجى الانتظار</p>
+    </div>
+  </div>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: 'Cairo', sans-serif;
+    }
+    .page-title {
+      color: #0d6efd;
+      margin-bottom: 28px;
+      text-align: center;
+      font-size: 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .page-title i {
+      font-size: 1.85rem;
+      background: linear-gradient(135deg, #0d6efd, #6610f2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .form-container {
+      background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(20, 20, 20, 0.95));
+      border: 2px solid rgba(13, 110, 253, 0.3);
+      border-radius: 20px;
+      padding: 28px 32px;
+      max-width: 920px;
+      margin: 0 auto 24px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    }
+    .form-header h3 {
+      color: #0d6efd;
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+    .form-header p { color: #a0a0a0; font-size: 0.92rem; margin-bottom: 0; }
+    .form-group { margin-bottom: 22px; }
+    .form-group label {
+      display: block;
+      color: #fff;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .form-group label i { color: #0d6efd; margin-left: 6px; }
+    .form-control, .form-select {
+      width: 100%;
+      background-color: rgba(45, 45, 45, 0.9);
+      border: 2px solid rgba(13, 110, 253, 0.3);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 1rem;
+    }
+    .form-control:focus, .form-select:focus {
+      outline: none;
+      border-color: #0d6efd;
+      box-shadow: 0 0 18px rgba(13, 110, 253, 0.25);
+    }
+    textarea.form-control { min-height: 120px; resize: vertical; }
+    .tabs-inline {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .tab-inline-btn {
+      padding: 10px 18px;
+      border: 2px solid rgba(13, 110, 253, 0.35);
+      background: rgba(30, 30, 30, 0.9);
+      color: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    .tab-inline-btn:hover { border-color: #0d6efd; }
+    .tab-inline-btn.active {
+      background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+      border-color: #0d6efd;
+    }
+    .file-upload-area {
+      background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05));
+      border: 2px dashed rgba(13, 110, 253, 0.45);
+      border-radius: 15px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .file-upload-area:hover {
+      border-color: #0d6efd;
+      transform: translateY(-2px);
+    }
+    .tab-pane-sms { display: none; }
+    .tab-pane-sms.active { display: block; }
+    .btn-submit {
+      width: 100%;
+      max-width: 360px;
+      padding: 14px 22px;
+      border: none;
+      background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+      color: #fff;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 22px rgba(13, 110, 253, 0.35);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+      transform: translateY(-2px);
+    }
+    .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .sms-meta-line { color: #a0a0a0; font-size: 0.88rem; }
+    .sms-result-box {
+      border: 2px solid rgba(40, 167, 69, 0.45);
+      border-radius: 14px;
+      padding: 20px;
+      background: rgba(40, 167, 69, 0.08);
+      margin-top: 8px;
+    }
+    .sms-result-box.is-partial {
+      border-color: rgba(255, 193, 7, 0.5);
+      background: rgba(255, 193, 7, 0.06);
+    }
+    .sms-stat-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+    .sms-stat-pill {
+      min-width: 90px;
+      text-align: center;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .sms-stat-pill b { display: block; font-size: 1.35rem; }
+    .sms-stat-pill span { font-size: 0.75rem; color: #a0a0a0; }
+    .sms-send-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sms-send-overlay__inner {
+      text-align: center;
+      padding: 2rem 2.5rem;
+      background: #1e1e1e;
+      border: 2px solid rgba(13, 110, 253, 0.35);
+      border-radius: 16px;
+    }
+    .sms-send-spinner {
+      width: 44px; height: 44px; margin: 0 auto 12px;
+      border: 3px solid rgba(13, 110, 253, 0.25);
+      border-top-color: #0d6efd;
+      border-radius: 50%;
+      animation: smsOv 0.8s linear infinite;
+    }
+    @keyframes smsOv { to { transform: rotate(360deg); } }
+    .hint-small { color: #888; font-size: 0.85rem; }
+    code { color: #6ea8fe; }
+  </style>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-2">
+        <%- include("./partials/nav.ejs") %>
+      </div>
+      <div class="col-lg-10">
+        <main>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="left" style="margin-top: 0.2rem;">
+                <%- include("./partials/top.ejs") %>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-12">
+              <h2 class="page-title">
+                <i class="fa-solid fa-comment-sms"></i>
+                إرسال SMS
+              </h2>
+
+              <% if (!smsEnabled) { %>
+                <div class="alert alert-warning text-center" style="max-width: 920px; margin: 0 auto 20px;">
+                  الإرسال معطّل — فعّل <code>SMS_ENABLED</code> وإعدادات Advansys
+                </div>
+              <% } %>
+
+              <div id="smsAlertArea" style="max-width: 920px; margin: 0 auto;"></div>
+
+              <div class="form-container">
+                <div class="form-header text-center mb-3">
+                  <h3><i class="fa-solid fa-pen-to-square"></i> نص الرسالة</h3>
+                  <p>اكتب الرسالة مرة واحدة؛ تُرسل لجميع الأرقام في القائمة</p>
+                </div>
+                <div class="form-group">
+                  <textarea class="form-control" id="smsMessage" rows="5" placeholder="نص الرسالة…" dir="auto"></textarea>
+                  <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 gap-2">
+                    <span class="sms-meta-line" id="smsMeta"></span>
+                    <span class="badge bg-secondary" id="smsSegBadge">0 حرف</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-container">
+                <div class="form-header text-center mb-3">
+                  <h3><i class="fa-solid fa-address-book"></i> المستلمون</h3>
+                  <p>لصق الأرقام أو استيراد Excel (حد أقصى 50 رقمًا لكل طلب)</p>
+                </div>
+
+                <div class="tabs-inline justify-content-center">
+                  <button type="button" class="tab-inline-btn active" data-tab="manual">لصق يدوي</button>
+                  <button type="button" class="tab-inline-btn" data-tab="excel">ملف Excel</button>
+                </div>
+
+                <div class="tab-pane-sms active" id="tabManual">
+                  <div class="form-group">
+                    <label><i class="fa-solid fa-phone"></i> الأرقام</label>
+                    <textarea class="form-control font-monospace" id="smsPhones" rows="10" placeholder="سطر لكل رقم&#10;2012xxxxxxxx" dir="ltr" style="font-size: 0.95rem;"></textarea>
+                    <div class="d-flex justify-content-between mt-2 flex-wrap gap-2">
+                      <span class="hint-small">فصل بسطر جديد أو فاصلة</span>
+                      <span class="badge bg-primary" id="phoneCountBadge">0 رقم</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tab-pane-sms" id="tabExcel">
+                  <div class="file-upload-area mb-3" id="excelDropZone">
+                    <i class="fa-solid fa-file-excel" style="font-size: 2.2rem; color: #0d6efd;"></i>
+                    <p class="mb-2 mt-2">اسحب ملف <strong>.xlsx</strong> هنا أو اضغط للاختيار</p>
+                    <input type="file" id="excelPhonesFile" class="d-none" accept=".xlsx,.xls">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="excelPickBtn">اختيار ملف</button>
+                    <p class="hint-small mt-3 mb-0">يُستخرج الرقم المصري من أي خلية في الورقة</p>
+                  </div>
+                  <div class="text-center mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadSampleExcel">
+                      <i class="fa-solid fa-download me-1"></i> تنزيل نموذج Excel
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-container">
+                <div class="form-header text-center mb-3">
+                  <h3><i class="fa-solid fa-users"></i> تحميل من مجموعة</h3>
+                  <p>اختر المجموعة ثم اضغط لملء قائمة أرقام أولياء الأمور</p>
+                </div>
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-3 col-sm-6">
+                    <label class="small text-muted">السنتر</label>
+                    <select class="form-select" id="centerName"><option value="">اختر</option></select>
+                  </div>
+                  <div class="col-md-2 col-sm-6">
+                    <label class="small text-muted">الصف</label>
+                    <select class="form-select" id="Grade"><option value="">—</option></select>
+                  </div>
+                  <div class="col-md-2 col-sm-6">
+                    <label class="small text-muted">النوع</label>
+                    <select class="form-select" id="gradeType"><option value="">—</option></select>
+                  </div>
+                  <div class="col-md-2 col-sm-6">
+                    <label class="small text-muted">المجموعة</label>
+                    <select class="form-select" id="groupTime"><option value="">—</option></select>
+                  </div>
+                  <div class="col-md-3 col-sm-12">
+                    <button type="button" class="btn btn-outline-warning w-100" id="loadPhonesFromGroup">
+                      <i class="fa-solid fa-download me-1"></i> تحميل للقائمة
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-center mb-4">
+                <button type="button" class="btn-submit" id="sendSmsBtn" <%= smsEnabled ? '' : 'disabled' %>>
+                  <i class="fa-solid fa-paper-plane"></i>
+                  إرسال الآن
+                </button>
+              </div>
+
+              <div class="form-container d-none" id="smsResultPanel">
+                <div class="sms-result-box" id="smsResultInner">
+                  <h4 class="text-center mb-2" id="smsResultTitle" style="color: #28a745;">نتيجة الإرسال</h4>
+                  <p class="text-center lead mb-2" id="smsResultSummary" style="font-size: 1.05rem;"></p>
+                  <div class="sms-stat-row">
+                    <div class="sms-stat-pill"><b class="text-success" id="statSent">0</b><span>نجح</span></div>
+                    <div class="sms-stat-pill"><b class="text-danger" id="statFailed">0</b><span>فشل</span></div>
+                    <div class="sms-stat-pill"><b class="text-white" id="statTotal">0</b><span>الإجمالي</span></div>
+                  </div>
+                  <p class="text-center sms-meta-line mt-2 mb-0" id="smsSegInfo"></p>
+                  <div class="d-none mt-3" id="smsErrorsWrap">
+                    <hr class="border-secondary opacity-25">
+                    <strong class="small d-block mb-2">أخطاء:</strong>
+                    <ul class="small text-warning mb-0 ps-3" id="smsErrorsList"></ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-container" style="padding: 20px 24px;">
+                <p class="hint-small text-center mb-0">
+                  <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                  استخدم دائمًا نفس العنوان في المتصفح (<code dir="ltr">localhost</code> أو <code dir="ltr">127.0.0.1</code>) حتى يبقى تسجيل الدخول مستقرًا
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assest/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <%- include("../partials/group.ejs") %>
+
+  <script>
+    (function () {
+      const SMS_MAX = 50;
+      const msg = document.getElementById('smsMessage');
+      const meta = document.getElementById('smsMeta');
+      const segBadge = document.getElementById('smsSegBadge');
+      const phonesTa = document.getElementById('smsPhones');
+      const phoneCountBadge = document.getElementById('phoneCountBadge');
+      const sendBtn = document.getElementById('sendSmsBtn');
+      const overlay = document.getElementById('smsSendingOverlay');
+      const resultPanel = document.getElementById('smsResultPanel');
+      const resultInner = document.getElementById('smsResultInner');
+      const alertArea = document.getElementById('smsAlertArea');
+
+      document.querySelectorAll('.tab-inline-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('.tab-inline-btn').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          var t = btn.getAttribute('data-tab');
+          document.getElementById('tabManual').classList.toggle('active', t === 'manual');
+          document.getElementById('tabExcel').classList.toggle('active', t === 'excel');
+        });
+      });
+
+      function updateMeta() {
+        const t = msg.value || '';
+        const len = t.length;
+        const gsm = /^[\x00-\x7F]*$/.test(t);
+        const per = gsm ? 160 : 70;
+        const seg = len === 0 ? 0 : len <= per ? 1 : 1 + Math.ceil((len - per) / (gsm ? 153 : 67));
+        meta.textContent = 'الطول: ' + len + ' | مقاطع تقريبية: ' + seg + ' (' + (gsm ? 'GSM' : 'Unicode') + ')';
+        segBadge.textContent = len + ' حرف';
+      }
+      msg.addEventListener('input', updateMeta);
+      updateMeta();
+
+      function countPhones() {
+        const raw = phonesTa.value || '';
+        const list = raw.split(/[\n,;]+/).map(function (p) { return p.trim(); }).filter(Boolean);
+        const uniq = [...new Set(list)];
+        phoneCountBadge.textContent = uniq.length + ' رقم';
+        return uniq;
+      }
+      phonesTa.addEventListener('input', countPhones);
+      countPhones();
+
+      function showAlert(type, html) {
+        alertArea.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show shadow-sm" role="alert">' +
+          html + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+      }
+
+      function setLoading(on) {
+        overlay.classList.toggle('d-none', !on);
+        overlay.setAttribute('aria-hidden', on ? 'false' : 'true');
+        sendBtn.disabled = on || <%= smsEnabled ? 'false' : 'true' %>;
+      }
+
+      document.getElementById('loadPhonesFromGroup').addEventListener('click', async function () {
+        const centerName = document.getElementById('centerName').value;
+        const Grade = document.getElementById('Grade').value;
+        const gradeType = document.getElementById('gradeType').value;
+        const groupTime = document.getElementById('groupTime').value;
+        if (!centerName || !Grade || !gradeType || !groupTime) {
+          showAlert('warning', 'اختر السنتر والصف والنوع والمجموعة.');
+          return;
+        }
+        try {
+          const p = new URLSearchParams({ centerName, Grade, gradeType, groupTime });
+          const res = await fetch('/teacher/sendNotifications/getGroupStudents?' + p.toString());
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            showAlert('danger', data.message || 'فشل التحميل');
+            return;
+          }
+          const phones = (data.students || []).map(function (s) { return s.parentPhone || s.phone; }).filter(Boolean);
+          const uniq = [...new Set(phones)];
+          phonesTa.value = uniq.join('\n');
+          countPhones();
+          document.querySelector('.tab-inline-btn[data-tab="manual"]').click();
+          showAlert('success', 'تم تحميل <strong>' + uniq.length + '</strong> رقمًا.');
+        } catch (e) {
+          showAlert('danger', e.message || 'خطأ');
+        }
+      });
+
+      function extractPhonesFromSheetRows(rows) {
+        const found = [];
+        const re = /(?:\+?20|0)?1[0-9]{9}/g;
+        for (var r = 0; r < rows.length; r++) {
+          var row = rows[r];
+          if (!row) continue;
+          for (var c = 0; c < row.length; c++) {
+            var cell = row[c];
+            if (cell == null || cell === '') continue;
+            var str = String(cell);
+            var m;
+            while ((m = re.exec(str)) !== null) {
+              var d = m[0].replace(/\D/g, '');
+              if (d.length === 10 && d.startsWith('1')) d = '20' + d;
+              else if (d.length === 11 && d.startsWith('01')) d = '20' + d.slice(1);
+              if (d.length === 12 && d.startsWith('20')) found.push(d);
+            }
+            re.lastIndex = 0;
+            var digits = str.replace(/\D/g, '');
+            if (digits.length >= 10 && digits.length <= 12) {
+              var d2 = digits;
+              if (d2.length === 10 && d2.startsWith('1')) d2 = '20' + d2;
+              if (d2.length === 11 && d2.startsWith('01')) d2 = '20' + d2.slice(1);
+              if (d2.length === 12 && d2.startsWith('20')) found.push(d2);
+            }
+          }
+        }
+        return [...new Set(found)];
+      }
+
+      document.getElementById('excelPickBtn').addEventListener('click', function () {
+        document.getElementById('excelPhonesFile').click();
+      });
+      var dropZone = document.getElementById('excelDropZone');
+      dropZone.addEventListener('click', function (e) {
+        if (e.target.closest('#excelPickBtn')) return;
+        document.getElementById('excelPhonesFile').click();
+      });
+      ['dragenter', 'dragover'].forEach(function (ev) {
+        dropZone.addEventListener(ev, function (e) { e.preventDefault(); });
+      });
+      dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) handleExcelFile(f);
+      });
+      document.getElementById('excelPhonesFile').addEventListener('change', function (e) {
+        var f = e.target.files && e.target.files[0];
+        if (f) handleExcelFile(f);
+      });
+
+      function handleExcelFile(file) {
+        if (typeof XLSX === 'undefined') {
+          showAlert('danger', 'مكتبة Excel غير محمّلة');
+          return;
+        }
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            var data = new Uint8Array(ev.target.result);
+            var wb = XLSX.read(data, { type: 'array' });
+            var sheet = wb.Sheets[wb.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            var phones = extractPhonesFromSheetRows(rows);
+            if (phones.length === 0) {
+              showAlert('warning', 'لم يُعثر على أرقام صالحة في الملف');
+              return;
+            }
+            phonesTa.value = phones.slice(0, SMS_MAX).join('\n');
+            countPhones();
+            document.querySelector('.tab-inline-btn[data-tab="manual"]').click();
+            if (phones.length > SMS_MAX) {
+              showAlert('warning', 'عُثر على ' + phones.length + ' رقم — أُخذ أول ' + SMS_MAX + ' فقط');
+            } else {
+              showAlert('success', 'تم استيراد <strong>' + phones.length + '</strong> رقمًا');
+            }
+          } catch (err) {
+            showAlert('danger', err.message || 'فشل القراءة');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      document.getElementById('downloadSampleExcel').addEventListener('click', function () {
+        if (typeof XLSX === 'undefined') return;
+        var ws = XLSX.utils.aoa_to_sheet([['Phone'], ['201055200152'], ['01055200152']]);
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Numbers');
+        XLSX.writeFile(wb, 'Mayada_SMS_Phones_Sample.xlsx');
+      });
+
+      function showResult(data) {
+        resultPanel.classList.remove('d-none');
+        resultInner.classList.toggle('is-partial', !data.success);
+        var titleEl = document.getElementById('smsResultTitle');
+        if (data.success) {
+          titleEl.textContent = 'تم الإرسال بنجاح';
+          titleEl.style.color = '#28a745';
+        } else {
+          titleEl.textContent = 'اكتمل مع فشل جزئي';
+          titleEl.style.color = '#ffc107';
+        }
+        document.getElementById('smsResultSummary').textContent = data.messageSummaryAr || '';
+        document.getElementById('statSent').textContent = data.sent != null ? data.sent : '—';
+        document.getElementById('statFailed').textContent = data.failed != null ? data.failed : '—';
+        document.getElementById('statTotal').textContent = data.total != null ? data.total : '—';
+        var seg = data.segmentEstimate;
+        document.getElementById('smsSegInfo').textContent = seg
+          ? ('المقاطع للنص: ' + (seg.segments != null ? seg.segments : seg) + ' — ' + (seg.encoding || ''))
+          : '';
+        var errWrap = document.getElementById('smsErrorsWrap');
+        var errList = document.getElementById('smsErrorsList');
+        errList.innerHTML = '';
+        if (data.errors && data.errors.length) {
+          errWrap.classList.remove('d-none');
+          data.errors.forEach(function (e) {
+            var li = document.createElement('li');
+            li.textContent = (e.phone || '') + ' — ' + (e.message || '');
+            errList.appendChild(li);
+          });
+        } else {
+          errWrap.classList.add('d-none');
+        }
+        resultPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      sendBtn.addEventListener('click', async function () {
+        var message = msg.value.trim();
+        if (!message) {
+          showAlert('warning', 'أدخل نص الرسالة');
+          return;
+        }
+        var list = countPhones();
+        if (list.length === 0) {
+          showAlert('warning', 'أضف رقمًا واحدًا على الأقل');
+          return;
+        }
+        if (list.length > SMS_MAX) {
+          showAlert('warning', 'الحد ' + SMS_MAX + ' رقم');
+          return;
+        }
+        setLoading(true);
+        alertArea.innerHTML = '';
+        try {
+          var res = await fetch('/teacher/sendSms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, phones: list.join('\n') }),
+          });
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            showAlert('danger', data.message || 'فشل (' + res.status + ')');
+            return;
+          }
+          showResult(data);
+          showAlert(data.success ? 'success' : 'warning', (data.messageSummaryAr || '') + (data.success ? ' — تم بنجاح.' : ' — راجع التفاصيل.'));
+        } catch (e) {
+          showAlert('danger', e.message || 'خطأ');
+        } finally {
+          setLoading(false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

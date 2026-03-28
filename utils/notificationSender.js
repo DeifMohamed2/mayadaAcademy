@@ -25,6 +25,45 @@ const {
   getHomeworkStatusLine,
   getHomeworkStatusLabel,
 } = require('./notificationTranslations');
+const {
+  getSmsEnabled,
+  getSmsDeliveryMode,
+  sendSms,
+  truncateMessage,
+} = require('./sms');
+const {
+  buildCompactAttendanceSms,
+  fitAttendanceSmsSingleSegment,
+} = require('./smsFormatting');
+
+/**
+ * Advansys SMS body for attendance: compact, emoji-free, single-segment when possible (unlike push copy).
+ */
+async function sendAttendanceSms(phone, attendanceSms) {
+  let text;
+  if (
+    attendanceSms &&
+    attendanceSms.attendanceType &&
+    attendanceSms.smsData &&
+    attendanceSms.language
+  ) {
+    const raw = buildCompactAttendanceSms(
+      attendanceSms.attendanceType,
+      attendanceSms.smsData,
+      attendanceSms.language,
+    );
+    text = fitAttendanceSmsSingleSegment(raw);
+  } else {
+    text = truncateMessage(
+      `Mayada Academy\n${attendanceSms.title}\n${attendanceSms.body}`,
+    );
+  }
+  return sendSms({
+    phoneNumber: phone,
+    message: text,
+    requestId: attendanceSms.requestId || `att-${Date.now()}`,
+  });
+}
 
 /**
  * Normalize phone number for lookup
@@ -286,63 +325,146 @@ async function sendNotificationMessage(
       };
     }
 
+    const attendanceSms = details.attendanceSms;
+    const smsActive = getSmsEnabled() && attendanceSms;
+    const smsMode = getSmsDeliveryMode();
+
+    const { attendanceSms: _omitAttendanceSms, ...detailsForFcm } = details;
     // Build FCM data payload with notificationId so the mobile app can read it
     const fcmData = {
       type: 'general',
       timestamp: new Date().toISOString(),
       notificationId,
-      ...details,
+      ...detailsForFcm,
     };
 
-    if (!user || !user.fcmToken) {
-      // If user not found or no FCM token, try sending to parent
-      const result = await sendNotificationToParent(
-        normalizedPhone,
-        title,
-        body,
-        fcmData,
-      );
-
-      // Update notification status based on result
+    // SMS-only: skip FCM, deliver via Advansys
+    if (smsActive && smsMode === 'sms_only') {
+      const smsResult = await sendAttendanceSms(phone, attendanceSms);
       if (savedNotification && !savedNotification._isDuplicate) {
-        savedNotification.status = result.sent > 0 ? 'sent' : 'failed';
+        savedNotification.status = smsResult.success ? 'sent' : 'failed';
         await savedNotification.save();
       }
+      return {
+        success: smsResult.success,
+        message: smsResult.message,
+        notificationId,
+        sms: smsResult,
+        channel: 'sms',
+      };
+    }
 
-      if (result.sent > 0) {
-        return {
-          success: true,
-          data: result,
-          message: `Sent to ${result.sent} device(s)`,
-          notificationId,
+    let fcmDelivered = false;
+    let fcmReturn = {
+      success: false,
+      message: 'FCM not attempted',
+      notificationId,
+    };
+
+    try {
+      if (!user || !user.fcmToken) {
+        const result = await sendNotificationToParent(
+          normalizedPhone,
+          title,
+          body,
+          fcmData,
+        );
+
+        if (savedNotification && !savedNotification._isDuplicate) {
+          savedNotification.status = result.sent > 0 ? 'sent' : 'failed';
+          await savedNotification.save();
+        }
+
+        fcmDelivered = result.sent > 0;
+        fcmReturn =
+          result.sent > 0
+            ? {
+                success: true,
+                data: result,
+                message: `Sent to ${result.sent} device(s)`,
+                notificationId,
+              }
+            : {
+                success: false,
+                message:
+                  'No user found with FCM token for this phone number',
+                notificationId,
+              };
+      } else {
+        const result = await sendNotification(
+          user.fcmToken,
+          title,
+          body,
+          fcmData,
+        );
+
+        if (savedNotification && !savedNotification._isDuplicate) {
+          savedNotification.status = result.success ? 'sent' : 'failed';
+          await savedNotification.save();
+        }
+
+        fcmDelivered = result.success;
+        fcmReturn = result.success
+          ? { success: true, data: result, notificationId }
+          : {
+              success: false,
+              message: result.message || 'Failed to send notification',
+              notificationId,
+            };
+      }
+    } catch (fcmErr) {
+      console.error('[FCM] Attendance push failed:', fcmErr.message);
+      fcmDelivered = false;
+      fcmReturn = {
+        success: false,
+        message: fcmErr.message || 'FCM error',
+        notificationId,
+      };
+      if (savedNotification && !savedNotification._isDuplicate) {
+        savedNotification.status = 'failed';
+        await savedNotification.save();
+      }
+    }
+
+    // parallel: always SMS after FCM attempt (channels independent; SMS still runs if FCM threw)
+    // fallback: SMS only if FCM did not deliver (legacy)
+    let smsResult = null;
+    const sendSmsAfterPush =
+      smsActive &&
+      smsMode !== 'sms_only' &&
+      (smsMode === 'parallel' ||
+        (smsMode === 'fallback' && !fcmDelivered));
+
+    if (sendSmsAfterPush) {
+      try {
+        smsResult = await sendAttendanceSms(phone, attendanceSms);
+        if (smsResult && !smsResult.success) {
+          console.warn(
+            '[SMS] Attendance SMS failed (push may have succeeded):',
+            smsResult.message,
+          );
+        }
+        if (
+          smsMode === 'fallback' &&
+          smsResult &&
+          smsResult.success &&
+          !fcmDelivered &&
+          savedNotification &&
+          !savedNotification._isDuplicate
+        ) {
+          savedNotification.status = 'sent';
+          await savedNotification.save();
+        }
+      } catch (smsErr) {
+        console.error('[SMS] Attendance SMS error:', smsErr.message);
+        smsResult = {
+          success: false,
+          message: smsErr.message,
         };
       }
-
-      return {
-        success: false,
-        message: 'No user found with FCM token for this phone number',
-        notificationId,
-      };
     }
 
-    // Step 2: Send notification to the user with notificationId in data payload
-    const result = await sendNotification(user.fcmToken, title, body, fcmData);
-
-    // Step 3: Update notification status based on FCM result
-    if (savedNotification && !savedNotification._isDuplicate) {
-      savedNotification.status = result.success ? 'sent' : 'failed';
-      await savedNotification.save();
-    }
-
-    if (result.success) {
-      return { success: true, data: result, notificationId };
-    } else {
-      return {
-        success: false,
-        message: result.message || 'Failed to send notification',
-        notificationId,
-      };
-    }
+    return { ...fcmReturn, sms: smsResult };
   } catch (error) {
     console.error('Error sending notification:', error);
     return {
@@ -427,9 +549,34 @@ async function sendLocalizedAttendanceNotification(
 
     const message = `${notification.title}: ${notification.body}`;
 
+    const requestId = [
+      data.studentId != null ? String(data.studentId) : 'na',
+      attendanceType,
+      data.date || '',
+    ].join('|');
+
+    const smsData = {
+      studentName: data.studentName,
+      studentCode: data.studentCode,
+      group: data.group,
+      absences: data.absences,
+      date: data.date,
+      hwLine: data.hwLine,
+      homeworkStatus: data.homeworkStatus,
+      warningMessage: data.warningMessage,
+    };
+
     return await sendNotificationMessage(phone, message, {
       type: data.type || `attendance_${attendanceType}`,
       language,
+      attendanceSms: {
+        attendanceType,
+        language,
+        smsData,
+        requestId,
+        title: notification.title,
+        body: notification.body,
+      },
       ...data,
     });
   } catch (error) {

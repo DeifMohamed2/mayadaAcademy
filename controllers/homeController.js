@@ -8,6 +8,20 @@ const Excel = require('exceljs');
 
 const jwtSecret = process.env.JWTSECRET;
 
+/** Auth cookie + JWT lifetime (keep in sync). */
+const AUTH_TOKEN_EXPIRES_IN = '7d';
+const AUTH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function setAuthTokenCookie(res, token) {
+  res.cookie('token', token, {
+    httpOnly: true,
+    path: '/',
+    maxAge: AUTH_COOKIE_MAX_AGE_MS,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  });
+}
+
 async function sendQRCode(chatId, message, studentCode, centerName) {
   try {
     console.log('Sending QR code notification for center:', centerName);
@@ -85,8 +99,10 @@ const public_login_post = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ userId: user._id }, jwtSecret);
-    res.cookie('token', token, { httpOnly: true });
+    const token = jwt.sign({ userId: user._id }, jwtSecret, {
+      expiresIn: AUTH_TOKEN_EXPIRES_IN,
+    });
+    setAuthTokenCookie(res, token);
 
     if (user.isTeacher) {
       return res.redirect('/teacher/dash');

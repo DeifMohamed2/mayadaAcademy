@@ -1,8 +1,6 @@
-const mongoose = require('mongoose')
-const { required } = require('nodemon/lib/config');
-const { ref } = require('pdfkit');
-const Schema = mongoose.Schema
+const mongoose = require('mongoose');
 
+const Schema = mongoose.Schema;
 
 const groupSchema = new Schema(
   {
@@ -14,7 +12,7 @@ const groupSchema = new Schema(
       type: String,
       required: true,
     },
-    gradeType :{
+    gradeType: {
       type: String,
       required: true,
     },
@@ -22,13 +20,23 @@ const groupSchema = new Schema(
       type: String,
       required: true,
     },
-
-    related : { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
+    displayText: {
+      type: String,
+      default: '',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    related: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-
-
   },
-  { timestamps: true }
+  { timestamps: true },
+);
+
+groupSchema.index(
+  { CenterName: 1, Grade: 1, gradeType: 1, GroupTime: 1 },
+  { unique: true },
 );
 
 const Group = mongoose.model('Group', groupSchema);

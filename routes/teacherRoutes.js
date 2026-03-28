@@ -15,7 +15,7 @@ const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
 
   if (!token) {
-    return res.status(401).redirect('../login');
+    return res.status(401).redirect('/login');
   }
 
   try {
@@ -25,21 +25,24 @@ const authMiddleware = async (req, res, next) => {
     const result = await User.findOne({ '_id': decode.userId });
 
     if (!result) {
-      res.clearCookie('token');
-      return res.status(401).redirect('../login');
+      res.clearCookie('token', { path: '/' });
+      return res.status(401).redirect('/login');
     }
 
     if (result.isTeacher) {
       req.userData = result;
       next();
     } else {
-      res.clearCookie('token');
-      return res.status(301).redirect('../login');
+      res.clearCookie('token', { path: '/' });
+      return res.status(301).redirect('/login');
     }
-
   } catch (error) {
-    res.clearCookie('token');
-    return res.status(401).redirect('../login');
+    if (process.env.NODE_ENV !== 'production') {
+      const name = error && error.name ? error.name : 'Error';
+      console.warn('[authMiddleware] JWT verify failed:', name, error.message || error);
+    }
+    res.clearCookie('token', { path: '/' });
+    return res.status(401).redirect('/login');
   }
 };
 
@@ -191,5 +194,34 @@ router.get('/convertGroup', authMiddleware, teacherController.convertGroup_get);
 router.get('/getDataToTransferring/:Code', authMiddleware, teacherController.getDataToTransferring);
 
 router.put('/transferStudent/:Code', authMiddleware, teacherController.transferStudent);
+
+// ================== Edit Groups (Management) ================= //
+
+router.get('/editGroups', authMiddleware, teacherController.editGroups_get);
+router.get('/registerGroups', authMiddleware, teacherController.listRegisterGroups);
+router.post('/registerGroups', authMiddleware, teacherController.createRegisterGroup);
+router.put('/registerGroups/:id', authMiddleware, teacherController.updateRegisterGroup);
+router.delete('/registerGroups/:id', authMiddleware, teacherController.deleteRegisterGroup);
+router.get('/registerGroups/:id/students', authMiddleware, teacherController.getGroupStudents);
+router.delete(
+  '/registerGroups/:id/students/:studentId',
+  authMiddleware,
+  teacherController.removeStudentFromRegisterGroup,
+);
+router.delete(
+  '/registerGroups/:id/students',
+  authMiddleware,
+  teacherController.clearRegisterGroupStudents,
+);
+router.get(
+  '/students/no-group',
+  authMiddleware,
+  teacherController.listStudentsWithoutGroup,
+);
+
+// ================== Send SMS (teacher) ================= //
+
+router.get('/sendSms', authMiddleware, teacherController.sendSms_get);
+router.post('/sendSms', authMiddleware, teacherController.sendSms_post);
 
 module.exports = router;

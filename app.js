@@ -13,6 +13,7 @@ const cors = require('cors')
 const homeRoutes = require('./routes/homeRoutes')
 const teacherRoutes = require('./routes/teacherRoutes')
 const parentRoute = require('./routes/parentRoute')
+const teacherController = require('./controllers/teacherController')
 
 // express app
 const app = express();
@@ -73,6 +74,9 @@ app.use(session({
 app.use('/', homeRoutes)
 app.use('/teacher', teacherRoutes)
 app.use('/api/parent', parentRoute);
+
+/** Public read-only group cascade for registration and shared partials */
+app.get('/groupOptions', teacherController.getGroupOptions);
 
 
 
