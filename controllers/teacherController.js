@@ -3,6 +3,14 @@ const Group = require('../models/Group');
 const Card = require('../models/Card');
 const Attendance = require('../models/Attendance');
 const { ALLOWED_CENTERS } = require('../config/groupHierarchy');
+
+/** User group fields when the student is not in any Group document (must not match real group filters). */
+const UNASSIGNED_GROUP_PLACEHOLDER = {
+  centerName: '__unassigned__',
+  Grade: '__unassigned__',
+  gradeType: '__unassigned__',
+  groupTime: '__unassigned__',
+};
 const {
   getSmsEnabled,
   sendSms,
@@ -5116,9 +5124,17 @@ const clearRegisterGroupStudents = async (req, res) => {
     const group = await Group.findById(id);
     if (!group) return res.status(404).json({ message: 'Group not found' });
 
-    const removedCount = (group.students || []).length;
+    const studentIds = [...(group.students || [])];
+    const removedCount = studentIds.length;
     group.students = [];
     await group.save();
+
+    if (studentIds.length) {
+      await User.updateMany(
+        { _id: { $in: studentIds } },
+        { $set: UNASSIGNED_GROUP_PLACEHOLDER },
+      );
+    }
 
     return res.status(200).json({
       message: 'All students removed from group successfully',
@@ -5144,6 +5160,10 @@ const removeStudentFromRegisterGroup = async (req, res) => {
     }
 
     await Group.updateOne({ _id: id }, { $pull: { students: studentId } });
+
+    await User.findByIdAndUpdate(studentId, {
+      $set: UNASSIGNED_GROUP_PLACEHOLDER,
+    });
 
     const updated = await Group.findById(id).populate(
       'students',
