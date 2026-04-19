@@ -1,17 +1,60 @@
 <script>
 (function () {
-  function wireGroupCascade(centerNames, gradeTypeOptions, groupTimes) {
-    const centerEl = document.getElementById('centerName');
-    const gradeEl = document.getElementById('Grade');
-    const gradeTypeEl = document.getElementById('gradeType');
-    const groupTimeEl = document.getElementById('groupTime');
+  /**
+   * Populate center dropdown from API list.
+   * @param {HTMLElement} centerEl
+   * @param {string[]} centers
+   * @param {string} emptyLabel
+   */
+  function fillCenterOptions(centerEl, centers, emptyLabel) {
+    const first = centerEl.querySelector('option[value=""]');
+    centerEl.innerHTML = '';
+    if (first) {
+      centerEl.appendChild(first.cloneNode(true));
+    } else {
+      const o = document.createElement('option');
+      o.value = '';
+      o.textContent = emptyLabel;
+      centerEl.appendChild(o);
+    }
+    (centers || []).forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      centerEl.appendChild(opt);
+    });
+  }
+
+  /**
+   * @param {string} centerId
+   * @param {string} gradeId
+   * @param {string} gradeTypeId
+   * @param {string} groupTimeId
+   * @param {{ gradeEmpty: string, typeEmpty: string, timeEmpty: string, defaultTimeLabel?: string }} labels
+   */
+  function wireGroupCascade(
+    centerId,
+    gradeId,
+    gradeTypeId,
+    groupTimeId,
+    centerNames,
+    gradeTypeOptions,
+    groupTimes,
+    labels,
+  ) {
+    const centerEl = document.getElementById(centerId);
+    const gradeEl = document.getElementById(gradeId);
+    const gradeTypeEl = document.getElementById(gradeTypeId);
+    const groupTimeEl = document.getElementById(groupTimeId);
     if (!centerEl || !gradeEl || !gradeTypeEl || !groupTimeEl) return;
+
+    const defaultTimeLabel = labels.defaultTimeLabel || 'Default Group Time';
 
     centerEl.addEventListener('change', () => {
       const centerName = centerEl.value;
-      gradeEl.innerHTML = '<option value="" selected>Select Grade</option>';
-      gradeTypeEl.innerHTML = '<option value="" selected>Type</option>';
-      groupTimeEl.innerHTML = '<option value="" selected>Group Time</option>';
+      gradeEl.innerHTML = labels.gradeEmpty;
+      gradeTypeEl.innerHTML = labels.typeEmpty;
+      groupTimeEl.innerHTML = labels.timeEmpty;
       if (centerNames[centerName]) {
         centerNames[centerName].forEach((center) => {
           const option = document.createElement('option');
@@ -24,8 +67,8 @@
 
     gradeEl.addEventListener('change', function () {
       const selectedGrade = this.value;
-      gradeTypeEl.innerHTML = '<option value="" selected>Type</option>';
-      groupTimeEl.innerHTML = '<option value="" selected>Group Time</option>';
+      gradeTypeEl.innerHTML = labels.typeEmpty;
+      groupTimeEl.innerHTML = labels.timeEmpty;
       if (gradeTypeOptions[selectedGrade]) {
         gradeTypeOptions[selectedGrade].forEach((opt) => {
           const option = document.createElement('option');
@@ -41,26 +84,38 @@
       const selectedCenter = centerEl.value;
       const selectedGrade = gradeEl.value;
       const selectedGradeType = gradeTypeEl.value;
-      groupTimeEl.innerHTML = '<option value="" selected>Group Time</option>';
+      groupTimeEl.innerHTML = labels.timeEmpty;
       if (!groupTimes[selectedCenter]) return;
       if (!groupTimes[selectedCenter][selectedGrade]) return;
       if (!groupTimes[selectedCenter][selectedGrade][selectedGradeType]) return;
-      groupTimes[selectedCenter][selectedGrade][selectedGradeType].forEach(
-        (group) => {
+      const times = groupTimes[selectedCenter][selectedGrade][selectedGradeType];
+      if (times && Array.isArray(times) && times.length > 0) {
+        times.forEach((time) => {
           const option = document.createElement('option');
-          option.value = group.value;
-          option.textContent = group.text;
+          if (typeof time === 'object' && time.value !== undefined) {
+            option.value = time.value;
+            option.textContent = time.text || time.value;
+          } else {
+            option.value = time;
+            option.textContent = time;
+          }
           groupTimeEl.appendChild(option);
-        },
-      );
+        });
+      } else {
+        const option = document.createElement('option');
+        option.value = 'default';
+        option.textContent = defaultTimeLabel;
+        groupTimeEl.appendChild(option);
+      }
     }
 
     gradeTypeEl.addEventListener('change', updateGroupTimes);
   }
 
   document.addEventListener('DOMContentLoaded', async function () {
-    const centerEl = document.getElementById('centerName');
-    if (!centerEl) return;
+    const legacyCenter = document.getElementById('centerName');
+    const groupTabCenter = document.getElementById('groupCenterName');
+    if (!legacyCenter && !groupTabCenter) return;
 
     try {
       const res = await fetch('/groupOptions');
@@ -71,45 +126,68 @@
       }
       const { centers, centerNames, gradeTypeOptions, groupTimes } = data;
 
-      const first = centerEl.querySelector('option[value=""]');
-      centerEl.innerHTML = '';
-      if (first) centerEl.appendChild(first.cloneNode(true));
-      else {
-        const o = document.createElement('option');
-        o.value = '';
-        o.textContent = 'اختر السنتر';
-        centerEl.appendChild(o);
-      }
-      (centers || []).forEach((c) => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        centerEl.appendChild(opt);
-      });
+      window.centerNames = centerNames;
+      window.gradeTypeOptions = gradeTypeOptions;
+      window.groupTimes = groupTimes;
 
-      wireGroupCascade(centerNames, gradeTypeOptions, groupTimes);
+      if (legacyCenter) {
+        fillCenterOptions(legacyCenter, centers, 'اختر السنتر');
+        wireGroupCascade(
+          'centerName',
+          'Grade',
+          'gradeType',
+          'groupTime',
+          centerNames,
+          gradeTypeOptions,
+          groupTimes,
+          {
+            gradeEmpty: '<option value="" selected>Select Grade</option>',
+            typeEmpty: '<option value="" selected>Type</option>',
+            timeEmpty: '<option value="" selected>Group Time</option>',
+          },
+        );
 
-      const gradeEl = document.getElementById('Grade');
-      const gradeTypeEl = document.getElementById('gradeType');
-      const groupTimeEl = document.getElementById('groupTime');
-      const ic = centerEl.getAttribute('data-initial-center');
-      const ig = gradeEl && gradeEl.getAttribute('data-initial-grade');
-      const it = gradeTypeEl && gradeTypeEl.getAttribute('data-initial-grade-type');
-      const igt = groupTimeEl && groupTimeEl.getAttribute('data-initial-group-time');
-      if (ic) {
-        centerEl.value = ic;
-        centerEl.dispatchEvent(new Event('change'));
+        const gradeEl = document.getElementById('Grade');
+        const gradeTypeEl = document.getElementById('gradeType');
+        const groupTimeEl = document.getElementById('groupTime');
+        const ic = legacyCenter.getAttribute('data-initial-center');
+        const ig = gradeEl && gradeEl.getAttribute('data-initial-grade');
+        const it = gradeTypeEl && gradeTypeEl.getAttribute('data-initial-grade-type');
+        const igt = groupTimeEl && groupTimeEl.getAttribute('data-initial-group-time');
+        if (ic) {
+          legacyCenter.value = ic;
+          legacyCenter.dispatchEvent(new Event('change'));
+        }
+        if (ig && gradeEl) {
+          gradeEl.value = ig;
+          gradeEl.dispatchEvent(new Event('change'));
+        }
+        if (it && gradeTypeEl) {
+          gradeTypeEl.value = it;
+          gradeTypeEl.dispatchEvent(new Event('change'));
+        }
+        if (igt && groupTimeEl) {
+          groupTimeEl.value = igt;
+        }
       }
-      if (ig && gradeEl) {
-        gradeEl.value = ig;
-        gradeEl.dispatchEvent(new Event('change'));
-      }
-      if (it && gradeTypeEl) {
-        gradeTypeEl.value = it;
-        gradeTypeEl.dispatchEvent(new Event('change'));
-      }
-      if (igt && groupTimeEl) {
-        groupTimeEl.value = igt;
+
+      if (groupTabCenter) {
+        fillCenterOptions(groupTabCenter, centers, 'اختر السنتر');
+        wireGroupCascade(
+          'groupCenterName',
+          'groupGrade',
+          'groupGradeType',
+          'groupTime',
+          centerNames,
+          gradeTypeOptions,
+          groupTimes,
+          {
+            gradeEmpty: '<option value="">اختر الصف</option>',
+            typeEmpty: '<option value="">اختر النوع</option>',
+            timeEmpty: '<option value="">اختر الوقت</option>',
+            defaultTimeLabel: 'Default Group Time',
+          },
+        );
       }
     } catch (e) {
       console.error('Failed to load /groupOptions', e);

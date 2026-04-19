@@ -1104,11 +1104,11 @@
       if (sendType) {
         sampleSection.style.display = 'block';
         if (sendType === 'hwStatus') {
-          sampleText.textContent = 'نموذج إرسال حالة الواجب - يحتوي على: اسم الطالب، رقم ولي الأمر، حالة الواجب';
+          sampleText.textContent = 'نموذج Excel بالإنجليزية: StudentName, ParentPhone, HomeworkStatus (yes/no) — أدخل نفس أسماء الأعمدة في الحقول أدناه';
         } else if (sendType === 'gradeMsg') {
-          sampleText.textContent = 'نموذج إرسال الدرجات - يحتوي على: اسم الطالب، رقم ولي الأمر، الدرجة، رقم الطالب (اختياري)';
+          sampleText.textContent = 'نموذج Excel بالإنجليزية: StudentName, ParentPhone, Grade, StudentCode (اختياري) — أدخل نفس أسماء الأعمدة في الحقول أدناه';
         } else if (sendType === 'sendMsg') {
-          sampleText.textContent = 'نموذج إرسال رسالة عامة - يحتوي على: اسم الطالب، رقم ولي الأمر، رقم الطالب';
+          sampleText.textContent = 'نموذج Excel بالإنجليزية: StudentName, ParentPhone, StudentCode — أدخل نفس أسماء الأعمدة في الحقول أدناه';
         }
       } else {
         sampleSection.style.display = 'none';
@@ -1138,29 +1138,29 @@
       let fileName = '';
 
       if (sendType === 'hwStatus') {
-        headers = ['اسم الطالب', 'رقم ولي الأمر', 'حالة الواجب'];
+        headers = ['StudentName', 'ParentPhone', 'HomeworkStatus'];
         sampleData = [
-          ['أحمد محمد', '01012345678', 'نعم'],
-          ['سارة أحمد', '01023456789', 'لا'],
-          ['محمد علي', '01034567890', 'نعم']
+          ['Ahmed Mohamed', '01012345678', 'yes'],
+          ['Sara Ahmed', '01023456789', 'no'],
+          ['Mohamed Ali', '01034567890', 'yes']
         ];
-        fileName = 'نموذج_حالة_الواجب.xlsx';
+        fileName = 'Mayada_Notifications_HW_sample.xlsx';
       } else if (sendType === 'gradeMsg') {
-        headers = ['اسم الطالب', 'رقم ولي الأمر', 'الدرجة', 'رقم الطالب'];
+        headers = ['StudentName', 'ParentPhone', 'Grade', 'StudentCode'];
         sampleData = [
-          ['أحمد محمد', '01012345678', '85', '01112345678'],
-          ['سارة أحمد', '01023456789', '92', '01123456789'],
-          ['محمد علي', '01034567890', '78', '01134567890']
+          ['Ahmed Mohamed', '01012345678', '85', '01112345678'],
+          ['Sara Ahmed', '01023456789', '92', '01123456789'],
+          ['Mohamed Ali', '01034567890', '78', '01134567890']
         ];
-        fileName = 'نموذج_درجات_الامتحان.xlsx';
+        fileName = 'Mayada_Notifications_Grades_sample.xlsx';
       } else if (sendType === 'sendMsg') {
-        headers = ['اسم الطالب', 'رقم ولي الأمر', 'رقم الطالب'];
+        headers = ['StudentName', 'ParentPhone', 'StudentCode'];
         sampleData = [
-          ['أحمد محمد', '01012345678', '01112345678'],
-          ['سارة أحمد', '01023456789', '01123456789'],
-          ['محمد علي', '01034567890', '01134567890']
+          ['Ahmed Mohamed', '01012345678', '01112345678'],
+          ['Sara Ahmed', '01023456789', '01123456789'],
+          ['Mohamed Ali', '01034567890', '01134567890']
         ];
-        fileName = 'نموذج_رسالة_عامة.xlsx';
+        fileName = 'Mayada_Notifications_Message_sample.xlsx';
       }
 
       // Create workbook using SheetJS
@@ -1536,76 +1536,7 @@
     });
 
     // ==================== Group Tab Functions ====================
-
-    // Group dropdowns change handlers - using same data as group.ejs (centerNames, gradeTypeOptions, groupTimes)
-    document.getElementById('groupCenterName').addEventListener('change', function() {
-      const centerVal = this.value;
-      const gradeSelect = document.getElementById('groupGrade');
-      gradeSelect.innerHTML = '<option value="">اختر الصف</option>';
-
-      if (centerNames && centerNames[centerVal]) {
-        centerNames[centerVal].forEach(center => {
-          const option = document.createElement('option');
-          option.value = center.value;
-          option.textContent = center.text;
-          gradeSelect.appendChild(option);
-        });
-      }
-
-      document.getElementById('groupGradeType').innerHTML = '<option value="">اختر النوع</option>';
-      document.getElementById('groupTime').innerHTML = '<option value="">اختر الوقت</option>';
-    });
-
-    document.getElementById('groupGrade').addEventListener('change', function() {
-      const selectedGrade = this.value;
-      const gradeTypeSelect = document.getElementById('groupGradeType');
-      gradeTypeSelect.innerHTML = '<option value="">اختر النوع</option>';
-
-      if (gradeTypeOptions && gradeTypeOptions[selectedGrade]) {
-        gradeTypeOptions[selectedGrade].forEach(opt => {
-          const option = document.createElement('option');
-          option.value = opt.value;
-          option.textContent = opt.text;
-          gradeTypeSelect.appendChild(option);
-        });
-      }
-
-      document.getElementById('groupTime').innerHTML = '<option value="">اختر الوقت</option>';
-    });
-
-    document.getElementById('groupGradeType').addEventListener('change', function() {
-      const centerName = document.getElementById('groupCenterName').value;
-      const grade = document.getElementById('groupGrade').value;
-      const gradeType = this.value;
-      const groupTimeSelect = document.getElementById('groupTime');
-      groupTimeSelect.innerHTML = '<option value="">اختر الوقت</option>';
-
-      if (groupTimes &&
-        groupTimes[centerName] &&
-        groupTimes[centerName][grade] &&
-        groupTimes[centerName][grade][gradeType]) {
-        const times = groupTimes[centerName][grade][gradeType];
-        if (times && Array.isArray(times) && times.length > 0) {
-          times.forEach(time => {
-            const option = document.createElement('option');
-            // Handle both object {value, text} and string formats
-            if (typeof time === 'object' && time.value !== undefined) {
-              option.value = time.value;
-              option.textContent = time.text || time.value;
-            } else {
-              option.value = time;
-              option.textContent = time;
-            }
-            groupTimeSelect.appendChild(option);
-          });
-        } else {
-          const option = document.createElement('option');
-          option.value = 'default';
-          option.textContent = 'Default Group Time';
-          groupTimeSelect.appendChild(option);
-        }
-      }
-    });
+    // Center / grade / type / group-time cascades are wired in partials/group.ejs (loads /groupOptions).
 
     document.getElementById('groupOptionSelect').addEventListener('change', function() {
       const selectedOption = this.value;

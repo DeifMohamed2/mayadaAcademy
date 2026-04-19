@@ -167,7 +167,6 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
     data.absences !== undefined && data.absences !== null
       ? String(data.absences).trim()
       : '';
-  const date = stripEmojisForSms(data.date || '').trim();
 
   if (attendanceType === 'present') {
     let hw = '';
@@ -182,8 +181,7 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
         `حضور: ${student}`,
         hw || null,
         `المجموعة: ${group}`,
-        `الغياب: ${absences}`,
-        `التاريخ: ${date}`,
+        `إجمالي الغياب: ${absences}`,
       ].filter(Boolean);
       return lines.join('\n');
     }
@@ -192,8 +190,7 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
       `Present: ${student}`,
       hw || null,
       `Group: ${group}`,
-      `Absences: ${absences}`,
-      `Date: ${date}`,
+      `Total Absent: ${absences}`,
     ].filter(Boolean);
     return lines.join('\n');
   }
@@ -204,16 +201,14 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
         head,
         `تأخر: ${student}`,
         `المجموعة: ${group}`,
-        `الغياب: ${absences}`,
-        `التاريخ: ${date}`,
+        `إجمالي الغياب: ${absences}`,
       ].join('\n');
     }
     return [
       head,
       `Late: ${student}`,
       `Group: ${group}`,
-      `Absences: ${absences}`,
-      `Date: ${date}`,
+      `Total Absent: ${absences}`,
     ].join('\n');
   }
 
@@ -227,7 +222,6 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
         `غياب: ${student}`,
         `المجموعة: ${group}`,
         `إجمالي الغياب: ${absences}`,
-        `التاريخ: ${date}`,
       ];
       if (extra) base.push(extra);
       return base.join('\n');
@@ -236,8 +230,7 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
       head,
       `Absent: ${student}`,
       `Group: ${group}`,
-      `Total absences: ${absences}`,
-      `Date: ${date}`,
+      `Total Absent: ${absences}`,
     ];
     if (extra) base.push(extra);
     return base.join('\n');
@@ -249,9 +242,8 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
       return [
         head,
         `تنبيه غياب: ${student}`,
-        `الغياب: ${absences}`,
+        `إجمالي الغياب: ${absences}`,
         `المجموعة: ${group}`,
-        `التاريخ: ${date}`,
         warn ? warn : null,
       ]
         .filter(Boolean)
@@ -260,9 +252,8 @@ function buildCompactAttendanceSms(attendanceType, data, language) {
     return [
       head,
       `Absence alert: ${student}`,
-      `Absences: ${absences}`,
+      `Total Absent: ${absences}`,
       `Group: ${group}`,
-      `Date: ${date}`,
       warn ? warn : null,
     ]
       .filter(Boolean)

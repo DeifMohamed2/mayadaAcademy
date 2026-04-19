@@ -223,5 +223,10 @@ router.get(
 
 router.get('/sendSms', authMiddleware, teacherController.sendSms_get);
 router.post('/sendSms', authMiddleware, teacherController.sendSms_post);
+router.post('/sendSms/fromExcelJson', authMiddleware, teacherController.sendSmsFromExcelJson);
+router.post('/sendSms/toStudents', authMiddleware, teacherController.sendSmsToStudents);
+router.post('/sendSms/custom', authMiddleware, teacherController.sendSmsCustom);
+router.post('/sendSms/toAllParents', authMiddleware, teacherController.sendSmsToAllParents);
+router.post('/sendSms/toGroup', authMiddleware, teacherController.sendSmsToGroup);
 
 module.exports = router;

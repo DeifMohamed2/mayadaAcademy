@@ -17,6 +17,12 @@ const {
   generateAdvansysRequestId,
 } = require('../utils/sms');
 const { estimateSmsSegments } = require('../utils/smsFormatting');
+const {
+  buildHwStatusSmsText,
+  buildGradeSmsText,
+  buildCustomSmsFullText,
+  deliverTeacherSms,
+} = require('../utils/teacherParentSms');
 
 const {
   sendAttendanceNotification,
@@ -5182,6 +5188,458 @@ const removeStudentFromRegisterGroup = async (req, res) => {
 // =================================================== Send SMS (teacher) =================================================== //
 
 const SMS_BULK_MAX = 50;
+const SMS_API_ERRORS_CAP = 30;
+
+const sendSmsFromExcelJson = async (req, res) => {
+  try {
+    if (!getSmsEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SMS is disabled (SMS_ENABLED)',
+      });
+    }
+
+    const {
+      title = 'Mayada Academy',
+      sendType,
+      phoneColumn,
+      nameColumn,
+      hwColumn,
+      quizName,
+      gradeColumn,
+      maxGrade,
+      messageContent,
+      excelData,
+    } = req.body;
+
+    if (!sendType || !phoneColumn || !nameColumn) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى إدخال نوع الإرسال وأسماء الأعمدة المطلوبة',
+      });
+    }
+
+    if (!excelData || !Array.isArray(excelData) || excelData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا توجد بيانات في الملف',
+      });
+    }
+
+    if (!['hwStatus', 'gradeMsg', 'sendMsg'].includes(sendType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'نوع الإرسال غير صالح',
+      });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const total = excelData.length;
+    const errors = [];
+
+    for (const row of excelData) {
+      const phone = row[phoneColumn]?.toString();
+      const name = row[nameColumn]?.toString();
+
+      if (!phone) {
+        failed += 1;
+        continue;
+      }
+
+      try {
+        if (sendType === 'hwStatus') {
+          const hwRaw = hwColumn ? row[hwColumn]?.toString() : '';
+          if (!hwRaw) {
+            failed += 1;
+            continue;
+          }
+          const text = await buildHwStatusSmsText(phone, {
+            studentName: name,
+            hwRawCell: hwRaw,
+          });
+          const result = await deliverTeacherSms(phone, text);
+          if (result.success) sent += 1;
+          else {
+            failed += 1;
+            if (errors.length < SMS_API_ERRORS_CAP) {
+              errors.push({ phone, message: result.message || 'Failed' });
+            }
+          }
+        } else if (sendType === 'gradeMsg') {
+          const gradeValue = gradeColumn ? row[gradeColumn]?.toString() : '';
+          if (!gradeValue) {
+            failed += 1;
+            continue;
+          }
+          const text = await buildGradeSmsText(phone, {
+            studentName: name,
+            quizName,
+            grade: gradeValue,
+            maxGrade,
+          });
+          const result = await deliverTeacherSms(phone, text);
+          if (result.success) sent += 1;
+          else {
+            failed += 1;
+            if (errors.length < SMS_API_ERRORS_CAP) {
+              errors.push({ phone, message: result.message || 'Failed' });
+            }
+          }
+        } else if (sendType === 'sendMsg') {
+          if (!messageContent) {
+            failed += 1;
+            continue;
+          }
+          const userLang = await getUserLanguage(phone);
+          const studentPlaceholder = userLang === 'AR' ? 'الطالب' : 'Student';
+          const personalized = messageContent.replace(
+            /{name}/g,
+            name || studentPlaceholder,
+          );
+          const text = buildCustomSmsFullText(title, personalized);
+          const result = await deliverTeacherSms(phone, text);
+          if (result.success) sent += 1;
+          else {
+            failed += 1;
+            if (errors.length < SMS_API_ERRORS_CAP) {
+              errors.push({ phone, message: result.message || 'Failed' });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('sendSmsFromExcelJson row:', err);
+        failed += 1;
+        if (errors.length < SMS_API_ERRORS_CAP) {
+          errors.push({ phone, message: err.message || 'Error' });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      total,
+      errors,
+      message: `Sent ${sent} SMS out of ${total}`,
+    });
+  } catch (error) {
+    console.error('sendSmsFromExcelJson:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendSmsToStudents = async (req, res) => {
+  try {
+    if (!getSmsEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SMS is disabled (SMS_ENABLED)',
+      });
+    }
+
+    const { students, title, message } = req.body;
+
+    if (!students || !Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى اختيار طالب واحد على الأقل',
+      });
+    }
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى كتابة نص الرسالة',
+      });
+    }
+
+    const studentDocs = await User.find({ _id: { $in: students } });
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const student of studentDocs) {
+      try {
+        const phone = student.parentPhone || student.phone;
+        if (!phone) {
+          failed += 1;
+          continue;
+        }
+        const text = buildCustomSmsFullText(title || 'Mayada Academy', message);
+        const result = await deliverTeacherSms(phone, text);
+        if (result.success) sent += 1;
+        else {
+          failed += 1;
+          if (errors.length < SMS_API_ERRORS_CAP) {
+            errors.push({ phone, message: result.message || 'Failed' });
+          }
+        }
+      } catch (err) {
+        console.error('sendSmsToStudents:', err);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      errors,
+      message: `تم إرسال ${sent} رسالة`,
+    });
+  } catch (error) {
+    console.error('sendSmsToStudents:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendSmsCustom = async (req, res) => {
+  try {
+    if (!getSmsEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SMS is disabled (SMS_ENABLED)',
+      });
+    }
+
+    const { phone, title, message } = req.body;
+
+    if (!phone || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى ملء جميع الحقول المطلوبة',
+      });
+    }
+
+    const text = buildCustomSmsFullText(title || 'Mayada Academy', message);
+    const result = await deliverTeacherSms(phone, text);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'تم إرسال الرسالة بنجاح',
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message || 'فشل في الإرسال',
+      });
+    }
+  } catch (error) {
+    console.error('sendSmsCustom:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendSmsToAllParents = async (req, res) => {
+  try {
+    if (!getSmsEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SMS is disabled (SMS_ENABLED)',
+      });
+    }
+
+    const { title, message } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى كتابة نص الرسالة',
+      });
+    }
+
+    const query = { parentPhone: { $exists: true, $ne: null, $ne: '' } };
+    const parents = await User.find(query)
+      .select('Username Code phone parentPhone')
+      .lean();
+
+    let sent = 0;
+    let failed = 0;
+    const total = parents.length;
+    const errors = [];
+
+    for (const parent of parents) {
+      try {
+        const phone = parent.parentPhone;
+        if (!phone) {
+          failed += 1;
+          continue;
+        }
+        const personalizedMessage = message.replace(
+          /{name}/g,
+          parent.Username || 'الطالب',
+        );
+        const text = buildCustomSmsFullText(title || 'Mayada Academy', personalizedMessage);
+        const result = await deliverTeacherSms(phone, text);
+        if (result.success) sent += 1;
+        else {
+          failed += 1;
+          if (errors.length < SMS_API_ERRORS_CAP) {
+            errors.push({ phone, message: result.message || 'Failed' });
+          }
+        }
+      } catch (err) {
+        console.error('sendSmsToAllParents:', err);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      total,
+      errors,
+      message: `تم إرسال ${sent} رسالة من أصل ${total}`,
+    });
+  } catch (error) {
+    console.error('sendSmsToAllParents:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
+
+const sendSmsToGroup = async (req, res) => {
+  try {
+    if (!getSmsEnabled()) {
+      return res.status(400).json({
+        success: false,
+        message: 'SMS is disabled (SMS_ENABLED)',
+      });
+    }
+
+    const {
+      data,
+      centerName,
+      Grade,
+      gradeType,
+      groupTime,
+      option,
+      quizName,
+      maxGrade,
+      messageContent,
+    } = req.body;
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا توجد بيانات للإرسال',
+      });
+    }
+
+    if (!['HWStatus', 'gradeMsg', 'sendMsg'].includes(option)) {
+      return res.status(400).json({
+        success: false,
+        message: 'نوع الإرسال غير صالح',
+      });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const item of data) {
+      try {
+        if (!item.parentPhone || item.parentPhone === '-') {
+          failed += 1;
+          continue;
+        }
+
+        const userLang = await getUserLanguage(item.parentPhone);
+
+        if (option === 'HWStatus') {
+          if (item.hwStatus === 'none') continue;
+
+          const hwRawCell = item.hwStatus === 'yes' ? 'yes' : 'no';
+          const text = await buildHwStatusSmsText(item.parentPhone, {
+            studentName: item.studentName,
+            hwRawCell,
+          });
+          const result = await deliverTeacherSms(item.parentPhone, text);
+          if (result.success) sent += 1;
+          else {
+            failed += 1;
+            if (errors.length < SMS_API_ERRORS_CAP) {
+              errors.push({
+                phone: item.parentPhone,
+                message: result.message || 'Failed',
+              });
+            }
+          }
+        } else if (option === 'gradeMsg') {
+          if (!item.grade || item.grade === '') continue;
+
+          const text = await buildGradeSmsText(item.parentPhone, {
+            studentName: item.studentName,
+            quizName,
+            grade: item.grade,
+            maxGrade,
+          });
+          const result = await deliverTeacherSms(item.parentPhone, text);
+          if (result.success) sent += 1;
+          else {
+            failed += 1;
+            if (errors.length < SMS_API_ERRORS_CAP) {
+              errors.push({
+                phone: item.parentPhone,
+                message: result.message || 'Failed',
+              });
+            }
+          }
+        } else if (option === 'sendMsg') {
+          const studentPlaceholder = userLang === 'AR' ? 'الطالب' : 'Student';
+          const messageToSend = messageContent.replace(
+            /{name}/g,
+            item.studentName || studentPlaceholder,
+          );
+          const text = buildCustomSmsFullText('Mayada Academy', messageToSend);
+          const result = await deliverTeacherSms(item.parentPhone, text);
+          if (result.success) sent += 1;
+          else {
+            failed += 1;
+            if (errors.length < SMS_API_ERRORS_CAP) {
+              errors.push({
+                phone: item.parentPhone,
+                message: result.message || 'Failed',
+              });
+            }
+          }
+        }
+      } catch (itemErr) {
+        console.error('sendSmsToGroup item:', itemErr);
+        failed += 1;
+      }
+    }
+
+    res.json({
+      success: true,
+      sent,
+      failed,
+      errors,
+      message: `تم إرسال ${sent} رسالة`,
+    });
+  } catch (error) {
+    console.error('sendSmsToGroup:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Internal server error',
+    });
+  }
+};
 
 const sendSms_get = async (req, res) => {
   res.render('teacher/sendSms', {
@@ -5359,4 +5817,9 @@ module.exports = {
 
   sendSms_get,
   sendSms_post,
+  sendSmsFromExcelJson,
+  sendSmsToStudents,
+  sendSmsCustom,
+  sendSmsToAllParents,
+  sendSmsToGroup,
 };
